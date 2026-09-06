@@ -4,15 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MAX Song Studio</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
         :root {
-            --bg-color: var(--tg-theme-bg-color, #0f172a);
-            --text-color: var(--tg-theme-text-color, #f8fafc);
-            --hint-color: var(--tg-theme-hint-color, #94a3b8);
-            --button-color: var(--tg-theme-button-color, #6366f1);
-            --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+            --bg-color: #0f172a;
+            --text-color: #f8fafc;
+            --hint-color: #94a3b8;
+            --button-color: #6366f1;
+            --button-text-color: #ffffff;
             --card-bg: rgba(30, 41, 59, 0.7);
         }
         body {
@@ -20,7 +19,7 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 16-px;
+            padding: 16px;
             padding-bottom: 80px;
         }
         .container { max-width: 480px; margin: 0 auto; padding: 12px; }
@@ -48,7 +47,7 @@
     <div class="container">
         <div class="header">
             <div>
-                <div style="font-size: 12px; color: var(--hint-color);">Баланс</div>
+                <div style="font-size: 12px; color: var(--hint-color);">Баланс (Max)</div>
                 <div class="balance-badge" id="userBalance">0 ₽</div>
             </div>
             <button style="width: auto; padding: 8px 14px; font-size: 13px;" onclick="scrollToTopUp()">Пополнить</button>
@@ -99,13 +98,11 @@
     </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        const maxId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : 'test_user_123';
-        const userName = tg.initDataUnsafe?.user?.first_name || 'Тестовый Пользователь';
+        // Получаем параметры из URL от мессенджера Max (если передаются) или используем тестовый ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const maxId = urlParams.get('user_id') || 'max_user_123';
+        const userName = urlParams.get('name') || 'Пользователь Max';
         
-        // Автоматически определяем адрес бэкенда (текущий домен Render)
         const API_URL = window.location.origin;
 
         async function initApp() {
@@ -175,16 +172,13 @@
             }
 
             try {
-                tg.MainButton.showProgress();
                 const res = await axios.post(`${API_URL}/api/generate-song`, { maxId, genre, vocal, prompt });
-                tg.MainButton.hideProgress();
                 if (res.data.success) {
                     alert('Генерация началась! Трек появится в списке через 1-2 минуты.');
                     document.getElementById('promptInput').value = '';
                     initApp();
                 }
             } catch (e) {
-                tg.MainButton.hideProgress();
                 alert(e.response?.data?.message || 'Ошибка при генерации');
             }
         }
@@ -219,7 +213,7 @@
         }
 
         initApp();
-        setInterval(loadOrders, 10000); // Автообновление статуса песен каждые 10 сек
+        setInterval(loadOrders, 10000);
     </script>
 </body>
 </html>
