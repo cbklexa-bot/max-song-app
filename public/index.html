@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MAX Song Studio</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #0f172a);
+            --text-color: var(--tg-theme-text-color, #f8fafc);
+            --hint-color: var(--tg-theme-hint-color, #94a3b8);
+            --button-color: var(--tg-theme-button-color, #6366f1);
+            --button-text-color: var(--tg-theme-button-text-color, #ffffff);
+            --card-bg: rgba(30, 41, 59, 0.7);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 16-px;
+            padding-bottom: 80px;
+        }
+        .container { max-width: 480px; margin: 0 auto; padding: 12px; }
+        .header { display: flex; justify-content: space-between; align-items: center; background: var(--card-bg); padding: 12px 16px; border-radius: 14px; margin-bottom: 16px; backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.05); }
+        .balance-badge { font-weight: bold; color: #34d399; font-size: 16px; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 18px; margin-top: 0; margin-bottom: 12px; }
+        label { display: block; font-size: 13px; color: var(--hint-color); margin-bottom: 6px; }
+        select, textarea, input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(15, 23, 42, 0.6); color: var(--text-color); font-size: 14px; box-sizing: border-box; margin-bottom: 12px; }
+        textarea { resize: none; height: 80px; }
+        button { width: 100%; padding: 14px; border-radius: 12px; border: none; background: var(--button-color); color: var(--button-text-color); font-weight: bold; font-size: 15px; cursor: pointer; transition: opacity 0.2s; }
+        button:active { opacity: 0.8; }
+        .topup-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+        .topup-btn { background: rgba(99, 102, 241, 0.2); border: 1px solid var(--button-color); color: var(--text-color); padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; text-align: center; }
+        .song-item { background: rgba(15, 23, 42, 0.5); border-radius: 10px; padding: 12px; margin-bottom: 10px; border: 1px solid rgba(255,255,255,0.05); }
+        .audio-player { width: 100%; margin-top: 8px; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; }
+        .badge-processing { background: rgba(234, 179, 8, 0.2); color: #facc15; }
+        .badge-preview { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+        .badge-completed { background: rgba(52, 211, 153, 0.2); color: #34d399; }
+        .badge-failed { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <div style="font-size: 12px; color: var(--hint-color);">Баланс</div>
+                <div class="balance-badge" id="userBalance">0 ₽</div>
+            </div>
+            <button style="width: auto; padding: 8px 14px; font-size: 13px;" onclick="scrollToTopUp()">Пополнить</button>
+        </div>
+
+        <div class="card">
+            <h2>🎵 Создать песню (200 ₽)</h2>
+            <label>Жанр</label>
+            <select id="genreSelect">
+                <option value="Поп">Поп</option>
+                <option value="Танцевальная">Танцевальная</option>
+                <option value="Народная">Народная</option>
+                <option value="Шансон">Шансон</option>
+                <option value="Рок">Рок</option>
+                <option value="Рэп">Рэп</option>
+                <option value="Акустика">Акустика</option>
+                <option value="Джаз">Джаз</option>
+                <option value="Электроника">Электроника</option>
+            </select>
+
+            <label>Вокал</label>
+            <select id="vocalSelect">
+                <option value="Мужской соло">Мужской соло</option>
+                <option value="Женский соло">Женский соло</option>
+                <option value="Дуэт">Дуэт</option>
+                <option value="Хор">Хор</option>
+            </select>
+
+            <label>О чем песня / Текст / Пожелания</label>
+            <textarea id="promptInput" placeholder="Например: Поздравить друга Алексея с днем рождения, пожелать крутых доходов и семейного тепла..."></textarea>
+
+            <button onclick="generateSong()">Сгенерировать песню</button>
+        </div>
+
+        <div class="card" id="topupSection">
+            <h2>💳 Пополнить баланс</h2>
+            <div class="topup-grid">
+                <div class="topup-btn" onclick="topUp(200)">200 ₽</div>
+                <div class="topup-btn" onclick="topUp(400)">400 ₽ (+10%)</div>
+                <div class="topup-btn" onclick="topUp(800)">800 ₽ (+20%)</div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>📜 Ваши песни</h2>
+            <div id="ordersList">Загрузка...</div>
+        </div>
+    </div>
+
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+
+        const maxId = tg.initDataUnsafe?.user?.id ? String(tg.initDataUnsafe.user.id) : 'test_user_123';
+        const userName = tg.initDataUnsafe?.user?.first_name || 'Тестовый Пользователь';
+        
+        // Автоматически определяем адрес бэкенда (текущий домен Render)
+        const API_URL = window.location.origin;
+
+        async function initApp() {
+            try {
+                const res = await axios.get(`${API_URL}/api/user/${maxId}?name=${encodeURIComponent(userName)}`);
+                if (res.data.success) {
+                    document.getElementById('userBalance').innerText = `${res.data.user.balance} ₽`;
+                }
+                loadOrders();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function loadOrders() {
+            try {
+                const res = await axios.get(`${API_URL}/api/orders/${maxId}`);
+                const orders = res.data.orders || [];
+                const container = document.getElementById('ordersList');
+
+                if (orders.length === 0) {
+                    container.innerHTML = '<div style="color: var(--hint-color); font-size: 13px;">У вас пока нет заказов</div>';
+                    return;
+                }
+
+                container.innerHTML = orders.map(o => {
+                    let badgeClass = 'badge-processing';
+                    let statusText = 'Генерируется... ⏳';
+                    if (o.status === 'preview') { badgeClass = 'badge-preview'; statusText = 'Готово к прослушиванию! 🎧'; }
+                    if (o.status === 'completed') { badgeClass = 'badge-completed'; statusText = 'Куплено ✔'; }
+                    if (o.status === 'failed') { badgeClass = 'badge-failed'; statusText = 'Ошибка генерации ❌'; }
+
+                    let content = `<div class="song-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="font-weight: bold; font-size: 14px;">${o.genre} (${o.vocal})</span>
+                            <span class="badge ${badgeClass}">${statusText}</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--hint-color); margin-bottom: 8px;">${o.prompt}</div>`;
+
+                    if (o.status === 'preview') {
+                        content += `
+                            <div style="margin-bottom: 8px; font-size: 13px; font-weight: bold;">${o.title || 'Вариант 1'}</div>
+                            <audio controls class="audio-player" src="${o.audio_url}"></audio>
+                            ${o.audio_url_2 ? `<div style="margin-top: 8px; font-size: 13px; font-weight: bold;">${o.title_2 || 'Вариант 2'}</div><audio controls class="audio-player" src="${o.audio_url_2}"></audio>` : ''}
+                            <button style="margin-top: 10px; background: #34d399; color: #0f172a;" onclick="unlockSong(${o.id}, '${o.audio_url}', '${o.title}')">Разблокировать трек (200 ₽)</button>
+                        `;
+                    } else if (o.status === 'completed' && o.audio_url) {
+                        content += `<audio controls class="audio-player" src="${o.audio_url}"></audio>`;
+                    }
+
+                    content += `</div>`;
+                    return content;
+                }).join('');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        async function generateSong() {
+            const genre = document.getElementById('genreSelect').value;
+            const vocal = document.getElementById('vocalSelect').value;
+            const prompt = document.getElementById('promptInput').value.trim();
+
+            if (!prompt) {
+                alert('Пожалуйста, введите описание для песни!');
+                return;
+            }
+
+            try {
+                tg.MainButton.showProgress();
+                const res = await axios.post(`${API_URL}/api/generate-song`, { maxId, genre, vocal, prompt });
+                tg.MainButton.hideProgress();
+                if (res.data.success) {
+                    alert('Генерация началась! Трек появится в списке через 1-2 минуты.');
+                    document.getElementById('promptInput').value = '';
+                    initApp();
+                }
+            } catch (e) {
+                tg.MainButton.hideProgress();
+                alert(e.response?.data?.message || 'Ошибка при генерации');
+            }
+        }
+
+        async function unlockSong(orderId, audioUrl, title) {
+            if (!confirm('Разблокировать эту песню за 200 ₽?')) return;
+            try {
+                const res = await axios.post(`${API_URL}/api/unlock-song`, { maxId, orderId, audioUrl, title });
+                if (res.data.success) {
+                    alert('Песня успешно разблокирована!');
+                    initApp();
+                }
+            } catch (e) {
+                alert(e.response?.data?.message || 'Ошибка пополнения/списания');
+            }
+        }
+
+        async function topUp(amount) {
+            try {
+                const res = await axios.post(`${API_URL}/api/topup`, { maxId, amount });
+                if (res.data.success) {
+                    alert(res.data.message);
+                    initApp();
+                }
+            } catch (e) {
+                alert(e.response?.data?.message || 'Ошибка пополнения');
+            }
+        }
+
+        function scrollToTopUp() {
+            document.getElementById('topupSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        initApp();
+        setInterval(loadOrders, 10000); // Автообновление статуса песен каждые 10 сек
+    </script>
+</body>
+</html>
