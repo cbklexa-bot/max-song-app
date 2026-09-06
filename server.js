@@ -5,6 +5,7 @@ const axios = require('axios');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.static('public'));
 
 const supabaseUrl = (process.env.SUPABASE_URL || '').trim().replace(/\/$/, '');
 const supabaseKey = (process.env.SUPABASE_KEY || '').trim();
@@ -211,8 +212,6 @@ app.get('/api/orders/:maxId', async (req, res) => {
     res.status(500).json({ success: false, message: err.response?.data?.message || err.message });
   }
 });
-
-app.get('/', (req, res) => res.send('MAX Song App Backend is Running!'));
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
