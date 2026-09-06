@@ -16,53 +16,54 @@
     }
   </style>
 </head>
-<body class="flex flex-col justify-between p-2 max-w-md mx-auto select-none">
+<body class="flex flex-col justify-between p-2 max-w-md mx-auto select-none h-screen">
 
-  <!-- Шапка пользователя (компактная) -->
-  <div class="w-full bg-slate-800/90 rounded-xl p-2.5 flex justify-between items-center border border-slate-700 shadow-md shrink-0">
-    <div class="flex items-center gap-2.5">
-      <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white text-sm" id="user-avatar">
+  <!-- Шапка пользователя -->
+  <div class="w-full bg-slate-800/90 rounded-xl px-3 py-2 flex justify-between items-center border border-slate-700 shadow-md shrink-0">
+    <div class="flex items-center gap-2.5 overflow-hidden">
+      <div class="w-8 h-8 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white text-xs shrink-0" id="user-avatar">
         M
       </div>
-      <div>
-        <h2 class="font-bold text-xs text-slate-100 leading-tight" id="user-name">Загрузка...</h2>
-        <p class="text-[10px] text-slate-400">MAX Studio</p>
+      <div class="truncate">
+        <h2 class="font-bold text-xs text-slate-100 truncate leading-tight" id="user-name">Загрузка...</h2>
+        <p class="text-[10px] text-slate-400">MAX Account</p>
       </div>
     </div>
     
-    <div onclick="openTopupModal()" class="cursor-pointer bg-slate-900 hover:bg-slate-950 border border-purple-500/40 px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition active:scale-95">
+    <!-- Кнопка баланса и пополнения -->
+    <div onclick="openTopupModal()" class="cursor-pointer bg-slate-900 hover:bg-slate-950 border border-purple-500/40 px-3 py-1 rounded-lg flex items-center gap-2 transition active:scale-95 shrink-0">
       <span class="font-bold text-emerald-400 text-xs" id="user-balance">0 ₽</span>
-      <div class="w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold">
+      <div class="w-4 h-4 bg-purple-600 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow">
         +
       </div>
     </div>
   </div>
 
   <!-- Главный контейнер заказа (компактный) -->
-  <div class="w-full bg-slate-800/60 rounded-2xl p-3.5 border border-slate-700/80 shadow-xl backdrop-blur shrink-0 my-1">
+  <div class="w-full bg-slate-800/60 rounded-2xl p-3 border border-slate-700/80 shadow-xl backdrop-blur shrink-0 my-1">
     
-    <div class="text-center mb-3">
-      <h1 class="text-base font-black bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent leading-tight">
+    <div class="text-center mb-2">
+      <h1 class="text-sm font-black bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent leading-tight">
         Песня на заказ
       </h1>
       <p class="text-[10px] text-slate-400">2 варианта • Демо 30 сек бесплатно</p>
     </div>
 
     <!-- Выбор жанра -->
-    <div class="mb-2.5">
+    <div class="mb-2">
       <label class="block text-[10px] font-semibold text-slate-300 mb-1">🎵 Жанр музыки</label>
       <div class="grid grid-cols-3 gap-1" id="genre-select">
-        <button onclick="selectGenre(this, 'Поп')" class="genre-btn bg-purple-600 border-purple-400 text-white py-1.5 px-1 rounded-lg text-[11px] font-medium border transition">Поп</button>
-        <button onclick="selectGenre(this, 'Танцевальная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1.5 px-1 rounded-lg text-[11px] font-medium border transition">Танцевальная</button>
-        <button onclick="selectGenre(this, 'Народная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1.5 px-1 rounded-lg text-[11px] font-medium border transition">Народная</button>
-        <button onclick="selectGenre(this, 'Шансон')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1.5 px-1 rounded-lg text-[11px] font-medium border transition">Шансон</button>
-        <button onclick="selectGenre(this, 'Рок')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1.5 px-1 rounded-lg text-[11px] font-medium border transition">Рок</button>
-        <button onclick="selectGenre(this, 'Рэп')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1.5 px-1 rounded-lg text-[11px] font-medium border transition">Рэп</button>
+        <button onclick="selectGenre(this, 'Поп')" class="genre-btn bg-purple-600 border-purple-400 text-white py-1 px-1 rounded-lg text-[11px] font-medium border transition">Поп</button>
+        <button onclick="selectGenre(this, 'Танцевальная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1 px-1 rounded-lg text-[11px] font-medium border transition">Танцевальная</button>
+        <button onclick="selectGenre(this, 'Народная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1 px-1 rounded-lg text-[11px] font-medium border transition">Народная</button>
+        <button onclick="selectGenre(this, 'Шансон')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1 px-1 rounded-lg text-[11px] font-medium border transition">Шансон</button>
+        <button onclick="selectGenre(this, 'Рок')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1 px-1 rounded-lg text-[11px] font-medium border transition">Рок</button>
+        <button onclick="selectGenre(this, 'Рэп')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1 px-1 rounded-lg text-[11px] font-medium border transition">Рэп</button>
       </div>
     </div>
 
     <!-- Выбор вокала -->
-    <div class="mb-2.5">
+    <div class="mb-2">
       <label class="block text-[10px] font-semibold text-slate-300 mb-1">🎙 Вокал</label>
       <div class="grid grid-cols-4 gap-1" id="vocal-select">
         <button onclick="selectVocal(this, 'Мужской соло')" class="vocal-btn bg-purple-600 border-purple-400 text-white py-1 px-1 rounded-lg text-[10px] font-medium border transition">Мужской</button>
@@ -73,52 +74,67 @@
     </div>
 
     <!-- Пожелания -->
-    <div class="mb-3">
+    <div class="mb-2.5">
       <textarea id="prompt-input" rows="2" placeholder="Имя, повод, ключевые фразы..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition resize-none"></textarea>
     </div>
 
     <!-- Кнопка заказа -->
-    <button id="order-btn" onclick="generateSong()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-2.5 px-3 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2">
+    <button id="order-btn" onclick="generateSong()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-2 px-3 rounded-xl text-xs shadow-md transition flex items-center justify-center gap-2">
       <span>Сгенерировать 2 варианта (200 ₽)</span>
     </button>
 
   </div>
 
-  <!-- Раздел: Мои песни (занимает оставшееся пространство с прокруткой только внутри) -->
-  <div class="w-full bg-slate-800/40 rounded-2xl p-3 border border-slate-700/60 flex-1 flex flex-col min-h-0 overflow-hidden mb-1">
-    <h2 class="text-xs font-bold mb-2 text-slate-300 flex items-center gap-1.5 shrink-0">
+  <!-- Раздел: Мои песни (со внутренней прокруткой, не ломающей экран) -->
+  <div class="w-full bg-slate-800/40 rounded-2xl p-2.5 border border-slate-700/60 flex-1 flex flex-col min-h-0 overflow-hidden mb-1">
+    <h2 class="text-xs font-bold mb-1.5 text-slate-300 flex items-center gap-1.5 shrink-0">
       🎧 Мои песни
     </h2>
-    <div id="orders-list" class="space-y-2.5 overflow-y-auto flex-1 pr-1">
+    <div id="orders-list" class="space-y-2 overflow-y-auto flex-1 pr-1">
       <p class="text-[11px] text-slate-500 text-center py-4">Список песен пуст</p>
     </div>
   </div>
 
-  <!-- Модальное окно пополнения баланса -->
+  <!-- Модальное окно пополнения баланса (с бонусами и деталями) -->
   <div id="topup-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-5 shadow-2xl relative">
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-4 shadow-2xl relative">
       <button onclick="closeTopupModal()" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
       
       <h3 class="text-base font-bold text-slate-100 mb-1">Пополнение баланса</h3>
-      <p class="text-[11px] text-slate-400 mb-3">Выберите сумму для пополнения:</p>
+      <p class="text-[11px] text-slate-400 mb-3">Минимальная сумма — 200 ₽</p>
 
-      <div class="space-y-2 mb-4">
-        <button onclick="selectTopupAmount(200)" class="amount-btn w-full bg-slate-800 border border-purple-500/50 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
+      <!-- Выбор суммы с бонусами -->
+      <div class="space-y-2 mb-3">
+        <button onclick="selectTopupAmount(200)" id="btn-amt-200" class="amount-btn w-full bg-slate-800 border border-purple-500 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold transition">
           <span>200 ₽</span>
-          <span class="text-slate-400 text-[10px]">1 песня</span>
+          <span class="text-slate-400 text-[10px]">Стандарт (1 песня)</span>
         </button>
-        <button onclick="selectTopupAmount(400)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
-          <span>400 ₽ (+10%)</span>
-          <span class="text-emerald-400 text-[10px]">440 ₽ на счет</span>
+
+        <button onclick="selectTopupAmount(400)" id="btn-amt-400" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold transition">
+          <div class="flex items-center gap-2">
+            <span>400 ₽</span>
+            <span class="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.5 rounded border border-emerald-500/30">+10% БОНУС</span>
+          </div>
+          <span class="text-emerald-400 text-[10px]">+40 ₽ в подарок</span>
         </button>
-        <button onclick="selectTopupAmount(800)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
-          <span>800 ₽ (+20%)</span>
-          <span class="text-amber-400 text-[10px]">960 ₽ на счет</span>
+
+        <button onclick="selectTopupAmount(800)" id="btn-amt-800" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold transition">
+          <div class="flex items-center gap-2">
+            <span>800 ₽</span>
+            <span class="bg-amber-500/20 text-amber-400 text-[9px] px-1.5 py-0.5 rounded border border-amber-500/30">+20% БОНУС</span>
+          </div>
+          <span class="text-amber-400 text-[10px]">+160 ₽ в подарок</span>
         </button>
       </div>
 
-      <button onclick="processTopup()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg transition">
-        Оплатить
+      <!-- Итоговое зачисление -->
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-3 flex justify-between items-center text-xs">
+        <span class="text-slate-400">Будет зачислено на счет:</span>
+        <span class="font-bold text-emerald-400 text-sm" id="modal-credited-calc">200 ₽</span>
+      </div>
+
+      <button onclick="processTopup()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg transition">
+        Оплатить и пополнить
       </button>
     </div>
   </div>
@@ -131,6 +147,7 @@
     let currentMaxId = '';
     let currentUserName = '';
     let currentBalance = 0;
+
     let selectedTopupSum = 200;
     
     let phraseIndex = 0;
@@ -189,7 +206,7 @@
           localStorage.setItem('max_guest_id', savedGuestId);
         }
         currentMaxId = savedGuestId;
-        currentUserName = 'Гость';
+        currentUserName = 'Гость Max';
       }
 
       document.getElementById('user-name').innerText = currentUserName;
@@ -211,9 +228,31 @@
       loadOrders();
     }
 
-    function openTopupModal() { document.getElementById('topup-modal').classList.remove('hidden'); }
-    function closeTopupModal() { document.getElementById('topup-modal').classList.add('hidden'); }
-    function selectTopupAmount(amount) { selectedTopupSum = amount; }
+    function openTopupModal() { 
+      document.getElementById('topup-modal').classList.remove('hidden'); 
+    }
+    
+    function closeTopupModal() { 
+      document.getElementById('topup-modal').classList.add('hidden'); 
+    }
+
+    function selectTopupAmount(amount) {
+      selectedTopupSum = amount;
+      
+      document.querySelectorAll('.amount-btn').forEach(b => {
+        b.className = 'amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold transition';
+      });
+      
+      const activeBtn = document.getElementById(`btn-amt-${amount}`);
+      if (activeBtn) {
+        activeBtn.className = 'amount-btn w-full bg-slate-800 border border-purple-500 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold transition';
+      }
+
+      let total = amount;
+      if (amount === 400) total = 440;
+      if (amount === 800) total = 960;
+      document.getElementById('modal-credited-calc').innerText = `${total} ₽`;
+    }
 
     async function processTopup() {
       try {
@@ -305,10 +344,10 @@
         const card = document.createElement('div');
 
         if (order.status === 'processing') {
-          card.className = 'bg-slate-900 border border-purple-500/40 rounded-xl p-3 space-y-2 shrink-0';
+          card.className = 'bg-slate-900 border border-purple-500/40 rounded-xl p-2.5 space-y-2 shrink-0';
           card.innerHTML = `
-            <div class="flex items-center gap-2.5">
-              <div class="w-7 h-7 rounded-lg bg-purple-600/30 flex items-center justify-center text-purple-300 text-xs font-bold animate-spin">⏳</div>
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-lg bg-purple-600/30 flex items-center justify-center text-purple-300 text-xs font-bold animate-spin">⏳</div>
               <div>
                 <h3 class="text-xs font-bold text-purple-300">Создаем варианты...</h3>
                 <p class="text-[10px] text-slate-400">${order.genre} • ${order.vocal}</p>
@@ -320,26 +359,26 @@
             </div>
           `;
         } else if (order.status === 'preview') {
-          card.className = 'bg-slate-900 border border-amber-500/40 rounded-xl p-3 space-y-2.5 shrink-0';
+          card.className = 'bg-slate-900 border border-amber-500/40 rounded-xl p-2.5 space-y-2 shrink-0';
           card.innerHTML = `
-            <div class="flex justify-between items-center border-b border-slate-800 pb-1.5">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-1">
               <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-1.5 py-0.5 rounded border border-amber-500/30">ДЕМО (30 сек)</span>
               <span class="text-[10px] text-slate-400">${order.genre}</span>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1">
               <div class="flex items-center justify-between text-[11px] font-semibold text-slate-200">
                 <span>🎵 Вариант 1</span>
-                <button onclick="unlockSong(${order.id}, 1, '${order.audio_url}', '${order.title || 'Вариант 1'}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 px-2.5 rounded text-[10px]">Скачать (200 ₽)</button>
+                <button onclick="unlockSong(${order.id}, 1, '${order.audio_url}', '${order.title || 'Вариант 1'}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 px-2 rounded text-[10px]">Скачать (200 ₽)</button>
               </div>
               <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800 bg-slate-950">
                 <source src="${order.audio_url}" type="audio/mpeg">
               </audio>
             </div>
             ${order.audio_url_2 ? `
-            <div class="space-y-1.5 pt-1 border-t border-slate-800/60">
+            <div class="space-y-1 pt-1 border-t border-slate-800/60">
               <div class="flex items-center justify-between text-[11px] font-semibold text-slate-200">
                 <span>🎵 Вариант 2</span>
-                <button onclick="unlockSong(${order.id}, 2, '${order.audio_url_2}', '${order.title_2 || 'Вариант 2'}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 px-2.5 rounded text-[10px]">Скачать (200 ₽)</button>
+                <button onclick="unlockSong(${order.id}, 2, '${order.audio_url_2}', '${order.title_2 || 'Вариант 2'}')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1 px-2 rounded text-[10px]">Скачать (200 ₽)</button>
               </div>
               <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800 bg-slate-950">
                 <source src="${order.audio_url_2}" type="audio/mpeg">
@@ -348,17 +387,17 @@
             ` : ''}
           `;
         } else if (order.status === 'completed' && order.audio_url) {
-          card.className = 'bg-slate-900 border border-slate-700/80 rounded-xl p-3 space-y-2 shrink-0';
+          card.className = 'bg-slate-900 border border-slate-700/80 rounded-xl p-2.5 space-y-1.5 shrink-0';
           card.innerHTML = `
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2 overflow-hidden">
-                <div class="w-7 h-7 rounded-lg bg-emerald-600/20 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">🎵</div>
+                <div class="w-6 h-6 rounded-lg bg-emerald-600/20 flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">🎵</div>
                 <div class="truncate">
                   <h3 class="text-xs font-bold text-slate-100 truncate">${order.title || 'Песня'}</h3>
                   <p class="text-[10px] text-slate-400">${order.genre}</p>
                 </div>
               </div>
-              <a href="${order.audio_url}" target="_blank" download="song.mp3" class="bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-semibold py-1 px-2.5 rounded-lg shrink-0">📥 Скачать</a>
+              <a href="${order.audio_url}" target="_blank" download="song.mp3" class="bg-purple-600 hover:bg-purple-500 text-white text-[10px] font-semibold py-1 px-2 rounded-lg shrink-0">📥 Скачать</a>
             </div>
             <audio controls class="w-full h-7 rounded border border-slate-800 bg-slate-950">
               <source src="${order.audio_url}" type="audio/mpeg">
@@ -370,14 +409,14 @@
     }
 
     function selectGenre(btn, genre) {
-      document.querySelectorAll('.genre-btn').forEach(b => b.className = 'genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1.5 px-1 rounded-lg text-[11px] font-medium border transition');
-      btn.className = 'genre-btn bg-purple-600 border-purple-400 text-white py-1.5 px-1 rounded-lg text-[11px] font-medium border transition';
+      document.querySelectorAll('.genre-btn').forEach(b => b.className = 'genre-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1 px-1 rounded-lg text-[11px] font-medium border transition');
+      btn.className = 'genre-btn bg-purple-600 border-purple-400 text-white py-1 px-1 rounded-lg text-[11px] font-medium border transition';
       selectedGenre = genre;
     }
 
     function selectVocal(btn, vocal) {
-      document.querySelectorAll('.vocal-btn').forEach(b => b.className = 'vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1.5 px-1 rounded-lg text-[10px] font-medium border transition');
-      btn.className = 'vocal-btn bg-purple-600 border-purple-400 text-white py-1.5 px-1 rounded-lg text-[10px] font-medium border transition';
+      document.querySelectorAll('.vocal-btn').forEach(b => b.className = 'vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 py-1 px-1 rounded-lg text-[10px] font-medium border transition');
+      btn.className = 'vocal-btn bg-purple-600 border-purple-400 text-white py-1 px-1 rounded-lg text-[10px] font-medium border transition';
       selectedVocal = vocal;
     }
 
