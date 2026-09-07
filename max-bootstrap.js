@@ -3,8 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 
 // MAX transport compatibility layer.
-// It is loaded with NODE_OPTIONS=--require=./max-bootstrap.js
-// before server.js, so the existing application logic stays untouched.
+// Loaded by package.json with: node -r ./max-bootstrap.js server.js
 
 const originalUse = express.application.use;
 
@@ -12,7 +11,6 @@ express.application.use = function patchedUse(...args) {
   if (!this.__maxTransportInstalled) {
     this.__maxTransportInstalled = true;
 
-    // Runs before the existing logger and routes.
     originalUse.call(this, (req, res, next) => {
       try {
         const rawUrl = String(req.url || '');
@@ -26,7 +24,6 @@ express.application.use = function patchedUse(...args) {
             req.headers['x-max-init-data'] = initData;
           }
 
-          // Keep initData out of application request logs.
           req.originalUrl = rawUrl.slice(0, question) || '/';
         }
       } catch (_) {}
@@ -34,9 +31,6 @@ express.application.use = function patchedUse(...args) {
       next();
     });
 
-    // Convert simple POST query parameters into the req.body shape
-    // expected by the existing routes. No request body is required
-    // from the browser, so the browser never needs a CORS preflight.
     originalUse.call(this, (req, res, next) => {
       const q = req.query || {};
       if (req.method !== 'GET' && Object.keys(q).length) {
@@ -53,10 +47,7 @@ express.application.use = function patchedUse(...args) {
   return originalUse.apply(this, args);
 };
 
-// Current MAX initData uses URL-encoded parameter values in the string,
-// while the signature is calculated over decoded values. The original
-// server signs the second-stage data with a Buffer secret key, so decode
-// values only for that HMAC stage.
+// MAX initData compatibility for the existing signature implementation.
 const originalCreateHmac = crypto.createHmac.bind(crypto);
 crypto.createHmac = function patchedCreateHmac(algorithm, key, ...rest) {
   const hmac = originalCreateHmac(algorithm, key, ...rest);
@@ -92,26 +83,34 @@ crypto.createHmac = function patchedCreateHmac(algorithm, key, ...rest) {
   return hmac;
 };
 
-// On Amvera, serve the existing frontend with a same-origin API base.
-// This keeps GitHub Pages/Render behavior unchanged while the Amvera
-// deployment talks to its own backend instead of Render.
+// On Amvera, force the existing HTML to use same-origin API requests.
+// Also disable caching so MAX WebView cannot keep an older Render-based page.
 const originalSendFile = express.response.sendFile;
 express.response.sendFile = function patchedSendFile(filePath, ...args) {
   try {
     const req = this.req;
-    const isAmvera = String(req && req.headers && req.headers.host || '')
-      .toLowerCase()
-      .includes('amvera');
+    const host = String(req?.headers?.host || '').toLowerCase();
+    const isAmvera = host.includes('amvera');
     const isIndex = String(filePath || '').endsWith('/index.html') ||
       String(filePath || '').endsWith('index.html');
 
     if (isAmvera && isIndex) {
       const html = fs.readFileSync(filePath, 'utf8');
-      const patchedHtml = html.replace(
-        /const\s+API_BASE\s*=\s*['"]https:\/\/max-song-app\.onrender\.com['"];?/g,
-        "const API_BASE = '';"
-      );
 
+      const patchedHtml = html
+        .replace(
+          /const\s+API_BASE\s*=\s*['"]https:\/\/max-song-app\.onrender\.com['"];?/g,
+          "const API_BASE = '';"
+        )
+        .replace(
+          /https:\/\/max-song-app\.onrender\.com/g,
+          ''
+        );
+
+      this.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+      this.set('Pragma', 'no-cache');
+      this.set('Expires', '0');
+      this.set('X-Max-Backend', 'amvera');
       this.type('html').send(patchedHtml);
       return this;
     }
