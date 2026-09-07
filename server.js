@@ -48,6 +48,10 @@ app.get('/api/user/:maxId', async (req, res) => {
   const rawName = req.query.name || 'Пользователь MAX';
   const name = decodeURIComponent(rawName);
 
+  if (!maxId || maxId === 'undefined' || maxId === 'null') {
+    return res.status(400).json({ success: false, message: 'Некорректный ID пользователя' });
+  }
+
   try {
     const userRes = await axios.get(`${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}&select=*`, { headers: dbHeaders });
     let user = userRes.data[0];
@@ -74,6 +78,10 @@ app.post('/api/topup', async (req, res) => {
   const { maxId, amount } = req.body;
   const numAmount = Number(amount);
 
+  if (!maxId || maxId === 'undefined' || maxId === 'null') {
+    return res.status(400).json({ success: false, message: 'Не передан ID пользователя' });
+  }
+
   if (!numAmount || numAmount < 200) {
     return res.status(400).json({ success: false, message: 'Минимальное пополнение 200 ₽' });
   }
@@ -91,7 +99,9 @@ app.post('/api/topup', async (req, res) => {
     const newBalance = currentBalance + totalCredited;
 
     await axios.patch(`${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}`, { balance: newBalance }, { headers: dbHeaders });
-    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { user_max_id: maxId, amount: totalCredited, type: 'topup' }, { headers: dbHeaders });
+    
+    // Исправлено: user_max_id заменен на max_id
+    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { max_id: maxId, amount: totalCredited, type: 'topup' }, { headers: dbHeaders });
 
     res.json({
       success: true,
@@ -99,13 +109,18 @@ app.post('/api/topup', async (req, res) => {
       newBalance
     });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.response?.data?.message || err.message });
+    console.error('[TOPUP ERROR]:', err.response?.data || err.message);
+    res.status(500).json({ success: false, message: err.response?.data?.message || err.response?.data?.details || err.message });
   }
 });
 
 app.post('/api/generate-song', async (req, res) => {
   const { maxId, genre, vocal, prompt } = req.body;
   const SONG_PRICE = 200;
+
+  if (!maxId || maxId === 'undefined') {
+    return res.status(400).json({ success: false, message: 'Не передан ID пользователя' });
+  }
 
   try {
     const userRes = await axios.get(`${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}&select=balance`, { headers: dbHeaders });
@@ -134,6 +149,7 @@ app.post('/api/generate-song', async (req, res) => {
 
     res.json({ success: true, message: 'Генерация запущена!', order: orderRes.data[0] });
   } catch (err) {
+    console.error('[GENERATE ERROR]:', err.response?.data || err.message);
     const errMsg = err.response?.data?.message || err.message;
     res.status(500).json({ success: false, message: 'Ошибка генерации: ' + errMsg });
   }
@@ -142,6 +158,10 @@ app.post('/api/generate-song', async (req, res) => {
 app.post('/api/unlock-song', async (req, res) => {
   const { maxId, orderId, audioUrl, title } = req.body;
   const SONG_PRICE = 200;
+
+  if (!maxId || maxId === 'undefined') {
+    return res.status(400).json({ success: false, message: 'Не передан ID пользователя' });
+  }
 
   try {
     const userRes = await axios.get(`${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}&select=balance`, { headers: dbHeaders });
@@ -157,16 +177,23 @@ app.post('/api/unlock-song', async (req, res) => {
     await axios.patch(`${supabaseUrl}/rest/v1/orders?id=eq.${orderId}`, {
       status: 'completed', audio_url: audioUrl, title: title || 'Именная песня'
     }, { headers: dbHeaders });
-    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { user_max_id: maxId, amount: -SONG_PRICE, type: 'song_unlock' }, { headers: dbHeaders });
+    
+    // Исправлено: user_max_id заменен на max_id
+    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { max_id: maxId, amount: -SONG_PRICE, type: 'song_unlock' }, { headers: dbHeaders });
 
     res.json({ success: true, message: 'Песня разблокирована!', newBalance });
   } catch (err) {
-    res.status(500).json({ success: false, message: err.response?.data?.message || err.message });
+    console.error('[UNLOCK ERROR]:', err.response?.data || err.message);
+    res.status(500).json({ success: false, message: err.response?.data?.message || err.response?.data?.details || err.message });
   }
 });
 
 app.get('/api/orders/:maxId', async (req, res) => {
   const { maxId } = req.params;
+
+  if (!maxId || maxId === 'undefined') {
+    return res.status(400).json({ success: false, message: 'Не передан ID пользователя' });
+  }
 
   try {
     const ordersRes = await axios.get(`${supabaseUrl}/rest/v1/orders?max_id=eq.${encodeURIComponent(maxId)}&order=created_at.desc`, { headers: dbHeaders });
@@ -178,8 +205,6 @@ app.get('/api/orders/:maxId', async (req, res) => {
           const checkRes = await axios.get(`https://api.piapi.ai/api/v1/task/${order.task_id}`, {
             headers: { 'x-api-key': PIAPI_KEY }
           });
-
-          console.log('PiAPI check response:', JSON.stringify(checkRes.data));
 
           const taskData = checkRes.data?.data || checkRes.data;
           if (taskData) {
