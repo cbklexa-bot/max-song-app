@@ -19,11 +19,12 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Patch API transport
+      - name: Patch API transport and MAX signature validation
         shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           index = Path('index.html')
           text = index.read_text(encoding='utf-8')
@@ -173,32 +174,120 @@ jobs:
             }
           );"""
 
-          if old not in text:
-              raise SystemExit('Expected apiFetch block was not found')
-          text = text.replace(old, new, 1)
+          if old in text:
+              text = text.replace(old, new, 1)
+          else:
+              print('apiFetch legacy block already patched or not found')
+
+          index.write_text(text, encoding='utf-8')
 
           server = Path('server.js')
-          server_text = server.read_text(encoding='utf-8')
+          s = server.read_text(encoding='utf-8')
 
-          old = """app.use(
-  express.json({
-    limit: '1mb'
-  })
-);"""
-          new = """app.use(
-  express.json({
-    limit: '1mb'
-  })
-);
+          start = s.index('function validateMaxInitData(initData) {')
+          end = s.index('\nfunction requireMaxUser(req) {', start)
 
-app.use(
-  express.urlencoded({
-    extended: false,
-    limit: '1mb'
-  })
-);"""
-          if old in server_text:
-              server_text = server_text.replace(old, new, 1)
+          validation = r'''function validateMaxInitData(initData) {
+  if (!MAX_BOT_TOKEN) {
+    throw new Error('MAX_BOT_TOKEN is not configured');
+  }
+
+  if (!initData || typeof initData !== 'string') {
+    throw new Error('MAX initData is missing');
+  }
+
+  const pairs = [];
+
+  for (const part of initData.split('&')) {
+    const separatorIndex = part.indexOf('=');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    const key = part.slice(0, separatorIndex);
+    const rawValue = part.slice(separatorIndex + 1);
+
+    if (pairs.some(([existingKey]) => existingKey === key)) {
+      throw new Error('MAX initData contains duplicate parameters');
+    }
+
+    let value;
+    try {
+      value = decodeURIComponent(rawValue);
+    } catch (_) {
+      throw new Error('MAX initData contains invalid URL encoding');
+    }
+
+    pairs.push([key, value]);
+  }
+
+  const hashEntries = pairs.filter(([key]) => key === 'hash');
+
+  if (hashEntries.length !== 1) {
+    throw new Error('MAX initData hash is missing or duplicated');
+  }
+
+  const receivedHash = hashEntries[0][1];
+
+  const dataCheckString = pairs
+    .filter(([key]) => key !== 'hash')
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, value]) => key + '=' + value)
+    .join('\n');
+
+  const secretKey = crypto
+    .createHmac('sha256', 'WebAppData')
+    .update(MAX_BOT_TOKEN)
+    .digest();
+
+  const calculatedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
+
+  const receivedBuffer = Buffer.from(receivedHash, 'hex');
+  const calculatedBuffer = Buffer.from(calculatedHash, 'hex');
+
+  if (
+    receivedBuffer.length !== calculatedBuffer.length ||
+    !crypto.timingSafeEqual(receivedBuffer, calculatedBuffer)
+  ) {
+    throw new Error('Invalid MAX initData signature');
+  }
+
+  if (pairs.some(([key]) => key === 'auth_date')) {
+    const authDateValue = pairs.find(([key]) => key === 'auth_date')[1];
+    const authDate = Number(authDateValue);
+
+    if (!Number.isNaN(authDate)) {
+      const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+
+      if (ageSeconds > 3600) {
+        throw new Error('MAX initData expired');
+      }
+    }
+  }
+
+  let user = null;
+  const userValue = pairs.find(([key]) => key === 'user')?.[1];
+
+  if (userValue) {
+    try {
+      user = JSON.parse(userValue);
+    } catch (_) {
+      user = null;
+    }
+  }
+
+  return {
+    params: Object.fromEntries(pairs),
+    user
+  };
+}
+'''
+
+          s = s[:start] + validation + s[end:]
 
           old = """function requireMaxUser(req) {
   const initData = req.headers['x-max-init-data'];
@@ -220,12 +309,22 @@ app.use(
   }
 
   const result = validateMaxInitData(initData);"""
-          if old not in server_text:
-              raise SystemExit('Expected requireMaxUser block was not found')
-          server_text = server_text.replace(old, new, 1)
+          if old in s:
+              s = s.replace(old, new, 1)
 
-          index.write_text(text, encoding='utf-8')
-          server.write_text(server_text, encoding='utf-8')
+          server.write_text(s, encoding='utf-8')
+
+          bootstrap = Path('max-bootstrap.js')
+          b = bootstrap.read_text(encoding='utf-8')
+
+          b = re.sub(
+              r"\n// MAX initData compatibility for the existing signature implementation\..*?(?=\n// On Amvera, force the existing HTML)",
+              "\n",
+              b,
+              flags=re.S
+          )
+
+          bootstrap.write_text(b, encoding='utf-8')
           PY
 
       - name: Commit patched files
@@ -233,7 +332,7 @@ app.use(
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add index.html server.js
+          git add index.html server.js max-bootstrap.js
           git diff --cached --quiet && exit 0
-          git commit -m 'Fix MAX transport without preflight'
+          git commit -m 'Fix MAX initData signature validation'
           git push origin main
