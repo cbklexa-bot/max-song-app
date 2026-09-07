@@ -100,7 +100,6 @@ app.post('/api/topup', async (req, res) => {
 
     await axios.patch(`${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}`, { balance: newBalance }, { headers: dbHeaders });
     
-    // Используем правильное имя колонки user_max_id для таблицы transactions
     await axios.post(`${supabaseUrl}/rest/v1/transactions`, { user_max_id: maxId, amount: totalCredited, type: 'topup' }, { headers: dbHeaders });
 
     res.json({
@@ -178,13 +177,33 @@ app.post('/api/unlock-song', async (req, res) => {
       status: 'completed', audio_url: audioUrl, title: title || 'Именная песня'
     }, { headers: dbHeaders });
     
-    // Используем правильное имя колонки user_max_id для таблицы transactions
     await axios.post(`${supabaseUrl}/rest/v1/transactions`, { user_max_id: maxId, amount: -SONG_PRICE, type: 'song_unlock' }, { headers: dbHeaders });
 
     res.json({ success: true, message: 'Песня разблокирована!', newBalance });
   } catch (err) {
     console.error('[UNLOCK ERROR]:', err.response?.data || err.message);
     res.status(500).json({ success: false, message: err.response?.data?.message || err.response?.data?.details || err.message });
+  }
+});
+
+app.get('/api/download', async (req, res) => {
+  const fileUrl = req.query.url;
+  const fileName = req.query.name || 'song.mp3';
+
+  if (!fileUrl) {
+    return res.status(400).send('Не указана ссылка на файл');
+  }
+
+  try {
+    const response = await axios.get(fileUrl, { responseType: 'stream' });
+    
+    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(fileName)}.mp3"`);
+    res.setHeader('Content-Type', 'audio/mpeg');
+    
+    response.data.pipe(res);
+  } catch (err) {
+    console.error('[DOWNLOAD ERROR]:', err.message);
+    res.status(500).json({ success: false, message: 'Ошибка при скачивании файла' });
   }
 });
 
