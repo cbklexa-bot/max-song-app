@@ -1038,7 +1038,23 @@ app.get('/api/download', async (req, res) => {
 });
 
 /* =========================================
-   STATIC FRONTEND
+   MAX DIRECT FRONTEND
+========================================= */
+
+app.get('/', (req, res) => {
+  res.sendFile(
+    path.join(__dirname, 'index.html')
+  );
+});
+
+app.get('/index.html', (req, res) => {
+  res.sendFile(
+    path.join(__dirname, 'index.html')
+  );
+});
+
+/* =========================================
+   STATIC FRONTEND / FALLBACK
 ========================================= */
 
 app.use(
