@@ -195,7 +195,6 @@
     }
 
     function detectUser() {
-      // Собираем параметры из URL строки и из хэша
       const urlParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
 
@@ -204,7 +203,6 @@
       const urlMaxId = getParam('max_id') || getParam('user_id') || getParam('id') || getParam('tgWebAppStartParam');
       const urlName = getParam('name') || getParam('first_name');
 
-      // Проверяем официальный объект MAX Bridge (window.WebApp)
       const maxUser = 
         window.WebApp?.initDataUnsafe?.user || 
         window.MAXWebApp?.initDataUnsafe?.user || 
@@ -222,7 +220,6 @@
         currentUserName = urlName ? decodeURIComponent(urlName) : 'Пользователь Max';
         document.getElementById('debug-info').innerText = `ID (URL Param): ${currentMaxId}`;
       } else {
-        // Если запущено вне мессенджера
         let savedGuestId = localStorage.getItem('max_guest_id');
         if (!savedGuestId) {
           savedGuestId = 'guest_' + Math.random().toString(36).substring(2, 11);
@@ -374,6 +371,17 @@
       }
     }
 
+    // Функция скачивания через наш бэкенд прокси
+    function downloadSongFile(audioUrl, songTitle) {
+      const downloadUrl = `${BACKEND_URL}/api/download?url=${encodeURIComponent(audioUrl)}&name=${encodeURIComponent(songTitle || 'song')}`;
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `${songTitle || 'song'}.mp3`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+
     function renderOrders(orders) {
       const listContainer = document.getElementById('orders-list');
       if (!orders || orders.length === 0) {
@@ -440,6 +448,7 @@
             ` : ''}
           `;
         } else if (order.status === 'completed' && order.audio_url) {
+          const safeTitle = (order.title || 'Именная песня').replace(/'/g, "\\'");
           card.className = 'bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 space-y-3';
           card.innerHTML = `
             <div class="flex items-center gap-3">
@@ -457,9 +466,9 @@
             </audio>
 
             <div class="grid grid-cols-2 gap-2 pt-1">
-              <a href="${order.audio_url}" target="_blank" download="song.mp3" class="bg-purple-600/80 hover:bg-purple-600 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition">
+              <button onclick="downloadSongFile('${order.audio_url}', '${safeTitle}')" class="bg-purple-600/80 hover:bg-purple-600 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition">
                 📥 Скачать MP3
-              </a>
+              </button>
               <button onclick="shareSong('${order.audio_url}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition">
                 📤 Поделиться
               </button>
