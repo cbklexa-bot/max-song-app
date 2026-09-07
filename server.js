@@ -10,10 +10,7 @@ app.disable('x-powered-by');
 
 app.use(
   cors({
-    origin: [
-      'https://cbklexa-bot.github.io',
-      'https://max-song-app.onrender.com'
-    ],
+    origin: true,
     methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'X-MAX-Init-Data'],
     credentials: false
