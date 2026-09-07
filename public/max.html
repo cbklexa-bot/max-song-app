@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Песня на заказ | MAX</title>
+</head>
+<body style="margin:0;background:#0d0718;color:#fff;font-family:system-ui,sans-serif">
+  <div id="boot" style="padding:20px">Запуск приложения…</div>
+  <script>
+    (async function () {
+      try {
+        const response = await fetch('/', { cache: 'no-store' });
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        let html = await response.text();
+
+        // MAX-safe transport: duplicate initData into the query string.
+        // The Render compatibility layer converts this query parameter
+        // into X-MAX-Init-Data before the API routes run.
+        const old = "headers.set(\n          'X-MAX-Init-Data',\n          maxInitData\n        );";
+        const replacement = old + "\n\n        if (maxInitData) {\n          const joiner = path.includes('?') ? '&' : '?';\n          path = path + joiner + 'initData=' + encodeURIComponent(maxInitData);\n        }";
+
+        if (!html.includes(old)) {
+          throw new Error('Версия приложения не содержит ожидаемую API-точку.');
+        }
+
+        html = html.replace(old, replacement);
+        html = html.replace('const response =\n          await fetch(\n            `${API_BASE}${path}`,', 'const response =\n          await fetch(\n            `${API_BASE}${path}`,');
+
+        document.open();
+        document.write(html);
+        document.close();
+      } catch (error) {
+        document.getElementById('boot').textContent =
+          'Ошибка запуска: ' + (error?.message || error);
+      }
+    })();
+  </script>
+</body>
+</html>
