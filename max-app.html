@@ -8,14 +8,16 @@
     html,body{margin:0;padding:0;min-height:100%;background:#0d0718;color:#fff;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
     body{padding:24px;display:flex;align-items:center;justify-content:center}
     .box{max-width:420px;text-align:center;color:#bdb3c5}
+    .error{color:#ffb4bc;white-space:pre-wrap;word-break:break-word}
   </style>
 </head>
 <body>
-  <div class="box">Запускаем MAX Music Studio…</div>
+  <div class="box" id="boot">Запускаем MAX Music Studio…</div>
   <script>
     (async () => {
       try {
-        const sourceUrl = 'index.html?max_transport=3&v=' + Date.now();
+        const API_BASE = 'https://max-song-app.onrender.com';
+        const sourceUrl = 'index.html?max_transport=4&v=' + Date.now();
         const response = await fetch(sourceUrl, { cache: 'no-store' });
         if (!response.ok) throw new Error('Не удалось загрузить приложение: HTTP ' + response.status);
 
@@ -28,17 +30,66 @@
           throw new Error('Не найден сетевой слой приложения.');
         }
 
-        const replacement = `    async function apiFetch(\n      path,\n      options = {},\n      timeoutMs = 30000\n    ) {\n      const controller = new AbortController();\n      const timeout = setTimeout(() => controller.abort(), timeoutMs);\n\n      try {\n        const headers = new Headers(options.headers || {});\n        headers.delete('X-MAX-Init-Data');\n        headers.delete('Content-Type');\n\n        const url = new URL(\`\\${API_BASE}\\${path}\`);\n        const payload = options.body ? (() => {\n          try { return JSON.parse(options.body); }\n          catch { return {}; }\n        })() : {};\n\n        url.searchParams.set('initData', maxInitData);\n        Object.entries(payload || {}).forEach(([key, value]) => {\n          url.searchParams.set(key, String(value ?? ''));\n        });\n\n        const response = await fetch(url.toString(), {\n          method: options.method || 'GET',\n          headers,\n          signal: controller.signal\n        });\n\n        const text = await response.text();\n        let data = {};\n        try { data = text ? JSON.parse(text) : {}; }\n        catch { throw new Error(\`Сервер вернул не JSON (\\${response.status})\`); }\n\n        if (!response.ok) {\n          throw new Error(data.error || data.message || \`Ошибка HTTP \\${response.status}\`);\n        }\n\n        return data;\n      } catch (error) {\n        if (error?.name === 'AbortError') {\n          throw new Error('Сервер слишком долго отвечает.');\n        }\n        throw error;\n      } finally {\n        clearTimeout(timeout);\n      }\n    }\n\n`;
+        const replacement = `    async function apiFetch(
+      path,
+      options = {},
+      timeoutMs = 30000
+    ) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+      try {
+        const url = new URL(`${API_BASE}${path}`);
+        const payload = options.body ? (() => {
+          try { return JSON.parse(options.body); }
+          catch { return {}; }
+        })() : {};
+
+        // MAX initData is sent as a query parameter. This avoids the
+        // non-simple custom header that can trigger a CORS preflight.
+        url.searchParams.set('initData', maxInitData);
+        Object.entries(payload || {}).forEach(([key, value]) => {
+          url.searchParams.set(key, String(value ?? ''));
+        });
+
+        const response = await fetch(url.toString(), {
+          method: options.method || 'GET',
+          signal: controller.signal
+        });
+
+        const text = await response.text();
+        let data = {};
+        try {
+          data = text ? JSON.parse(text) : {};
+        } catch {
+          throw new Error(`Сервер вернул не JSON (${response.status})`);
+        }
+
+        if (!response.ok) {
+          throw new Error(data.error || data.message || `Ошибка HTTP ${response.status}`);
+        }
+
+        return data;
+      } catch (error) {
+        if (error?.name === 'AbortError') {
+          throw new Error('Сервер слишком долго отвечает.');
+        }
+        throw error;
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+
+`;
 
         html = html.slice(0, start) + replacement + html.slice(end);
 
-        // The root page already contains the correct Render API address.
         document.open();
         document.write(html);
         document.close();
       } catch (error) {
-        document.body.innerHTML = '<div style="max-width:520px;padding:24px;text-align:center;color:#ffb4bc">' +
-          String(error?.message || error).replaceAll('<','&lt;') + '</div>';
+        document.getElementById('boot').className = 'box error';
+        document.getElementById('boot').textContent = String(error?.message || error);
       }
     })();
   </script>
