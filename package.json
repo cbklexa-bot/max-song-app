@@ -1,6 +1,6 @@
 {
   "name": "max-song-app-backend",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "private": true,
   "main": "server.js",
   "scripts": {
@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "axios": "^1.6.0",
+    "cors": "^2.8.5",
     "express": "^4.18.2"
   }
 }
