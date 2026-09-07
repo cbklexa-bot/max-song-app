@@ -1,0 +1,139 @@
+name: Final fix MAX initData validation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'public/max-amvera-diagnostic.html'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch MAX validation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          server = Path('server.js')
+          text = server.read_text(encoding='utf-8')
+
+          start = text.index('function validateMaxInitData(initData) {')
+          end = text.index('\nfunction requireMaxUser(req) {', start)
+
+          new_fn = r'''function validateMaxInitData(initData) {
+            if (!MAX_BOT_TOKEN) {
+              throw new Error('MAX_BOT_TOKEN is not configured');
+            }
+
+            if (!initData || typeof initData !== 'string') {
+              throw new Error('MAX initData is missing');
+            }
+
+            const pairs = initData.split('&').map((part) => {
+              const separatorIndex = part.indexOf('=');
+              if (separatorIndex === -1) return null;
+              return [part.slice(0, separatorIndex), part.slice(separatorIndex + 1)];
+            }).filter(Boolean);
+
+            const hashPairs = pairs.filter(([key]) => key === 'hash');
+            if (hashPairs.length !== 1) {
+              throw new Error('MAX initData hash is missing or duplicated');
+            }
+
+            const receivedHash = hashPairs[0][1];
+
+            const decoded = pairs.map(([key, value]) => {
+              try {
+                return [key, decodeURIComponent(value)];
+              } catch (error) {
+                throw new Error('Invalid URL encoding in MAX initData');
+              }
+            });
+
+            const launchParams = decoded
+              .filter(([key]) => key !== 'hash')
+              .sort((a, b) => a[0].localeCompare(b[0]))
+              .map(([key, value]) => key + '=' + value)
+              .join('\\n');
+
+            const secretKey = crypto
+              .createHmac('sha256', 'WebAppData')
+              .update(MAX_BOT_TOKEN, 'utf8')
+              .digest();
+
+            const calculatedHash = crypto
+              .createHmac('sha256', secretKey)
+              .update(launchParams, 'utf8')
+              .digest('hex');
+
+            const receivedBuffer = Buffer.from(receivedHash, 'hex');
+            const calculatedBuffer = Buffer.from(calculatedHash, 'hex');
+
+            if (
+              receivedBuffer.length !== calculatedBuffer.length ||
+              !crypto.timingSafeEqual(receivedBuffer, calculatedBuffer)
+            ) {
+              throw new Error('Invalid MAX initData signature');
+            }
+
+            const params = Object.fromEntries(decoded);
+
+            if (params.auth_date) {
+              const authDate = Number(params.auth_date);
+              if (!Number.isNaN(authDate)) {
+                const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+                if (ageSeconds > 3600) {
+                  throw new Error('MAX initData expired');
+                }
+              }
+            }
+
+            let user = null;
+            if (params.user) {
+              try {
+                user = JSON.parse(params.user);
+              } catch (error) {
+                throw new Error('Invalid MAX user data');
+              }
+            }
+
+            return { params, user };
+          }
+'''
+
+          text = text[:start] + new_fn + text[end:]
+          server.write_text(text, encoding='utf-8')
+
+          bootstrap = Path('max-bootstrap.js')
+          b = bootstrap.read_text(encoding='utf-8')
+          marker1 = '// MAX initData compatibility for the existing signature implementation.'
+          marker2 = '// On Amvera, force the existing HTML to use same-origin API requests.'
+          if marker1 in b and marker2 in b:
+              i = b.index(marker1)
+              j = b.index(marker2, i)
+              b = b[:i] + marker2 + b[j + len(marker2):]
+              b = b.replace('// On Amvera, force the existing HTML to use same-origin API requests.', '// On Amvera, force the existing HTML to use same-origin API requests.', 1)
+              bootstrap.write_text(b, encoding='utf-8')
+          PY
+
+      - name: Commit changes
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server.js max-bootstrap.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'Use official MAX initData validation'
+          git push origin main
