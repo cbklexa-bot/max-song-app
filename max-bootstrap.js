@@ -1,5 +1,6 @@
 const express = require('express');
 const crypto = require('crypto');
+const fs = require('fs');
 
 // MAX transport compatibility layer.
 // It is loaded with NODE_OPTIONS=--require=./max-bootstrap.js
@@ -89,4 +90,34 @@ crypto.createHmac = function patchedCreateHmac(algorithm, key, ...rest) {
   };
 
   return hmac;
+};
+
+// On Amvera, serve the existing frontend with a same-origin API base.
+// This keeps GitHub Pages/Render behavior unchanged while the Amvera
+// deployment talks to its own backend instead of Render.
+const originalSendFile = express.response.sendFile;
+express.response.sendFile = function patchedSendFile(filePath, ...args) {
+  try {
+    const req = this.req;
+    const isAmvera = String(req && req.headers && req.headers.host || '')
+      .toLowerCase()
+      .includes('amvera');
+    const isIndex = String(filePath || '').endsWith('/index.html') ||
+      String(filePath || '').endsWith('index.html');
+
+    if (isAmvera && isIndex) {
+      const html = fs.readFileSync(filePath, 'utf8');
+      const patchedHtml = html.replace(
+        /const\s+API_BASE\s*=\s*['"]https:\/\/max-song-app\.onrender\.com['"];?/g,
+        "const API_BASE = '';"
+      );
+
+      this.type('html').send(patchedHtml);
+      return this;
+    }
+  } catch (error) {
+    console.error('[AMVERA INDEX PATCH]', error.message);
+  }
+
+  return originalSendFile.call(this, filePath, ...args);
 };
