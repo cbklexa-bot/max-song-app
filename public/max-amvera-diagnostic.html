@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MAX Amvera Diagnostic</title>
+<style>
+body{font-family:Arial,sans-serif;background:#f5f5f5;color:#111;margin:0;padding:20px;line-height:1.45}
+.card{max-width:760px;margin:0 auto;background:#fff;border-radius:16px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.08)}
+h1{font-size:22px;margin:0 0 12px}button{font-size:17px;padding:12px 16px;border:0;border-radius:10px;background:#111;color:#fff;margin:6px 0;display:block;width:100%}
+pre{white-space:pre-wrap;word-break:break-word;background:#111;color:#0f0;padding:14px;border-radius:10px;margin-top:14px;min-height:240px}
+.ok{color:#087f23}.bad{color:#b00020}
+</style>
+<script src="https://st.max.ru/js/max-web-app.js"></script>
+</head>
+<body>
+<div class="card">
+<h1>MAX → Amvera диагностика</h1>
+<div id="status">Инициализация…</div>
+<button id="run">Проверить API</button>
+<pre id="log"></pre>
+</div>
+<script>
+(function(){
+  const logEl=document.getElementById('log');
+  const statusEl=document.getElementById('status');
+  let initData='';
+  function log(s){ logEl.textContent += String(s)+'\n'; }
+  function ok(s){ const d=document.createElement('div'); d.className='ok'; d.textContent=s; statusEl.replaceChildren(d); }
+  function bad(s){ const d=document.createElement('div'); d.className='bad'; d.textContent=s; statusEl.replaceChildren(d); }
+  function setup(){
+    log('URL: '+location.href);
+    const wa=window.WebApp||null;
+    log('window.WebApp: '+(wa?'true':'false'));
+    if(!wa){ bad('MAX Bridge не найден'); log('Проверьте, что страница открыта именно внутри MAX.'); return; }
+    try{ wa.ready?.(); }catch(e){ log('ready error: '+e.message); }
+    initData=String(wa.initData||'').trim();
+    log('initData length: '+initData.length);
+    const user=wa.initDataUnsafe?.user||null;
+    log('user id: '+(user?.id||'нет'));
+    log('platform: '+(wa.platform||'нет'));
+    log('version: '+(wa.version||'нет'));
+    if(!initData || !user?.id){ bad('MAX Bridge есть, но авторизационные данные не получены'); return; }
+    ok('MAX Bridge и initData работают');
+  }
+  async function getJson(path, options){
+    const started=Date.now();
+    try{
+      const r=await fetch(path,Object.assign({cache:'no-store'},options||{}));
+      const text=await r.text();
+      log(path+' → HTTP '+r.status+' ('+(Date.now()-started)+' ms)');
+      log(text.slice(0,1200));
+      return {ok:r.ok,status:r.status,text};
+    }catch(e){
+      log(path+' → FETCH ERROR after '+(Date.now()-started)+' ms: '+(e?.name||'Error')+': '+(e?.message||e));
+      return {ok:false,error:e};
+    }
+  }
+  document.getElementById('run').addEventListener('click',async function(){
+    log('\n--- API TEST ---');
+    await getJson('/api/health');
+    await getJson('/api/max-probe');
+    if(!initData){ log('/api/user → skipped: нет initData'); return; }
+    await getJson('/api/user',{headers:{'X-MAX-Init-Data':initData}});
+  });
+  setup();
+  setTimeout(setup,1000);
+})();
+</script>
+</body>
+</html>
