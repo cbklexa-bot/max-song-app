@@ -1,0 +1,136 @@
+name: Direct MAX signature fix
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-signature-direct.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Patch MAX signature validation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          server = Path('server.js')
+          text = server.read_text(encoding='utf-8')
+
+          pattern = re.compile(r"function validateMaxInitData\(initData\) \{.*?\n\nfunction requireMaxUser", re.S)
+          replacement = '''function validateMaxInitData(initData) {
+  if (!MAX_BOT_TOKEN) {
+    throw new Error('MAX_BOT_TOKEN is not configured');
+  }
+
+  if (!initData || typeof initData !== 'string') {
+    throw new Error('MAX initData is missing');
+  }
+
+  const pairs = initData.split('&').map((part) => {
+    const index = part.indexOf('=');
+    if (index === -1) return [part, ''];
+    return [part.slice(0, index), part.slice(index + 1)];
+  });
+
+  const hashPairs = pairs.filter(([key]) => key === 'hash');
+  if (hashPairs.length !== 1 || !hashPairs[0][1]) {
+    throw new Error('MAX initData hash is missing');
+  }
+
+  const receivedHash = hashPairs[0][1];
+
+  const params = pairs.map(([key, value]) => {
+    let decoded = value;
+    try {
+      decoded = decodeURIComponent(value);
+    } catch (_) {}
+    return [key, decoded];
+  });
+
+  const dataCheckString = params
+    .filter(([key]) => key !== 'hash')
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([key, value]) => key + '=' + value)
+    .join('\\n');
+
+  const secretKey = crypto
+    .createHmac('sha256', 'WebAppData')
+    .update(MAX_BOT_TOKEN)
+    .digest();
+
+  const calculatedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
+
+  const receivedBuffer = Buffer.from(receivedHash, 'hex');
+  const calculatedBuffer = Buffer.from(calculatedHash, 'hex');
+
+  if (
+    receivedBuffer.length !== calculatedBuffer.length ||
+    !crypto.timingSafeEqual(receivedBuffer, calculatedBuffer)
+  ) {
+    throw new Error('Invalid MAX initData signature');
+  }
+
+  const decoded = Object.fromEntries(params);
+
+  if (decoded.auth_date) {
+    const authDate = Number(decoded.auth_date);
+    if (!Number.isNaN(authDate)) {
+      const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+      if (ageSeconds > 3600) {
+        throw new Error('MAX initData expired');
+      }
+    }
+  }
+
+  let user = null;
+  if (decoded.user) {
+    try {
+      user = JSON.parse(decoded.user);
+    } catch (_) {
+      user = null;
+    }
+  }
+
+  return { params: Object.fromEntries(params), user };
+}
+
+function requireMaxUser'''
+
+          if not pattern.search(text):
+              raise SystemExit('validateMaxInitData block not found')
+          text = pattern.sub(replacement, text, count=1)
+
+          server.write_text(text, encoding='utf-8')
+
+          boot = Path('max-bootstrap.js')
+          b = boot.read_text(encoding='utf-8')
+          hmac_pattern = re.compile(r"\n// MAX initData compatibility for the existing signature implementation\\..*?\n// On Amvera, force", re.S)
+          b2 = hmac_pattern.sub('\n// On Amvera, force', b, count=1)
+          if b == b2:
+              raise SystemExit('HMAC compatibility block not found in max-bootstrap.js')
+          boot.write_text(b2, encoding='utf-8')
+
+      - name: Commit
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add server.js max-bootstrap.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix MAX initData validation directly'
+          git push origin main
