@@ -27,6 +27,8 @@ jobs:
           server = Path('server.js')
           text = server.read_text(encoding='utf-8')
 
+          # Supabase users schema in this project is exactly:
+          # max_id, name, balance, created_at
           text = text.replace("max_user_id:", "max_id:")
 
           start = text.index('async function createUser(maxUser) {')
@@ -55,6 +57,8 @@ jobs:
 
           text = text[:start] + new_create_user + text[end:]
 
+          # There is no users.id in the real schema, so all downstream user references
+          # use users.max_id as the stable identifier stored in orders/transactions.
           text = text.replace('user.id', 'user.max_id')
           text = text.replace(
               "id: 'eq.' + String(user.max_id)",
@@ -67,6 +71,13 @@ jobs:
         shell: bash
         run: node --check server.js
 
+      - name: Verify mapping was actually applied
+        shell: bash
+        run: |
+          ! grep -n "max_user_id" server.js
+          ! grep -n "id: 'eq.' + String(user.max_id)" server.js
+          grep -n "max_id: 'eq.' + String(maxUser.id)" server.js
+
       - name: Commit
         shell: bash
         run: |
@@ -74,5 +85,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add server.js
           git diff --cached --quiet && exit 0
-          git commit -m 'Fix Supabase users schema mapping'
+          git commit -m 'Fix Supabase users schema mapping v2'
           git push origin main
