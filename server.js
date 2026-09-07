@@ -533,6 +533,16 @@ app.post('/api/generate-song', async (req, res) => {
       });
     }
 
+    const currentBalance = Number(user.balance || 0);
+
+    if (currentBalance < SONG_PRICE) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Для генерации нужен баланс минимум 200 ₽. Пополните баланс и попробуйте снова.'
+      });
+    }
+
     const genre = String(req.body.genre || '').trim();
     const vocal = String(req.body.vocal || '').trim();
     const prompt = String(req.body.prompt || '').trim();
