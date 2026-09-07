@@ -17,15 +17,22 @@ if (!isRender) {
     app.use('/api', async (req, res) => {
         try {
             const targetUrl = `${RENDER_BACKEND}${req.originalUrl}`;
+            
+            // Удаляем заголовки, вызывающие конфликт длины и хоста при проксировании
+            const headers = { ...req.headers };
+            delete headers.host;
+            delete headers['content-length'];
+
             const response = await axios({
                 method: req.method,
                 url: targetUrl,
-                data: req.body,
+                data: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body,
                 headers: {
-                    ...req.headers,
+                    ...headers,
                     host: 'max-song-app.onrender.com'
                 },
-                validateStatus: () => true
+                validateStatus: () => true,
+                timeout: 30000
             });
             res.status(response.status).json(response.data);
         } catch (err) {
