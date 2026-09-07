@@ -14,9 +14,9 @@ pre{white-space:pre-wrap;word-break:break-word;background:#111;color:#0f0;paddin
 </head>
 <body>
 <div class="card">
-<h1>MAX → Amvera диагностика v3</h1>
+<h1>MAX → Amvera диагностика v4</h1>
 <div id="status">Инициализация…</div>
-<button id="run">Проверить API и токен</button>
+<button id="run">Проверить API</button>
 <pre id="log"></pre>
 </div>
 <script>
@@ -57,11 +57,11 @@ pre{white-space:pre-wrap;word-break:break-word;background:#111;color:#0f0;paddin
   }
   document.getElementById('run').addEventListener('click',async function(){
     log('\n--- API TEST ---');
-    await getJson('/api/health');
-    await getJson('/api/max-bot-check');
-    await getJson('/api/max-probe');
+    const health=await getJson('/api/health');
+    const probe=await getJson('/api/max-probe');
     if(!initData){log('/api/user → skipped: нет initData');return;}
-    await getJson('/api/user',{headers:{'X-MAX-Init-Data':initData}});
+    const user=await getJson('/api/user',{headers:{'X-MAX-Init-Data':initData}});
+    if(health.ok&&probe.ok&&user.ok) ok('MAX → Amvera → Supabase: всё работает');
   });
   setup();
   setTimeout(setup,1000);
