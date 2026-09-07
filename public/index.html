@@ -15,116 +15,103 @@
     }
   </style>
 </head>
-<body class="min-h-screen flex flex-col items-center p-4">
+<body class="min-h-screen flex flex-col items-center p-3">
 
   <!-- Шапка пользователя -->
-  <div class="w-full max-w-md bg-slate-800/80 rounded-2xl p-4 mb-3 flex justify-between items-center border border-slate-700 shadow-lg backdrop-blur">
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white text-lg" id="user-avatar">
+  <div class="w-full max-w-md bg-slate-800/80 rounded-2xl p-3 mb-3 flex justify-between items-center border border-slate-700 shadow-lg backdrop-blur">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white text-sm" id="user-avatar">
         M
       </div>
       <div>
-        <h2 class="font-bold text-sm text-slate-100" id="user-name">Загрузка...</h2>
-        <p class="text-xs text-slate-400">MAX Account</p>
+        <h2 class="font-bold text-xs text-slate-100" id="user-name">Загрузка...</h2>
+        <p class="text-[10px] text-slate-400">MAX Account</p>
       </div>
     </div>
     
     <!-- Кнопка баланса и пополнения -->
-    <div onclick="openTopupModal()" class="cursor-pointer bg-slate-900 hover:bg-slate-950 border border-purple-500/40 px-3 py-1.5 rounded-xl flex items-center gap-2 transition active:scale-95 shadow-md">
-      <span class="font-bold text-emerald-400 text-sm" id="user-balance">0 ₽</span>
-      <div class="w-5 h-5 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold shadow">
+    <div onclick="openTopupModal()" class="cursor-pointer bg-slate-900 hover:bg-slate-950 border border-purple-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-md">
+      <span class="font-bold text-emerald-400 text-xs" id="user-balance">0 ₽</span>
+      <div class="w-4 h-4 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow">
         +
       </div>
     </div>
   </div>
 
-  <!-- Отладочная строка для проверки ID -->
-  <div class="w-full max-w-md text-[10px] text-slate-500 mb-4 px-2 flex justify-between">
-    <span id="debug-info">ID: инициализация...</span>
-    <span class="text-purple-400 cursor-pointer" onclick="forceChangeUser()">[Сменить ID]</span>
-  </div>
-
   <!-- Главный контейнер заказа -->
-  <div class="w-full max-w-md bg-slate-800/50 rounded-3xl p-6 border border-slate-700 shadow-2xl backdrop-blur mb-6">
+  <div class="w-full max-w-md bg-slate-800/50 rounded-2xl p-4 border border-slate-700 shadow-xl backdrop-blur mb-4">
     
-    <div class="text-center mb-6">
-      <span class="bg-purple-500/10 text-purple-400 text-xs font-semibold px-3 py-1 rounded-full border border-purple-500/20">
+    <div class="text-center mb-4">
+      <span class="bg-purple-500/10 text-purple-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-purple-500/20">
         AI Студия музыки
       </span>
-      <h1 class="text-2xl font-black mt-2 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
+      <h1 class="text-xl font-black mt-1.5 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
         Песня на заказ
       </h1>
-      <p class="text-xs text-slate-400 mt-1">2 уникальных варианта • Демо 30 сек бесплатно</p>
     </div>
 
     <!-- Выбор жанра -->
-    <div class="mb-5">
-      <label class="block text-xs font-semibold text-slate-300 mb-2">🎵 Жанр музыки</label>
-      <div class="grid grid-cols-3 gap-2" id="genre-select">
-        <button onclick="selectGenre(this, 'Поп')" class="genre-btn bg-purple-600 border-purple-400 text-white p-2.5 rounded-xl text-xs font-medium border transition">Поп</button>
-        <button onclick="selectGenre(this, 'Танцевальная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Танцевальная</button>
-        <button onclick="selectGenre(this, 'Народная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Народная</button>
-        
-        <button onclick="selectGenre(this, 'Шансон')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Шансон</button>
-        <button onclick="selectGenre(this, 'Рок')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Рок</button>
-        <button onclick="selectGenre(this, 'Рэп')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Рэп</button>
-        
-        <button onclick="selectGenre(this, 'Акустика')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Акустика</button>
-        <button onclick="selectGenre(this, 'Джаз')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Джаз</button>
-        <button onclick="selectGenre(this, 'Электроника')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Электроника</button>
+    <div class="mb-3.5">
+      <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">🎵 Жанр музыки</label>
+      <div class="grid grid-cols-3 gap-1.5" id="genre-select">
+        <button onclick="selectGenre(this, 'Поп')" class="genre-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Поп</button>
+        <button onclick="selectGenre(this, 'Танцевальная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Танцевальная</button>
+        <button onclick="selectGenre(this, 'Народная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Народная</button>
+        <button onclick="selectGenre(this, 'Шансон')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Шансон</button>
+        <button onclick="selectGenre(this, 'Рэп')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Рэп</button>
       </div>
     </div>
 
     <!-- Выбор вокала -->
-    <div class="mb-5">
-      <label class="block text-xs font-semibold text-slate-300 mb-2">🎙 Исполнение / Вокал</label>
-      <div class="grid grid-cols-2 gap-2" id="vocal-select">
-        <button onclick="selectVocal(this, 'Мужской соло')" class="vocal-btn bg-purple-600 border-purple-400 text-white p-2.5 rounded-xl text-xs font-medium border transition">Мужской соло</button>
-        <button onclick="selectVocal(this, 'Женский соло')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Женский соло</button>
-        <button onclick="selectVocal(this, 'Дуэт')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Дуэт</button>
-        <button onclick="selectVocal(this, 'Хор')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition">Хор</button>
+    <div class="mb-3.5">
+      <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">🎙 Исполнение / Вокал</label>
+      <div class="grid grid-cols-2 gap-1.5" id="vocal-select">
+        <button onclick="selectVocal(this, 'Мужской соло')" class="vocal-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Мужской соло</button>
+        <button onclick="selectVocal(this, 'Женский соло')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Женский соло</button>
+        <button onclick="selectVocal(this, 'Дуэт')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Дуэт</button>
+        <button onclick="selectVocal(this, 'Детский голос')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Детский голос</button>
       </div>
     </div>
 
     <!-- Текст / Описание -->
-    <div class="mb-6">
-      <label class="block text-xs font-semibold text-slate-300 mb-2">💬 Детали и пожелания к песне</label>
-      <textarea id="prompt-input" rows="3" placeholder="Имя человека, праздник, ключевые фразы..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition resize-none"></textarea>
+    <div class="mb-4">
+      <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">💬 Детали и пожелания к песне</label>
+      <textarea id="prompt-input" rows="2.5" placeholder="Имя человека, праздник, ключевые фразы..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition resize-none"></textarea>
     </div>
 
     <!-- Кнопка заказа -->
-    <button id="order-btn" onclick="generateSong()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-3.5 px-4 rounded-xl text-sm shadow-lg shadow-purple-500/25 active:scale-98 transition flex items-center justify-center gap-2">
-      <span>Сгенерировать 2 варианта</span>
+    <button id="order-btn" onclick="generateSong()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-3 px-4 rounded-xl text-xs shadow-lg shadow-purple-500/25 active:scale-98 transition flex items-center justify-center gap-2">
+      <span>Сгенерировать шедевр</span>
     </button>
 
   </div>
 
   <!-- Раздел: Мои песни -->
-  <div class="w-full max-w-md bg-slate-800/50 rounded-3xl p-6 border border-slate-700 shadow-2xl backdrop-blur">
-    <h2 class="text-lg font-bold mb-4 text-slate-200 flex items-center gap-2">
+  <div class="w-full max-w-md bg-slate-800/50 rounded-2xl p-4 border border-slate-700 shadow-xl backdrop-blur mb-4">
+    <h2 class="text-sm font-bold mb-3 text-slate-200 flex items-center gap-2">
       🎧 Мои песни
     </h2>
-    <div id="orders-list" class="space-y-4">
-      <p class="text-xs text-slate-500 text-center py-4">У вас пока нет сгенерированных песен.</p>
+    <div id="orders-list" class="space-y-3">
+      <p class="text-xs text-slate-500 text-center py-3">У вас пока нет сгенерированных песен.</p>
     </div>
   </div>
 
   <!-- Модальное окно пополнения баланса -->
   <div id="topup-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-6 shadow-2xl relative">
-      <button onclick="closeTopupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-lg">✕</button>
+    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl relative">
+      <button onclick="closeTopupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-base">✕</button>
       
-      <h3 class="text-lg font-bold text-slate-100 mb-1">Пополнение баланса</h3>
+      <h3 class="text-base font-bold text-slate-100 mb-1">Пополнение баланса</h3>
       <p class="text-xs text-slate-400 mb-4">Минимальная сумма пополнения — 200 ₽</p>
 
       <!-- Выбор суммы с бонусами -->
-      <div class="space-y-2.5 mb-5">
-        <button onclick="selectTopupAmount(200)" class="amount-btn w-full bg-slate-800 border border-purple-500/50 p-3 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
+      <div class="space-y-2 mb-4">
+        <button onclick="selectTopupAmount(200)" class="amount-btn w-full bg-slate-800 border border-purple-500/50 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
           <span>200 ₽</span>
           <span class="text-slate-400">Стандарт (1 песня)</span>
         </button>
 
-        <button onclick="selectTopupAmount(400)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-3 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
+        <button onclick="selectTopupAmount(400)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
           <div class="flex items-center gap-2">
             <span>400 ₽</span>
             <span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-md border border-emerald-500/30">+10% БОНУС</span>
@@ -132,7 +119,7 @@
           <span class="text-emerald-400">+40 ₽ в подарок</span>
         </button>
 
-        <button onclick="selectTopupAmount(800)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-3 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
+        <button onclick="selectTopupAmount(800)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
           <div class="flex items-center gap-2">
             <span>800 ₽</span>
             <span class="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded-md border border-amber-500/30">+20% БОНУС</span>
@@ -142,12 +129,12 @@
       </div>
 
       <!-- Итоговое зачисление -->
-      <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 mb-5 flex justify-between items-center text-xs">
+      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-4 flex justify-between items-center text-xs">
         <span class="text-slate-400">Будет зачислено:</span>
         <span class="font-bold text-emerald-400 text-sm" id="modal-credited-calc">200 ₽</span>
       </div>
 
-      <button onclick="processTopup()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3 rounded-xl text-xs shadow-lg transition">
+      <button onclick="processTopup()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg transition">
         Оплатить и пополнить
       </button>
     </div>
@@ -214,11 +201,9 @@
       if (maxUser && maxUser.id) {
         currentMaxId = String(maxUser.id);
         currentUserName = maxUser.first_name || maxUser.name || 'Пользователь Max';
-        document.getElementById('debug-info').innerText = `ID (Max Bridge): ${currentMaxId}`;
       } else if (urlMaxId) {
         currentMaxId = String(urlMaxId);
         currentUserName = urlName ? decodeURIComponent(urlName) : 'Пользователь Max';
-        document.getElementById('debug-info').innerText = `ID (URL Param): ${currentMaxId}`;
       } else {
         let savedGuestId = localStorage.getItem('max_guest_id');
         if (!savedGuestId) {
@@ -227,20 +212,10 @@
         }
         currentMaxId = savedGuestId;
         currentUserName = 'Гость (Браузер)';
-        document.getElementById('debug-info').innerText = `ID (Браузер): ${currentMaxId}`;
       }
 
       document.getElementById('user-name').innerText = currentUserName;
       document.getElementById('user-avatar').innerText = currentUserName.charAt(0).toUpperCase();
-    }
-
-    function forceChangeUser() {
-      const newId = prompt("Служебная ручная смена ID:", currentMaxId);
-      if (newId) {
-        currentMaxId = newId.trim();
-        localStorage.setItem('max_guest_id', currentMaxId);
-        location.reload();
-      }
     }
 
     async function fetchUserData() {
@@ -371,7 +346,6 @@
       }
     }
 
-    // Функция скачивания через наш бэкенд прокси
     function downloadSongFile(audioUrl, songTitle) {
       const downloadUrl = `${BACKEND_URL}/api/download?url=${encodeURIComponent(audioUrl)}&name=${encodeURIComponent(songTitle || 'song')}`;
       const a = document.createElement('a');
@@ -385,7 +359,7 @@
     function renderOrders(orders) {
       const listContainer = document.getElementById('orders-list');
       if (!orders || orders.length === 0) {
-        listContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">У вас пока нет сгенерированных песен.</p>';
+        listContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-3">У вас пока нет сгенерированных песен.</p>';
         return;
       }
 
@@ -395,53 +369,53 @@
         const card = document.createElement('div');
 
         if (order.status === 'processing') {
-          card.className = 'bg-slate-900/90 border border-purple-500/40 rounded-2xl p-4 space-y-3';
+          card.className = 'bg-slate-900/90 border border-purple-500/40 rounded-xl p-3 space-y-2.5';
           card.innerHTML = `
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 text-lg font-bold animate-spin">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 text-sm font-bold animate-spin">
                 ⏳
               </div>
               <div>
-                <h3 class="text-sm font-bold text-purple-300">Генерируем 2 варианта...</h3>
-                <p class="text-xs text-slate-400">${order.genre} • ${order.vocal}</p>
+                <h3 class="text-xs font-bold text-purple-300">Генерируем 2 варианта...</h3>
+                <p class="text-[10px] text-slate-400">${order.genre} • ${order.vocal}</p>
               </div>
             </div>
-            <div class="flex items-center gap-2 pt-1">
+            <div class="flex items-center gap-2 pt-0.5">
               <div class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
-              <span class="dynamic-phrase text-xs font-medium text-amber-300">${GENERATION_PHRASES[phraseIndex]}</span>
+              <span class="dynamic-phrase text-[11px] font-medium text-amber-300">${GENERATION_PHRASES[phraseIndex]}</span>
             </div>
           `;
         } else if (order.status === 'preview') {
-          card.className = 'bg-slate-900/90 border border-amber-500/50 rounded-2xl p-4 space-y-4';
+          card.className = 'bg-slate-900/90 border border-amber-500/50 rounded-xl p-3 space-y-3';
           card.innerHTML = `
-            <div class="border-b border-slate-800 pb-2">
-              <span class="bg-amber-500/20 text-amber-300 text-[10px] font-bold px-2 py-0.5 rounded border border-amber-500/30">
+            <div class="border-b border-slate-800 pb-1.5">
+              <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded border border-amber-500/30">
                 ДЕМО-РЕЖИМ (30 сек)
               </span>
-              <p class="text-xs text-slate-300 mt-1">Послушайте варианты и разблокируйте полную версию:</p>
+              <p class="text-[11px] text-slate-300 mt-1">Послушайте варианты и разблокируйте полную версию:</p>
             </div>
 
-            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-              <div class="flex justify-between items-center text-xs font-bold text-slate-200">
+            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+              <div class="flex justify-between items-center text-[11px] font-bold text-slate-200">
                 <span>🎵 Вариант 1</span>
               </div>
-              <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-8 rounded border border-slate-800">
+              <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800">
                 <source src="${order.audio_url}" type="audio/mpeg">
               </audio>
-              <button onclick="unlockSong(${order.id}, 1, '${order.audio_url}', '${order.title || 'Вариант 1'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-xs transition">
+              <button onclick="unlockSong(${order.id}, 1, '${order.audio_url}', '${order.title || 'Вариант 1'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
                 Скачать полную версию (200 ₽)
               </button>
             </div>
 
             ${order.audio_url_2 ? `
-            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-2">
-              <div class="flex justify-between items-center text-xs font-bold text-slate-200">
+            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+              <div class="flex justify-between items-center text-[11px] font-bold text-slate-200">
                 <span>🎵 Вариант 2</span>
               </div>
-              <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-8 rounded border border-slate-800">
+              <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800">
                 <source src="${order.audio_url_2}" type="audio/mpeg">
               </audio>
-              <button onclick="unlockSong(${order.id}, 2, '${order.audio_url_2}', '${order.title_2 || 'Вариант 2'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded-lg text-xs transition">
+              <button onclick="unlockSong(${order.id}, 2, '${order.audio_url_2}', '${order.title_2 || 'Вариант 2'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
                 Скачать полную версию (200 ₽)
               </button>
             </div>
@@ -449,27 +423,27 @@
           `;
         } else if (order.status === 'completed' && order.audio_url) {
           const safeTitle = (order.title || 'Именная песня').replace(/'/g, "\\'");
-          card.className = 'bg-slate-900/90 border border-slate-700/80 rounded-2xl p-4 space-y-3';
+          card.className = 'bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 space-y-2.5';
           card.innerHTML = `
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-xs">
                 🎵
               </div>
               <div class="flex-1 overflow-hidden">
-                <h3 class="text-sm font-bold text-slate-100 truncate">${order.title || 'Именная песня'}</h3>
-                <p class="text-xs text-slate-400">${order.genre} • ${order.vocal}</p>
+                <h3 class="text-xs font-bold text-slate-100 truncate">${order.title || 'Именная песня'}</h3>
+                <p class="text-[10px] text-slate-400">${order.genre} • ${order.vocal}</p>
               </div>
             </div>
 
-            <audio controls class="w-full h-9 rounded-lg border border-slate-700 bg-slate-950">
+            <audio controls class="w-full h-8 rounded-lg border border-slate-700 bg-slate-950">
               <source src="${order.audio_url}" type="audio/mpeg">
             </audio>
 
-            <div class="grid grid-cols-2 gap-2 pt-1">
-              <button onclick="downloadSongFile('${order.audio_url}', '${safeTitle}')" class="bg-purple-600/80 hover:bg-purple-600 text-white text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition">
+            <div class="grid grid-cols-2 gap-1.5 pt-0.5">
+              <button onclick="downloadSongFile('${order.audio_url}', '${safeTitle}')" class="bg-purple-600/80 hover:bg-purple-600 text-white text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
                 📥 Скачать MP3
               </button>
-              <button onclick="shareSong('${order.audio_url}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-xs font-semibold py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition">
+              <button onclick="shareSong('${order.audio_url}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
                 📤 Поделиться
               </button>
             </div>
@@ -491,17 +465,17 @@
 
     function selectGenre(btn, genre) {
       document.querySelectorAll('.genre-btn').forEach(b => {
-        b.className = 'genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition';
+        b.className = 'genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition';
       });
-      btn.className = 'genre-btn bg-purple-600 border-purple-400 text-white p-2.5 rounded-xl text-xs font-medium border transition';
+      btn.className = 'genre-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
       selectedGenre = genre;
     }
 
     function selectVocal(btn, vocal) {
       document.querySelectorAll('.vocal-btn').forEach(b => {
-        b.className = 'vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2.5 rounded-xl text-xs font-medium border hover:border-slate-500 transition';
+        b.className = 'vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition';
       });
-      btn.className = 'vocal-btn bg-purple-600 border-purple-400 text-white p-2.5 rounded-xl text-xs font-medium border transition';
+      btn.className = 'vocal-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
       selectedVocal = vocal;
     }
 
@@ -546,11 +520,10 @@
         alert('Ошибка связи с сервером.');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<span>Сгенерировать 2 варианта</span>`;
+        btn.innerHTML = `<span>Сгенерировать шедевр</span>`;
       }
     }
 
-    // Автоматический старт при загрузке страницы
     fetchUserData();
   </script>
 </body>
