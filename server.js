@@ -15,7 +15,7 @@ app.use(
       'https://max-song-app.onrender.com'
     ],
     methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-    allowedHeaders: ['Content-Type'],
+    allowedHeaders: ['Content-Type', 'X-MAX-Init-Data'],
     credentials: false
   })
 );
@@ -105,9 +105,7 @@ function validateMaxInitData(initData) {
   const dataCheckString = Object.keys(params)
     .filter((key) => key !== 'hash')
     .sort()
-    .map((key) => {
-      return key + '=' + params[key];
-    })
+    .map((key) => key + '=' + params[key])
     .join('\n');
 
   const secretKey = createMaxSecretKey();
@@ -509,7 +507,7 @@ app.post('/api/topup', async (req, res) => {
 });
 
 /* =========================================
-   GENERATE SONG
+   GENERATE SONG — FREE DEMO
 ========================================= */
 
 app.post('/api/generate-song', async (req, res) => {
@@ -518,13 +516,20 @@ app.post('/api/generate-song', async (req, res) => {
 
     const user = await getOrCreateUser(auth.user);
 
-    const currentBalance = Number(user.balance || 0);
+    const existingOrders = await supabaseGet('orders', {
+      user_id: 'eq.' + String(user.id),
+      status: 'in.(processing,preview,purchasing)',
+      select: 'id,status,created_at',
+      order: 'created_at.desc',
+      limit: 1
+    });
 
-    if (currentBalance < SONG_PRICE) {
-      return res.status(400).json({
+    if (existingOrders.length) {
+      return res.status(409).json({
         ok: false,
         error:
-          'Недостаточно средств. Для генерации необходимо 200 ₽.'
+          'У вас уже есть песня, ожидающая покупки. Сначала выберите вариант и оплатите её.',
+        order: existingOrders[0]
       });
     }
 
@@ -585,6 +590,7 @@ app.post('/api/generate-song', async (req, res) => {
 
     res.json({
       ok: true,
+      demo: true,
       order: orderRows[0] || null,
       task_id: String(taskId)
     });
@@ -829,11 +835,33 @@ app.post('/api/unlock-song', async (req, res) => {
       });
     }
 
+    const reserveRows = await supabasePatch(
+      'orders',
+      {
+        id: 'eq.' + String(order.id),
+        user_id: 'eq.' + String(user.id),
+        status: 'eq.preview'
+      },
+      {
+        status: 'purchasing'
+      }
+    );
+
+    if (!reserveRows.length) {
+      return res.status(409).json({
+        ok: false,
+        error:
+          'Заказ уже обрабатывается или был куплен'
+      });
+    }
+
     const newBalance =
       balance - SONG_PRICE;
 
-    const updatedUserRows =
-      await supabasePatch(
+    let updatedUserRows;
+
+    try {
+      updatedUserRows = await supabasePatch(
         'users',
         {
           id: 'eq.' + String(user.id)
@@ -842,6 +870,21 @@ app.post('/api/unlock-song', async (req, res) => {
           balance: newBalance
         }
       );
+    } catch (balanceError) {
+      await supabasePatch(
+        'orders',
+        {
+          id: 'eq.' + String(order.id),
+          user_id: 'eq.' + String(user.id),
+          status: 'eq.purchasing'
+        },
+        {
+          status: 'preview'
+        }
+      );
+
+      throw balanceError;
+    }
 
     const updatedOrderRows =
       await supabasePatch(
@@ -849,7 +892,7 @@ app.post('/api/unlock-song', async (req, res) => {
         {
           id: 'eq.' + String(order.id),
           user_id: 'eq.' + String(user.id),
-          status: 'eq.preview'
+          status: 'eq.purchasing'
         },
         {
           status: 'completed',
@@ -861,21 +904,52 @@ app.post('/api/unlock-song', async (req, res) => {
       );
 
     if (!updatedOrderRows.length) {
+      await supabasePatch(
+        'users',
+        {
+          id: 'eq.' + String(user.id)
+        },
+        {
+          balance: balance
+        }
+      );
+
+      await supabasePatch(
+        'orders',
+        {
+          id: 'eq.' + String(order.id),
+          user_id: 'eq.' + String(user.id),
+          status: 'eq.purchasing'
+        },
+        {
+          status: 'preview'
+        }
+      );
+
       return res.status(409).json({
         ok: false,
         error:
-          'Заказ уже был обработан или изменён'
+          'Не удалось завершить покупку. Средства не списаны.'
       });
     }
 
-    await supabasePost('transactions', {
-      user_id: user.id,
-      type: 'song_purchase',
-      amount: -SONG_PRICE,
-      description:
-        'Покупка полной версии песни',
-      order_id: order.id
-    });
+    try {
+      await supabasePost('transactions', {
+        user_id: user.id,
+        type: 'song_purchase',
+        amount: -SONG_PRICE,
+        description:
+          'Покупка полной версии песни',
+        order_id: order.id
+      });
+    } catch (transactionError) {
+      console.error(
+        '[TRANSACTION LOG]',
+        transactionError.response
+          ? transactionError.response.data
+          : transactionError.message
+      );
+    }
 
     res.json({
       ok: true,
@@ -999,4 +1073,3 @@ app.listen(PORT, () => {
     checkConfig()
   );
 });
-
