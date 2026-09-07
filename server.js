@@ -179,23 +179,36 @@ app.get('/api/orders/:maxId', async (req, res) => {
             headers: { 'x-api-key': PIAPI_KEY }
           });
 
-          const taskData = checkRes.data?.data;
+          console.log('PiAPI check response:', JSON.stringify(checkRes.data));
+
+          const taskData = checkRes.data?.data || checkRes.data;
           if (taskData) {
             const taskStatus = (taskData.status || '').toLowerCase();
             if (taskStatus === 'completed' || taskStatus === 'success') {
-              const clips = taskData.output?.clips || taskData.output?.data || [];
-              const url1 = clips[0]?.audio_url || taskData.output?.audio_url || '';
-              const url2 = clips[1]?.audio_url || '';
-              const title1 = clips[0]?.title || `Вариант 1 (${order.genre})`;
-              const title2 = clips[1]?.title || `Вариант 2 (${order.genre})`;
+              const output = taskData.output || {};
+              const clips = output.clips || output.data || (Array.isArray(output) ? output : []);
+
+              const getUrl = (item) => item?.audio_url || item?.url || item?.audio || item?.stream_url || '';
+              const getTitle = (item, defaultTitle) => item?.title || defaultTitle;
+
+              const url1 = getUrl(clips[0]) || getUrl(output) || '';
+              const url2 = getUrl(clips[1]) || '';
+              const title1 = getTitle(clips[0], `Вариант 1 (${order.genre})`);
+              const title2 = getTitle(clips[1], `Вариант 2 (${order.genre})`);
 
               await axios.patch(`${supabaseUrl}/rest/v1/orders?id=eq.${order.id}`, {
-                status: 'preview', audio_url: url1, audio_url_2: url2, title: title1, title_2: title2
+                status: 'preview', 
+                audio_url: url1, 
+                audio_url_2: url2, 
+                title: title1, 
+                title_2: title2
               }, { headers: dbHeaders });
 
               order.status = 'preview';
               order.audio_url = url1;
               order.audio_url_2 = url2;
+              order.title = title1;
+              order.title_2 = title2;
             } else if (taskStatus === 'failed') {
               await axios.patch(`${supabaseUrl}/rest/v1/orders?id=eq.${order.id}`, { status: 'failed' }, { headers: dbHeaders });
               order.status = 'failed';
