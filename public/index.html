@@ -2,537 +2,1153 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#0f172a">
-  <title>Песня на заказ | MAX Mini App</title>
 
-  <!-- MAX Bridge -->
-  <script src="https://st.max.ru/js/max-web-app.js"></script>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
 
-  <!-- Для текущего прототипа оставляем Tailwind CDN.
-       Для production лучше собрать CSS локально, чтобы уменьшить внешние зависимости. -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta
+    name="theme-color"
+    content="#0f172a"
+  >
+
+  <title>Песня на заказ | MAX</title>
+
+  <!--
+    MAX Bridge.
+
+    defer:
+    HTML и интерфейс больше не блокируются
+    ожиданием загрузки внешней JS-библиотеки.
+  -->
+  <script
+    defer
+    src="https://st.max.ru/js/max-web-app.js"
+    onload="window.__MAX_BRIDGE_SCRIPT_LOADED__ = true"
+    onerror="window.__MAX_BRIDGE_SCRIPT_ERROR__ = true"
+  ></script>
 
   <style>
-    body {
-      background-color: #0f172a;
-      color: #f8fafc;
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      padding-bottom: env(safe-area-inset-bottom);
+    :root {
+      --bg: #0f172a;
+      --panel: rgba(30, 41, 59, 0.72);
+      --panel-dark: #0b1220;
+      --panel-soft: rgba(15, 23, 42, 0.85);
+      --border: rgba(100, 116, 139, 0.35);
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --muted-2: #64748b;
+      --purple: #9333ea;
+      --purple-2: #7e22ce;
+      --pink: #db2777;
+      --green: #10b981;
+      --amber: #f59e0b;
+      --danger: #ef4444;
     }
-    button:disabled {
-      opacity: .65;
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(
+          circle at top,
+          rgba(126, 34, 206, 0.16),
+          transparent 36%
+        ),
+        var(--bg);
+      color: var(--text);
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      padding:
+        max(12px, env(safe-area-inset-top))
+        12px
+        max(16px, env(safe-area-inset-bottom));
+      overflow-x: hidden;
+    }
+
+    button,
+    textarea,
+    input {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    .startup-status {
+      display: none;
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.1);
+      color: #fde68a;
+      font-size: 12px;
+      line-height: 1.45;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .startup-status.visible {
+      display: block;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.24);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .header-card {
+      padding: 12px;
+      margin-bottom: 12px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .profile {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .avatar {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 38px;
+      border-radius: 50%;
+      background:
+        linear-gradient(
+          135deg,
+          #9333ea,
+          #db2777
+        );
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .profile-text {
+      min-width: 0;
+    }
+
+    .profile-name {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .profile-subtitle {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    .balance-button {
+      flex-shrink: 0;
+      padding: 7px 9px;
+      border-radius: 13px;
+      border: 1px solid rgba(147, 51, 234, 0.42);
+      background: rgba(2, 6, 23, 0.82);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .balance-value {
+      color: #34d399;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .balance-plus {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #9333ea;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    .main-card,
+    .orders-card {
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 18px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(168, 85, 247, 0.2);
+      background: rgba(168, 85, 247, 0.1);
+      color: #c084fc;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .hero h1 {
+      margin: 7px 0 0;
+      font-size: 25px;
+      line-height: 1.1;
+      font-weight: 900;
+      background:
+        linear-gradient(
+          90deg,
+          #c084fc,
+          #ec4899
+        );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .section-label {
+      display: block;
+      margin-bottom: 7px;
+      color: #cbd5e1;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      gap: 7px;
+    }
+
+    .grid-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .choice-button {
+      min-height: 38px;
+      padding: 8px;
+      border-radius: 12px;
+      border: 1px solid #475569;
+      background: rgba(51, 65, 85, 0.48);
+      color: #cbd5e1;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition:
+        transform 0.12s ease,
+        background 0.12s ease,
+        border-color 0.12s ease;
+    }
+
+    .choice-button:active {
+      transform: scale(0.98);
+    }
+
+    .choice-button.selected {
+      background: #9333ea;
+      border-color: #c084fc;
+      color: white;
+    }
+
+    .prompt {
+      width: 100%;
+      min-height: 92px;
+      resize: vertical;
+      border-radius: 13px;
+      border: 1px solid #334155;
+      background: rgba(2, 6, 23, 0.82);
+      color: #e2e8f0;
+      padding: 11px;
+      font-size: 12px;
+      line-height: 1.45;
+      outline: none;
+    }
+
+    .prompt::placeholder {
+      color: #64748b;
+    }
+
+    .prompt:focus {
+      border-color: #9333ea;
+    }
+
+    .generate-button {
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 14px;
+      border-radius: 14px;
+      color: white;
+      background:
+        linear-gradient(
+          90deg,
+          #9333ea,
+          #db2777
+        );
+      font-size: 12px;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow:
+        0 10px 26px rgba(147, 51, 234, 0.24);
+    }
+
+    .generate-button:disabled {
+      opacity: 0.6;
       cursor: not-allowed;
+    }
+
+    .orders-title {
+      margin: 0 0 12px;
+      font-size: 15px;
+      font-weight: 900;
+      color: #e2e8f0;
+    }
+
+    .empty {
+      padding: 16px 8px;
+      text-align: center;
+      color: #64748b;
+      font-size: 12px;
+    }
+
+    .order-card {
+      padding: 13px;
+      margin-bottom: 10px;
+      border-radius: 15px;
+      border: 1px solid rgba(100, 116, 139, 0.28);
+      background: rgba(2, 6, 23, 0.73);
+    }
+
+    .order-card:last-child {
+      margin-bottom: 0;
+    }
+
+    .processing {
+      border-color: rgba(168, 85, 247, 0.45);
+    }
+
+    .preview {
+      border-color: rgba(245, 158, 11, 0.5);
+    }
+
+    .completed {
+      border-color: rgba(100, 116, 139, 0.35);
+    }
+
+    .order-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .order-icon {
+      width: 34px;
+      height: 34px;
+      flex: 0 0 34px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 15px;
+    }
+
+    .order-icon.processing-icon {
+      background: rgba(147, 51, 234, 0.2);
+      border: 1px solid rgba(168, 85, 247, 0.4);
+    }
+
+    .order-icon.completed-icon {
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }
+
+    .order-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .order-name {
+      margin: 0;
+      color: #f8fafc;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .order-meta {
+      margin: 3px 0 0;
+      color: #94a3b8;
+      font-size: 10px;
+    }
+
+    .phrase {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-top: 10px;
+      color: #fcd34d;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .phrase-dot {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+      animation: pulse 1.2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.3;
+        transform: scale(0.85);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    .preview-label {
+      display: inline-block;
+      margin-bottom: 8px;
+      padding: 4px 7px;
+      border-radius: 6px;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      background: rgba(245, 158, 11, 0.12);
+      color: #fcd34d;
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+    .preview-description {
+      margin: 0 0 10px;
+      color: #cbd5e1;
+      font-size: 11px;
+    }
+
+    .variant {
+      padding: 10px;
+      margin-top: 8px;
+      border-radius: 11px;
+      border: 1px solid #1e293b;
+      background: #020617;
+    }
+
+    .variant-title {
+      margin-bottom: 6px;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    audio {
+      width: 100%;
+      height: 38px;
+      display: block;
+    }
+
+    .variant-button {
+      width: 100%;
+      margin-top: 7px;
+      padding: 9px;
+      border-radius: 10px;
+      background: #059669;
+      color: white;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .audio-block {
+      margin-top: 10px;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin-top: 9px;
+    }
+
+    .secondary-button {
+      padding: 9px;
+      border-radius: 10px;
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    .primary-small {
+      background: rgba(126, 34, 206, 0.85);
+      border-color: rgba(168, 85, 247, 0.25);
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      padding: 18px;
+      background: rgba(2, 6, 23, 0.8);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 100%;
+      max-width: 400px;
+      padding: 20px;
+      border-radius: 24px;
+      border: 1px solid #334155;
+      background: #0f172a;
+      box-shadow:
+        0 25px 80px rgba(0, 0, 0, 0.45);
+      position: relative;
+    }
+
+    .modal-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #1e293b;
+      color: #94a3b8;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .modal-title {
+      margin: 0 45px 3px 0;
+      font-size: 16px;
+      font-weight: 900;
+    }
+
+    .modal-subtitle {
+      margin: 0 0 15px;
+      color: #94a3b8;
+      font-size: 11px;
+    }
+
+    .amounts {
+      display: grid;
+      gap: 8px;
+      margin-bottom: 14px;
+    }
+
+    .amount-button {
+      padding: 11px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      background: #1e293b;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .amount-button.selected {
+      border-color: rgba(168, 85, 247, 0.65);
+      background: rgba(126, 34, 206, 0.15);
+    }
+
+    .bonus {
+      margin-left: 5px;
+      padding: 3px 6px;
+      border-radius: 6px;
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+    .bonus-green {
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.25);
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .bonus-amber {
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.25);
+      background: rgba(245, 158, 11, 0.1);
+    }
+
+    .credit-box {
+      margin-bottom: 14px;
+      padding: 11px;
+      border-radius: 11px;
+      border: 1px solid #1e293b;
+      background: #020617;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 11px;
+    }
+
+    .credit-label {
+      color: #94a3b8;
+    }
+
+    .credit-value {
+      color: #34d399;
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .pay-button {
+      width: 100%;
+      padding: 11px;
+      border-radius: 12px;
+      color: white;
+      background:
+        linear-gradient(
+          90deg,
+          #10b981,
+          #0d9488
+        );
+      font-size: 11px;
+      font-weight: 900;
+      cursor: pointer;
+    }
+
+    .loading {
+      opacity: 0.55;
+      pointer-events: none;
+    }
+
+    @media (max-width: 400px) {
+      .grid-3 {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .action-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
 
-<body class="min-h-screen flex flex-col items-center p-3">
+<body>
 
-  <!-- Диагностический статус -->
-  <div id="startup-status"
-       class="hidden w-full max-w-md mb-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+  <div class="app">
+
+    <div
+      id="startup-status"
+      class="startup-status"
+    ></div>
+
+    <!-- HEADER -->
+
+    <div class="card header-card">
+
+      <div class="profile">
+
+        <div
+          id="user-avatar"
+          class="avatar"
+        >
+          M
+        </div>
+
+        <div class="profile-text">
+
+          <h2
+            id="user-name"
+            class="profile-name"
+          >
+            Загрузка...
+          </h2>
+
+          <p class="profile-subtitle">
+            MAX Account
+          </p>
+
+        </div>
+
+      </div>
+
+      <button
+        id="balance-button"
+        class="balance-button"
+        type="button"
+      >
+
+        <span
+          id="user-balance"
+          class="balance-value"
+        >
+          0 ₽
+        </span>
+
+        <span class="balance-plus">
+          +
+        </span>
+
+      </button>
+
+    </div>
+
+    <!-- MAIN -->
+
+    <div class="card main-card">
+
+      <div class="hero">
+
+        <span class="badge">
+          AI Студия музыки
+        </span>
+
+        <h1>
+          Песня на заказ
+        </h1>
+
+      </div>
+
+      <!-- GENRE -->
+
+      <div class="section">
+
+        <span class="section-label">
+          🎵 Жанр музыки
+        </span>
+
+        <div
+          id="genre-select"
+          class="grid grid-3"
+        >
+
+          <button
+            class="choice-button selected"
+            data-genre="Поп"
+            type="button"
+          >
+            Поп
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Танцевальная"
+            type="button"
+          >
+            Танцевальная
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Народная"
+            type="button"
+          >
+            Народная
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Шансон"
+            type="button"
+          >
+            Шансон
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Рэп"
+            type="button"
+          >
+            Рэп
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Рок"
+            type="button"
+          >
+            Рок
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Акустика"
+            type="button"
+          >
+            Акустика
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Джаз"
+            type="button"
+          >
+            Джаз
+          </button>
+
+          <button
+            class="choice-button"
+            data-genre="Электроника"
+            type="button"
+          >
+            Электроника
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- VOCAL -->
+
+      <div class="section">
+
+        <span class="section-label">
+          🎙 Исполнение / Вокал
+        </span>
+
+        <div
+          id="vocal-select"
+          class="grid grid-2"
+        >
+
+          <button
+            class="choice-button selected"
+            data-vocal="Мужской соло"
+            type="button"
+          >
+            Мужской соло
+          </button>
+
+          <button
+            class="choice-button"
+            data-vocal="Женский соло"
+            type="button"
+          >
+            Женский соло
+          </button>
+
+          <button
+            class="choice-button"
+            data-vocal="Дуэт"
+            type="button"
+          >
+            Дуэт
+          </button>
+
+          <button
+            class="choice-button"
+            data-vocal="Хор"
+            type="button"
+          >
+            Хор
+          </button>
+
+          <button
+            class="choice-button"
+            data-vocal="Детский голос"
+            type="button"
+          >
+            Детский голос
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- PROMPT -->
+
+      <div class="section">
+
+        <label
+          class="section-label"
+          for="prompt-input"
+        >
+          💬 Детали и пожелания к песне
+        </label>
+
+        <textarea
+          id="prompt-input"
+          class="prompt"
+          rows="4"
+          maxlength="2000"
+          placeholder="Имя человека, праздник, ключевые фразы..."
+        ></textarea>
+
+      </div>
+
+      <button
+        id="order-btn"
+        class="generate-button"
+        type="button"
+      >
+        Сгенерировать шедевр
+      </button>
+
+    </div>
+
+    <!-- ORDERS -->
+
+    <div class="card orders-card">
+
+      <h2 class="orders-title">
+        🎧 Мои песни
+      </h2>
+
+      <div id="orders-list">
+
+        <div class="empty">
+          У вас пока нет сгенерированных песен.
+        </div>
+
+      </div>
+
+    </div>
+
   </div>
 
-  <!-- Шапка пользователя -->
-  <div class="w-full max-w-md bg-slate-800/80 rounded-2xl p-3 mb-3 flex justify-between items-center border border-slate-700 shadow-lg backdrop-blur">
-    <div class="flex items-center gap-2.5">
-      <div class="w-9 h-9 rounded-full bg-gradient-to-tr from-purple-500 to-pink-500 flex items-center justify-center font-bold text-white text-sm" id="user-avatar">
-        M
-      </div>
-      <div>
-        <h2 class="font-bold text-xs text-slate-100" id="user-name">Загрузка...</h2>
-        <p class="text-[10px] text-slate-400">MAX Account</p>
-      </div>
-    </div>
+  <!-- TOPUP MODAL -->
 
-    <div onclick="openTopupModal()"
-         class="cursor-pointer bg-slate-900 hover:bg-slate-950 border border-purple-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-md">
-      <span class="font-bold text-emerald-400 text-xs" id="user-balance">0 ₽</span>
-      <div class="w-4 h-4 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow">+</div>
-    </div>
-  </div>
+  <div
+    id="topup-modal"
+    class="modal"
+  >
 
-  <!-- Главный контейнер -->
-  <div class="w-full max-w-md bg-slate-800/50 rounded-2xl p-4 border border-slate-700 shadow-xl backdrop-blur mb-4">
+    <div class="modal-box">
 
-    <div class="text-center mb-4">
-      <span class="bg-purple-500/10 text-purple-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-purple-500/20">
-        AI Студия музыки
-      </span>
-      <h1 class="text-xl font-black mt-1.5 bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">
-        Песня на заказ
-      </h1>
-    </div>
+      <button
+        id="topup-close"
+        class="modal-close"
+        type="button"
+      >
+        ✕
+      </button>
 
-    <!-- Жанр -->
-    <div class="mb-3.5">
-      <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">🎵 Жанр музыки</label>
-      <div class="grid grid-cols-3 gap-1.5" id="genre-select">
-        <button onclick="selectGenre(this, 'Поп')" class="genre-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Поп</button>
-        <button onclick="selectGenre(this, 'Танцевальная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Танцевальная</button>
-        <button onclick="selectGenre(this, 'Народная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Народная</button>
-        <button onclick="selectGenre(this, 'Шансон')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Шансон</button>
-        <button onclick="selectGenre(this, 'Рэп')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Рэп</button>
-      </div>
-    </div>
+      <h3 class="modal-title">
+        Пополнение баланса
+      </h3>
 
-    <!-- Вокал -->
-    <div class="mb-3.5">
-      <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">🎙 Исполнение / Вокал</label>
-      <div class="grid grid-cols-2 gap-1.5" id="vocal-select">
-        <button onclick="selectVocal(this, 'Мужской соло')" class="vocal-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Мужской соло</button>
-        <button onclick="selectVocal(this, 'Женский соло')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Женский соло</button>
-        <button onclick="selectVocal(this, 'Дуэт')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Дуэт</button>
-        <button onclick="selectVocal(this, 'Детский голос')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Детский голос</button>
-      </div>
-    </div>
+      <p class="modal-subtitle">
+        Минимальная сумма пополнения — 200 ₽
+      </p>
 
-    <!-- Текст -->
-    <div class="mb-4">
-      <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">💬 Детали и пожелания к песне</label>
-      <textarea id="prompt-input"
-                rows="3"
-                maxlength="2000"
-                placeholder="Имя человека, праздник, ключевые фразы..."
-                class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition resize-none"></textarea>
-    </div>
+      <div class="amounts">
 
-    <button id="order-btn"
-            onclick="generateSong()"
-            class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-3 px-4 rounded-xl text-xs shadow-lg shadow-purple-500/25 transition flex items-center justify-center gap-2">
-      <span>Сгенерировать шедевр</span>
-    </button>
-  </div>
+        <button
+          class="amount-button selected"
+          data-amount="200"
+          type="button"
+        >
 
-  <!-- Мои песни -->
-  <div class="w-full max-w-md bg-slate-800/50 rounded-2xl p-4 border border-slate-700 shadow-xl backdrop-blur mb-4">
-    <h2 class="text-sm font-bold mb-3 text-slate-200 flex items-center gap-2">🎧 Мои песни</h2>
-    <div id="orders-list" class="space-y-3">
-      <p class="text-xs text-slate-500 text-center py-3">У вас пока нет сгенерированных песен.</p>
-    </div>
-  </div>
+          <span>
+            200 ₽
+          </span>
 
-  <!-- Пополнение -->
-  <div id="topup-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl relative">
-      <button onclick="closeTopupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-base">✕</button>
+          <span>
+            Стандарт (1 песня)
+          </span>
 
-      <h3 class="text-base font-bold text-slate-100 mb-1">Пополнение баланса</h3>
-      <p class="text-xs text-slate-400 mb-4">Минимальная сумма пополнения — 200 ₽</p>
-
-      <div class="space-y-2 mb-4">
-        <button onclick="selectTopupAmount(200)" class="amount-btn w-full bg-slate-800 border border-purple-500/50 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
-          <span>200 ₽</span><span class="text-slate-400">Стандарт (1 песня)</span>
         </button>
 
-        <button onclick="selectTopupAmount(400)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
-          <div class="flex items-center gap-2">
-            <span>400 ₽</span>
-            <span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-md border border-emerald-500/30">+10% БОНУС</span>
-          </div>
-          <span class="text-emerald-400">+40 ₽</span>
+        <button
+          class="amount-button"
+          data-amount="400"
+          type="button"
+        >
+
+          <span>
+            400 ₽
+            <span class="bonus bonus-green">
+              +10% БОНУС
+            </span>
+          </span>
+
+          <span>
+            +40 ₽
+          </span>
+
         </button>
 
-        <button onclick="selectTopupAmount(800)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
-          <div class="flex items-center gap-2">
-            <span>800 ₽</span>
-            <span class="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded-md border border-amber-500/30">+20% БОНУС</span>
-          </div>
-          <span class="text-amber-400">+160 ₽</span>
+        <button
+          class="amount-button"
+          data-amount="800"
+          type="button"
+        >
+
+          <span>
+            800 ₽
+            <span class="bonus bonus-amber">
+              +20% БОНУС
+            </span>
+          </span>
+
+          <span>
+            +160 ₽
+          </span>
+
         </button>
+
       </div>
 
-      <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-4 flex justify-between items-center text-xs">
-        <span class="text-slate-400">Будет зачислено:</span>
-        <span class="font-bold text-emerald-400 text-sm" id="modal-credited-calc">200 ₽</span>
+      <div class="credit-box">
+
+        <span class="credit-label">
+          Будет зачислено:
+        </span>
+
+        <span
+          id="modal-credited-calc"
+          class="credit-value"
+        >
+          200 ₽
+        </span>
+
       </div>
 
-      <button onclick="processTopup()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-lg transition">
+      <button
+        id="process-topup-button"
+        class="pay-button"
+        type="button"
+      >
         Оплатить и пополнить
       </button>
+
     </div>
+
   </div>
 
   <script>
-    // ВАЖНО:
-    // Frontend и API находятся на одном Render Web Service.
-    // Поэтому используем относительные URL и не ходим на другой origin.
+    /*
+     * ========================================================
+     * APPLICATION STATE
+     * ========================================================
+     */
+
     const API_BASE = '';
 
     let selectedGenre = 'Поп';
     let selectedVocal = 'Мужской соло';
+
     let currentMaxId = '';
     let currentUserName = '';
     let currentBalance = 0;
     let maxInitData = '';
 
     let selectedTopupSum = 200;
+
     let phraseIndex = 0;
     let phraseTimer = null;
     let pollTimer = null;
 
     const GENERATION_PHRASES = [
-      "✨ AI пишет 2 варианта текста...",
-      "🎵 Сочиняем 2 разные мелодии...",
-      "🎤 Записываем нейро-вокал...",
-      "🎧 Сводим и создаем демо...",
-      "🚀 Готовим треки к прослушиванию..."
+      '✨ AI пишет 2 варианта текста...',
+      '🎵 Сочиняем 2 разные мелодии...',
+      '🎤 Записываем нейро-вокал...',
+      '🎧 Сводим и создаем демо...',
+      '🚀 Готовим треки к прослушиванию...'
     ];
 
+    /*
+     * ========================================================
+     * UI HELPERS
+     * ========================================================
+     */
+
     function showStartupError(message) {
-      const box = document.getElementById('startup-status');
-      box.textContent = message;
-      box.classList.remove('hidden');
+      const box =
+        document.getElementById(
+          'startup-status'
+        );
+
+      box.textContent = String(message);
+
+      box.classList.add('visible');
     }
 
     function clearStartupError() {
-      document.getElementById('startup-status').classList.add('hidden');
+      const box =
+        document.getElementById(
+          'startup-status'
+        );
+
+      box.classList.remove('visible');
+      box.textContent = '';
     }
 
-    function startPhraseAnimation() {
-      if (phraseTimer) return;
-      phraseTimer = setInterval(() => {
-        phraseIndex = (phraseIndex + 1) % GENERATION_PHRASES.length;
-        document.querySelectorAll('.dynamic-phrase').forEach(el => {
-          el.innerText = GENERATION_PHRASES[phraseIndex];
-        });
-      }, 3000);
-    }
+    function showTemporaryStatus(message) {
+      const box =
+        document.getElementById(
+          'startup-status'
+        );
 
-    function stopPhraseAnimation() {
-      if (phraseTimer) {
-        clearInterval(phraseTimer);
-        phraseTimer = null;
-      }
-    }
-
-    function getMaxUser() {
-      return window.WebApp?.initDataUnsafe?.user || null;
-    }
-
-    function detectUserFromMax() {
-      if (!window.WebApp) {
-        throw new Error('MAX Bridge не загрузился. Откройте приложение из MAX, а не как обычную веб-страницу.');
-      }
-
-      maxInitData = String(window.WebApp.initData || '').trim();
-      const user = getMaxUser();
-
-      if (!maxInitData || !user?.id) {
-        throw new Error('MAX не передал данные пользователя. Проверьте, что приложение открыто через Mini App внутри MAX и URL привязан к боту.');
-      }
-
-      currentMaxId = String(user.id);
-      currentUserName = user.first_name || user.name || 'Пользователь MAX';
-
-      document.getElementById('user-name').innerText = currentUserName;
-      document.getElementById('user-avatar').innerText =
-        currentUserName.charAt(0).toUpperCase();
-
-      // Передаём минимально необходимую отладочную информацию в консоль.
-      console.log('[MAX] platform:', window.WebApp.platform);
-      console.log('[MAX] version:', window.WebApp.version);
-      console.log('[MAX] device:', window.WebApp.deviceName);
-      console.log('[MAX] user id:', currentMaxId);
-    }
-
-    async function apiFetch(path, options = {}) {
-      const headers = new Headers(options.headers || {});
-      headers.set('Content-Type', 'application/json');
-
-      const finalOptions = {
-        ...options,
-        headers
-      };
-
-      const response = await fetch(`${API_BASE}${path}`, finalOptions);
-
-      const text = await response.text();
-      let data = {};
-
-      try {
-        data = text ? JSON.parse(text) : {};
-      } catch {
-        throw new Error(`Сервер вернул не JSON (${response.status}): ${text.slice(0, 200)}`);
-      }
-
-      if (!response.ok) {
-        throw new Error(data.message || `Ошибка HTTP ${response.status}`);
-      }
-
-      return data;
-    }
-
-    async function fetchUserData() {
-      detectUserFromMax();
-
-      const data = await apiFetch('/api/user', {
-        method: 'POST',
-        body: JSON.stringify({
-          initData: maxInitData
-        })
-      });
-
-      if (!data.success) {
-        throw new Error(data.message || 'Не удалось загрузить профиль.');
-      }
-
-      currentBalance = Number(data.user.balance || 0);
-      document.getElementById('user-balance').innerText = `${currentBalance} ₽`;
-
-      await loadOrders();
-      clearStartupError();
-    }
-
-    function openTopupModal() {
-      document.getElementById('topup-modal').classList.remove('hidden');
-    }
-
-    function closeTopupModal() {
-      document.getElementById('topup-modal').classList.add('hidden');
-    }
-
-    function selectTopupAmount(amount) {
-      selectedTopupSum = amount;
-      let total = amount;
-      if (amount === 400) total = 440;
-      if (amount === 800) total = 960;
-      document.getElementById('modal-credited-calc').innerText = `${total} ₽`;
-    }
-
-    async function processTopup() {
-      try {
-        const data = await apiFetch('/api/topup', {
-          method: 'POST',
-          body: JSON.stringify({
-            initData: maxInitData,
-            amount: selectedTopupSum
-          })
-        });
-
-        if (data.success) {
-          currentBalance = Number(data.newBalance);
-          document.getElementById('user-balance').innerText = `${currentBalance} ₽`;
-          alert(data.message);
-          closeTopupModal();
-        } else {
-          alert('Ошибка: ' + data.message);
-        }
-      } catch (e) {
-        console.error('[TOPUP]', e);
-        alert(e.message || 'Ошибка сервера при пополнении.');
-      }
-    }
-
-    async function loadOrders() {
-      try {
-        const data = await apiFetch('/api/orders', {
-          method: 'POST',
-          body: JSON.stringify({
-            initData: maxInitData
-          })
-        });
-
-        if (data.success) {
-          const validOrders = (data.orders || []).filter(o => o.status !== 'failed');
-          renderOrders(validOrders);
-
-          const hasProcessing = validOrders.some(o => o.status === 'processing');
-
-          if (hasProcessing) {
-            startPhraseAnimation();
-            scheduleNextPoll();
-          } else {
-            stopPhraseAnimation();
-          }
-        }
-      } catch (err) {
-        console.error('[ORDERS]', err);
-      }
-    }
-
-    function scheduleNextPoll() {
-      if (pollTimer) clearTimeout(pollTimer);
-      pollTimer = setTimeout(async () => {
-        pollTimer = null;
-        await loadOrders();
-      }, 4000);
-    }
-
-    function handleDemoTimeUpdate(audioEl) {
-      if (audioEl.currentTime >= 30) {
-        audioEl.pause();
-        audioEl.currentTime = 0;
-        alert("⌛ Демо-прослушивание ограничено 30 секундами. Разблокируйте полную версию за 200 ₽!");
-      }
-    }
-
-    async function unlockSong(orderId, optionIndex, audioUrl, title) {
-      if (currentBalance < 200) {
-        alert('Недостаточно средств на балансе! Пополните баланс на 200 ₽.');
-        openTopupModal();
-        return;
-      }
-
-      if (!confirm(`Разблокировать полную версию (${title}) за 200 ₽?`)) return;
-
-      try {
-        const data = await apiFetch('/api/unlock-song', {
-          method: 'POST',
-          body: JSON.stringify({
-            initData: maxInitData,
-            orderId,
-            selectedOption: optionIndex,
-            audioUrl,
-            title
-          })
-        });
-
-        if (data.success) {
-          currentBalance = Number(data.newBalance);
-          document.getElementById('user-balance').innerText = `${currentBalance} ₽`;
-          alert('🎉 Песня успешно разблокирована!');
-          await loadOrders();
-        } else {
-          alert('Ошибка: ' + data.message);
-        }
-      } catch (e) {
-        console.error('[UNLOCK]', e);
-        alert(e.message || 'Ошибка связи с сервером.');
-      }
-    }
-
-    function downloadSongFile(audioUrl, songTitle) {
-      const safeName = (songTitle || 'song').replace(/[\\/:*?"<>|]/g, '_');
-
-      // В MAX используем официальный downloadFile(), когда доступен.
-      if (window.WebApp?.downloadFile && /^https:\/\//i.test(audioUrl)) {
-        try {
-          window.WebApp.downloadFile(audioUrl, `${safeName}.mp3`);
-          return;
-        } catch (e) {
-          console.warn('[MAX DOWNLOAD FALLBACK]', e);
-        }
-      }
-
-      const downloadUrl =
-        `${API_BASE}/api/download?url=${encodeURIComponent(audioUrl)}&name=${encodeURIComponent(safeName)}`;
-
-      const a = document.createElement('a');
-      a.href = downloadUrl;
-      a.download = `${safeName}.mp3`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    }
-
-    function renderOrders(orders) {
-      const listContainer = document.getElementById('orders-list');
-
-      if (!orders || orders.length === 0) {
-        listContainer.innerHTML =
-          '<p class="text-xs text-slate-500 text-center py-3">У вас пока нет сгенерированных песен.</p>';
-        return;
-      }
-
-      listContainer.innerHTML = '';
-
-      orders.forEach(order => {
-        const card = document.createElement('div');
-
-        if (order.status === 'processing') {
-          card.className = 'bg-slate-900/90 border border-purple-500/40 rounded-xl p-3 space-y-2.5';
-          card.innerHTML = `
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 text-sm font-bold animate-spin">⏳</div>
-              <div>
-                <h3 class="text-xs font-bold text-purple-300">Генерируем 2 варианта...</h3>
-                <p class="text-[10px] text-slate-400">${escapeHtml(order.genre)} • ${escapeHtml(order.vocal)}</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 pt-0.5">
-              <div class="w-2 h-2 rounded-full bg-amber-400 animate-ping"></div>
-              <span class="dynamic-phrase text-[11px] font-medium text-amber-300">${GENERATION_PHRASES[phraseIndex]}</span>
-            </div>
-          `;
-        } else if (order.status === 'preview') {
-          card.className = 'bg-slate-900/90 border border-amber-500/50 rounded-xl p-3 space-y-3';
-
-          const title1 = escapeAttr(order.title || 'Вариант 1');
-          const title2 = escapeAttr(order.title_2 || 'Вариант 2');
-          const url1 = escapeAttr(order.audio_url || '');
-          const url2 = escapeAttr(order.audio_url_2 || '');
-
-          card.innerHTML = `
-            <div class="border-b border-slate-800 pb-1.5">
-              <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded border border-amber-500/30">
-                ДЕМО-РЕЖИМ (30 сек)
-              </span>
-              <p class="text-[11px] text-slate-300 mt-1">Послушайте варианты и разблокируйте полную версию:</p>
-            </div>
-
-            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex justify-between items-center text-[11px] font-bold text-slate-200">
-                <span>🎵 Вариант 1</span>
-              </div>
-              <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800">
-                <source src="${url1}" type="audio/mpeg">
-              </audio>
-              <button onclick="unlockSong(${Number(order.id)}, 1, '${url1}', '${title1}')"
-                      class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
-                Скачать полную версию (200 ₽)
-              </button>
-            </div>
-
-            ${order.audio_url_2 ? `
-              <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
-                <div class="flex justify-between items-center text-[11px] font-bold text-slate-200">
-                  <span>🎵 Вариант 2</span>
-                </div>
-                <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800">
-                  <source src="${url2}" type="audio/mpeg">
-                </audio>
-                <button onclick="unlockSong(${Number(order.id)}, 2, '${url2}', '${title2}')"
-                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
-                  Скачать полную версию (200 ₽)
-                </button>
-              </div>
-            ` : ''}
-          `;
-        } else if (order.status === 'completed' && order.audio_url) {
-          const safeTitle = escapeAttr(order.title || 'Именная песня');
-          const safeUrl = escapeAttr(order.audio_url);
-
-          card.className = 'bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 space-y-2.5';
-          card.innerHTML = `
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-xs">🎵</div>
-              <div class="flex-1 overflow-hidden">
-                <h3 class="text-xs font-bold text-slate-100 truncate">${escapeHtml(order.title || 'Именная песня')}</h3>
-                <p class="text-[10px] text-slate-400">${escapeHtml(order.genre)} • ${escapeHtml(order.vocal)}</p>
-              </div>
-            </div>
-
-            <audio controls class="w-full h-8 rounded-lg border border-slate-700 bg-slate-950">
-              <source src="${safeUrl}" type="audio/mpeg">
-            </audio>
-
-            <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-              <button onclick="downloadSongFile('${safeUrl}', '${safeTitle}')"
-                      class="bg-purple-600/80 hover:bg-purple-600 text-white text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
-                📥 Скачать MP3
-              </button>
-              <button onclick="shareSong('${safeUrl}')"
-                      class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
-                📤 Поделиться
-              </button>
-            </div>
-          `;
-        }
-
-        listContainer.appendChild(card);
-      });
+      box.textContent = String(message);
+      box.classList.add('visible');
     }
 
     function escapeHtml(value) {
@@ -544,150 +1160,1567 @@
         .replaceAll("'", '&#039;');
     }
 
-    function escapeAttr(value) {
-      return String(value ?? '')
+    /*
+     * Для inline data внутри HTML.
+     */
+    function safeJsString(value) {
+      return JSON.stringify(
+        String(value ?? '')
+      )
         .replaceAll('\\', '\\\\')
-        .replaceAll("'", "\\'")
-        .replaceAll('\n', ' ')
-        .replaceAll('\r', ' ');
+        .replaceAll("'", "\\'");
     }
 
-    async function shareSong(url) {
+    /*
+     * ========================================================
+     * MAX
+     * ========================================================
+     */
+
+    function getMaxWebApp() {
+      return window.WebApp || null;
+    }
+
+    function detectUserFromMax() {
+      const webApp =
+        getMaxWebApp();
+
+      if (!webApp) {
+        throw new Error(
+          'MAX Bridge не загрузился. ' +
+          'Откройте приложение внутри MAX.'
+        );
+      }
+
+      maxInitData =
+        String(
+          webApp.initData || ''
+        ).trim();
+
+      const unsafeUser =
+        webApp.initDataUnsafe?.user ||
+        null;
+
+      if (
+        !maxInitData ||
+        !unsafeUser?.id
+      ) {
+        throw new Error(
+          'MAX не передал данные пользователя. ' +
+          'Проверьте запуск Mini App через бота MAX.'
+        );
+      }
+
+      currentMaxId =
+        String(unsafeUser.id);
+
+      currentUserName =
+        unsafeUser.first_name ||
+        unsafeUser.name ||
+        'Пользователь MAX';
+
+      document.getElementById(
+        'user-name'
+      ).textContent =
+        currentUserName;
+
+      document.getElementById(
+        'user-avatar'
+      ).textContent =
+        currentUserName
+          .charAt(0)
+          .toUpperCase();
+
+      console.log(
+        '[MAX] platform:',
+        webApp.platform
+      );
+
+      console.log(
+        '[MAX] version:',
+        webApp.version
+      );
+
+      console.log(
+        '[MAX] device:',
+        webApp.deviceName
+      );
+
+      console.log(
+        '[MAX] initData length:',
+        maxInitData.length
+      );
+    }
+
+    /*
+     * ========================================================
+     * API
+     * ========================================================
+     */
+
+    async function apiFetch(
+      path,
+      options = {},
+      timeoutMs = 25000
+    ) {
+      const controller =
+        new AbortController();
+
+      const timeoutId =
+        setTimeout(
+          () => controller.abort(),
+          timeoutMs
+        );
+
       try {
-        if (window.WebApp?.shareContent) {
-          await window.WebApp.shareContent({
-            link: url,
-            text: 'Моя новая песня на заказ 🎵'
-          });
-          return;
+        const headers =
+          new Headers(
+            options.headers || {}
+          );
+
+        headers.set(
+          'Content-Type',
+          'application/json'
+        );
+
+        const finalOptions = {
+          ...options,
+          headers,
+          signal: controller.signal
+        };
+
+        const response =
+          await fetch(
+            `${API_BASE}${path}`,
+            finalOptions
+          );
+
+        const text =
+          await response.text();
+
+        let data = {};
+
+        try {
+          data =
+            text
+              ? JSON.parse(text)
+              : {};
+        } catch {
+          throw new Error(
+            `Сервер вернул не JSON ` +
+            `(${response.status}): ` +
+            `${text.slice(0, 200)}`
+          );
         }
 
-        if (navigator.share) {
-          await navigator.share({
-            title: 'Моя новая песня на заказ',
-            url
-          });
-          return;
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+            `Ошибка HTTP ${response.status}`
+          );
         }
 
-        await navigator.clipboard.writeText(url);
-        alert('Ссылка скопирована!');
-      } catch (e) {
-        console.warn('[SHARE]', e);
+        return data;
+
+      } catch (err) {
+
+        if (
+          err?.name ===
+          'AbortError'
+        ) {
+          throw new Error(
+            'Сервер слишком долго отвечает. ' +
+            'Попробуйте ещё раз.'
+          );
+        }
+
+        throw err;
+
+      } finally {
+        clearTimeout(timeoutId);
       }
     }
 
-    function selectGenre(btn, genre) {
-      document.querySelectorAll('.genre-btn').forEach(b => {
-        b.className =
-          'genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition';
-      });
+    /*
+     * ========================================================
+     * USER
+     * ========================================================
+     */
 
-      btn.className =
-        'genre-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
+    async function fetchUserData() {
+      detectUserFromMax();
 
-      selectedGenre = genre;
+      const data =
+        await apiFetch(
+          '/api/user',
+          {
+            method: 'POST',
+            body: JSON.stringify({
+              initData: maxInitData
+            })
+          }
+        );
 
-      try {
-        window.WebApp?.HapticFeedback?.selectionChanged?.();
-      } catch {}
-    }
-
-    function selectVocal(btn, vocal) {
-      document.querySelectorAll('.vocal-btn').forEach(b => {
-        b.className =
-          'vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition';
-      });
-
-      btn.className =
-        'vocal-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
-
-      selectedVocal = vocal;
-
-      try {
-        window.WebApp?.HapticFeedback?.selectionChanged?.();
-      } catch {}
-    }
-
-    async function generateSong() {
-      const prompt = document.getElementById('prompt-input').value.trim();
-
-      if (!prompt) {
-        alert('Пожалуйста, напишите пожелания к песне!');
-        return;
+      if (!data.success) {
+        throw new Error(
+          data.message ||
+          'Не удалось загрузить профиль.'
+        );
       }
 
-      if (currentBalance < 200) {
-        alert('Для генерации необходимо минимум 200 ₽. Пополните баланс.');
-        openTopupModal();
-        return;
+      currentBalance =
+        Number(
+          data.user?.balance || 0
+        );
+
+      document.getElementById(
+        'user-balance'
+      ).textContent =
+        `${currentBalance} ₽`;
+
+      await loadOrders();
+
+      clearStartupError();
+    }
+
+    /*
+     * ========================================================
+     * TOPUP
+     * ========================================================
+     */
+
+    function openTopupModal() {
+      document
+        .getElementById('topup-modal')
+        .classList.add('visible');
+    }
+
+    function closeTopupModal() {
+      document
+        .getElementById('topup-modal')
+        .classList.remove('visible');
+    }
+
+    function selectTopupAmount(
+      amount,
+      button
+    ) {
+      selectedTopupSum = amount;
+
+      document
+        .querySelectorAll(
+          '.amount-button'
+        )
+        .forEach(
+          item =>
+            item.classList.remove(
+              'selected'
+            )
+        );
+
+      if (button) {
+        button.classList.add(
+          'selected'
+        );
       }
 
-      const btn = document.getElementById('order-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<span>Отправка заказа...</span>';
+      let total = amount;
 
+      if (amount === 400) {
+        total = 440;
+      }
+
+      if (amount === 800) {
+        total = 960;
+      }
+
+      document.getElementById(
+        'modal-credited-calc'
+      ).textContent =
+        `${total} ₽`;
+    }
+
+    async function processTopup() {
       try {
-        const data = await apiFetch('/api/generate-song', {
-          method: 'POST',
-          body: JSON.stringify({
-            initData: maxInitData,
-            genre: selectedGenre,
-            vocal: selectedVocal,
-            prompt
-          })
-        });
+
+        const button =
+          document.getElementById(
+            'process-topup-button'
+          );
+
+        button.disabled = true;
+
+        const data =
+          await apiFetch(
+            '/api/topup',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                initData:
+                  maxInitData,
+                amount:
+                  selectedTopupSum
+              })
+            }
+          );
 
         if (data.success) {
-          document.getElementById('prompt-input').value = '';
-          await loadOrders();
+
+          currentBalance =
+            Number(
+              data.newBalance
+            );
+
+          document.getElementById(
+            'user-balance'
+          ).textContent =
+            `${currentBalance} ₽`;
+
+          alert(data.message);
+
+          closeTopupModal();
+
         } else {
-          alert(data.message || 'Не удалось запустить генерацию.');
+
+          alert(
+            'Ошибка: ' +
+            data.message
+          );
+
         }
+
       } catch (err) {
-        console.error('[GENERATE]', err);
-        alert(err.message || 'Ошибка связи с сервером.');
+
+        console.error(
+          '[TOPUP]',
+          err
+        );
+
+        alert(
+          err.message ||
+          'Ошибка сервера при пополнении.'
+        );
+
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>Сгенерировать шедевр</span>';
+
+        document.getElementById(
+          'process-topup-button'
+        ).disabled = false;
       }
     }
+
+    /*
+     * ========================================================
+     * ORDERS
+     * ========================================================
+     */
+
+    async function loadOrders() {
+      try {
+
+        const data =
+          await apiFetch(
+            '/api/orders',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                initData:
+                  maxInitData
+              })
+            }
+          );
+
+        if (
+          data.success
+        ) {
+
+          const validOrders =
+            (
+              data.orders || []
+            ).filter(
+              order =>
+                order.status !==
+                'failed'
+            );
+
+          renderOrders(
+            validOrders
+          );
+
+          const hasProcessing =
+            validOrders.some(
+              order =>
+                order.status ===
+                'processing'
+            );
+
+          if (hasProcessing) {
+
+            startPhraseAnimation();
+
+            scheduleNextPoll();
+
+          } else {
+
+            stopPhraseAnimation();
+
+          }
+        }
+
+      } catch (err) {
+
+        console.error(
+          '[ORDERS]',
+          err
+        );
+
+        /*
+         * Не показываем ошибку
+         * вместо интерфейса.
+         */
+      }
+    }
+
+    function scheduleNextPoll() {
+      if (pollTimer) {
+        clearTimeout(
+          pollTimer
+        );
+      }
+
+      pollTimer =
+        setTimeout(
+          async () => {
+
+            pollTimer = null;
+
+            await loadOrders();
+
+          },
+          4000
+        );
+    }
+
+    function startPhraseAnimation() {
+      if (phraseTimer) {
+        return;
+      }
+
+      phraseTimer =
+        setInterval(
+          () => {
+
+            phraseIndex =
+              (
+                phraseIndex + 1
+              ) %
+              GENERATION_PHRASES.length;
+
+            document
+              .querySelectorAll(
+                '.dynamic-phrase'
+              )
+              .forEach(
+                el => {
+                  el.textContent =
+                    GENERATION_PHRASES[
+                      phraseIndex
+                    ];
+                }
+              );
+
+          },
+          3000
+        );
+    }
+
+    function stopPhraseAnimation() {
+      if (phraseTimer) {
+
+        clearInterval(
+          phraseTimer
+        );
+
+        phraseTimer = null;
+      }
+    }
+
+    /*
+     * ========================================================
+     * AUDIO
+     * ========================================================
+     */
+
+    function handleDemoTimeUpdate(
+      audioEl
+    ) {
+      if (
+        audioEl.currentTime >=
+        30
+      ) {
+
+        audioEl.pause();
+        audioEl.currentTime = 0;
+
+        alert(
+          '⌛ Демо-прослушивание ' +
+          'ограничено 30 секундами. ' +
+          'Разблокируйте полную версию ' +
+          'за 200 ₽!'
+        );
+      }
+    }
+
+    /*
+     * ========================================================
+     * UNLOCK
+     * ========================================================
+     */
+
+    async function unlockSong(
+      orderId,
+      optionIndex,
+      audioUrl,
+      title
+    ) {
+      if (
+        currentBalance < 200
+      ) {
+        alert(
+          'Недостаточно средств ' +
+          'на балансе! Пополните ' +
+          'баланс на 200 ₽.'
+        );
+
+        openTopupModal();
+
+        return;
+      }
+
+      if (
+        !confirm(
+          `Разблокировать полную ` +
+          `версию (${title}) за 200 ₽?`
+        )
+      ) {
+        return;
+      }
+
+      try {
+
+        const data =
+          await apiFetch(
+            '/api/unlock-song',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                initData:
+                  maxInitData,
+                orderId,
+                selectedOption:
+                  optionIndex,
+                audioUrl,
+                title
+              })
+            }
+          );
+
+        if (data.success) {
+
+          currentBalance =
+            Number(
+              data.newBalance
+            );
+
+          document.getElementById(
+            'user-balance'
+          ).textContent =
+            `${currentBalance} ₽`;
+
+          alert(
+            '🎉 Песня успешно разблокирована!'
+          );
+
+          await loadOrders();
+
+        } else {
+
+          alert(
+            'Ошибка: ' +
+            data.message
+          );
+
+        }
+
+      } catch (err) {
+
+        console.error(
+          '[UNLOCK]',
+          err
+        );
+
+        alert(
+          err.message ||
+          'Ошибка связи с сервером.'
+        );
+      }
+    }
+
+    /*
+     * ========================================================
+     * DOWNLOAD
+     * ========================================================
+     */
+
+    function downloadSongFile(
+      audioUrl,
+      songTitle
+    ) {
+      const safeName =
+        String(
+          songTitle || 'song'
+        )
+          .replace(
+            /[\\/:*?"<>|]/g,
+            '_'
+          );
+
+      const webApp =
+        getMaxWebApp();
+
+      if (
+        webApp?.downloadFile &&
+        /^https:\/\//i.test(
+          audioUrl
+        )
+      ) {
+
+        try {
+
+          webApp.downloadFile(
+            audioUrl,
+            `${safeName}.mp3`
+          );
+
+          return;
+
+        } catch (err) {
+
+          console.warn(
+            '[MAX DOWNLOAD FALLBACK]',
+            err
+          );
+        }
+      }
+
+      const downloadUrl =
+        `${API_BASE}/api/download` +
+        `?url=${encodeURIComponent(
+          audioUrl
+        )}` +
+        `&name=${encodeURIComponent(
+          safeName
+        )}`;
+
+      const a =
+        document.createElement(
+          'a'
+        );
+
+      a.href = downloadUrl;
+
+      a.download =
+        `${safeName}.mp3`;
+
+      document.body.appendChild(a);
+
+      a.click();
+
+      document.body.removeChild(a);
+    }
+
+    /*
+     * ========================================================
+     * SHARE
+     * ========================================================
+     */
+
+    async function shareSong(
+      url
+    ) {
+      try {
+
+        const webApp =
+          getMaxWebApp();
+
+        if (
+          webApp?.shareContent
+        ) {
+
+          await webApp.shareContent({
+            link: url,
+            text:
+              'Моя новая песня на заказ 🎵'
+          });
+
+          return;
+        }
+
+        if (
+          navigator.share
+        ) {
+
+          await navigator.share({
+            title:
+              'Моя новая песня на заказ',
+            url
+          });
+
+          return;
+        }
+
+        if (
+          navigator.clipboard
+        ) {
+
+          await navigator.clipboard
+            .writeText(url);
+
+          alert(
+            'Ссылка скопирована!'
+          );
+        }
+
+      } catch (err) {
+
+        console.warn(
+          '[SHARE]',
+          err
+        );
+      }
+    }
+
+    /*
+     * ========================================================
+     * RENDER ORDERS
+     * ========================================================
+     */
+
+    function renderOrders(
+      orders
+    ) {
+      const list =
+        document.getElementById(
+          'orders-list'
+        );
+
+      if (
+        !orders ||
+        orders.length === 0
+      ) {
+
+        list.innerHTML = `
+          <div class="empty">
+            У вас пока нет сгенерированных песен.
+          </div>
+        `;
+
+        return;
+      }
+
+      list.innerHTML = '';
+
+      orders.forEach(
+        order => {
+
+          const card =
+            document.createElement(
+              'div'
+            );
+
+          /*
+           * PROCESSING
+           */
+
+          if (
+            order.status ===
+            'processing'
+          ) {
+
+            card.className =
+              'order-card processing';
+
+            card.innerHTML = `
+              <div class="order-head">
+
+                <div class="order-icon processing-icon">
+                  ⏳
+                </div>
+
+                <div class="order-info">
+
+                  <p class="order-name">
+                    Генерируем 2 варианта...
+                  </p>
+
+                  <p class="order-meta">
+                    ${escapeHtml(
+                      order.genre
+                    )}
+                    •
+                    ${escapeHtml(
+                      order.vocal
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div class="phrase">
+
+                <span class="phrase-dot"></span>
+
+                <span class="dynamic-phrase">
+                  ${GENERATION_PHRASES[
+                    phraseIndex
+                  ]}
+                </span>
+
+              </div>
+            `;
+          }
+
+          /*
+           * PREVIEW
+           */
+
+          else if (
+            order.status ===
+            'preview'
+          ) {
+
+            card.className =
+              'order-card preview';
+
+            const title1 =
+              String(
+                order.title ||
+                'Вариант 1'
+              );
+
+            const title2 =
+              String(
+                order.title_2 ||
+                'Вариант 2'
+              );
+
+            const url1 =
+              String(
+                order.audio_url ||
+                ''
+              );
+
+            const url2 =
+              String(
+                order.audio_url_2 ||
+                ''
+              );
+
+            card.innerHTML = `
+              <span class="preview-label">
+                ДЕМО-РЕЖИМ (30 сек)
+              </span>
+
+              <p class="preview-description">
+                Послушайте варианты и
+                разблокируйте полную версию:
+              </p>
+
+              <div class="variant">
+
+                <div class="variant-title">
+                  🎵 Вариант 1
+                </div>
+
+                <audio
+                  data-demo-audio="true"
+                  controls
+                >
+                  <source
+                    src="${escapeHtml(url1)}"
+                    type="audio/mpeg"
+                  >
+                </audio>
+
+                <button
+                  type="button"
+                  class="variant-button"
+                  data-unlock="true"
+                  data-order-id="${Number(
+                    order.id
+                  )}"
+                  data-option="1"
+                  data-url="${escapeHtml(
+                    url1
+                  )}"
+                  data-title="${escapeHtml(
+                    title1
+                  )}"
+                >
+                  Скачать полную версию
+                  (200 ₽)
+                </button>
+
+              </div>
+
+              ${
+                url2
+                ? `
+                <div class="variant">
+
+                  <div class="variant-title">
+                    🎵 Вариант 2
+                  </div>
+
+                  <audio
+                    data-demo-audio="true"
+                    controls
+                  >
+                    <source
+                      src="${escapeHtml(
+                        url2
+                      )}"
+                      type="audio/mpeg"
+                    >
+                  </audio>
+
+                  <button
+                    type="button"
+                    class="variant-button"
+                    data-unlock="true"
+                    data-order-id="${Number(
+                      order.id
+                    )}"
+                    data-option="2"
+                    data-url="${escapeHtml(
+                      url2
+                    )}"
+                    data-title="${escapeHtml(
+                      title2
+                    )}"
+                  >
+                    Скачать полную версию
+                    (200 ₽)
+                  </button>
+
+                </div>
+                `
+                : ''
+              }
+            `;
+          }
+
+          /*
+           * COMPLETED
+           */
+
+          else if (
+            order.status ===
+            'completed' &&
+            order.audio_url
+          ) {
+
+            card.className =
+              'order-card completed';
+
+            const title =
+              String(
+                order.title ||
+                'Именная песня'
+              );
+
+            const url =
+              String(
+                order.audio_url
+              );
+
+            card.innerHTML = `
+              <div class="order-head">
+
+                <div class="order-icon completed-icon">
+                  🎵
+                </div>
+
+                <div class="order-info">
+
+                  <p class="order-name">
+                    ${escapeHtml(
+                      title
+                    )}
+                  </p>
+
+                  <p class="order-meta">
+                    ${escapeHtml(
+                      order.genre
+                    )}
+                    •
+                    ${escapeHtml(
+                      order.vocal
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div class="audio-block">
+
+                <audio
+                  controls
+                >
+                  <source
+                    src="${escapeHtml(
+                      url
+                    )}"
+                    type="audio/mpeg"
+                  >
+                </audio>
+
+              </div>
+
+              <div class="action-grid">
+
+                <button
+                  type="button"
+                  class="secondary-button primary-small"
+                  data-download="true"
+                  data-url="${escapeHtml(
+                    url
+                  )}"
+                  data-title="${escapeHtml(
+                    title
+                  )}"
+                >
+                  📥 Скачать MP3
+                </button>
+
+                <button
+                  type="button"
+                  class="secondary-button"
+                  data-share="true"
+                  data-url="${escapeHtml(
+                    url
+                  )}"
+                >
+                  📤 Поделиться
+                </button>
+
+              </div>
+            `;
+          }
+
+          list.appendChild(card);
+        }
+      );
+    }
+
+    /*
+     * ========================================================
+     * GENERATION
+     * ========================================================
+     */
+
+    async function generateSong() {
+      const prompt =
+        document
+          .getElementById(
+            'prompt-input'
+          )
+          .value
+          .trim();
+
+      if (!prompt) {
+        alert(
+          'Пожалуйста, напишите ' +
+          'пожелания к песне!'
+        );
+
+        return;
+      }
+
+      if (
+        currentBalance < 200
+      ) {
+
+        alert(
+          'Для генерации необходимо ' +
+          'минимум 200 ₽. ' +
+          'Пополните баланс.'
+        );
+
+        openTopupModal();
+
+        return;
+      }
+
+      const button =
+        document.getElementById(
+          'order-btn'
+        );
+
+      button.disabled = true;
+
+      button.textContent =
+        'Отправка заказа...';
+
+      try {
+
+        const data =
+          await apiFetch(
+            '/api/generate-song',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+                initData:
+                  maxInitData,
+                genre:
+                  selectedGenre,
+                vocal:
+                  selectedVocal,
+                prompt
+              })
+            },
+            30000
+          );
+
+        if (data.success) {
+
+          document.getElementById(
+            'prompt-input'
+          ).value = '';
+
+          await loadOrders();
+
+        } else {
+
+          alert(
+            data.message ||
+            'Не удалось запустить генерацию.'
+          );
+
+        }
+
+      } catch (err) {
+
+        console.error(
+          '[GENERATE]',
+          err
+        );
+
+        alert(
+          err.message ||
+          'Ошибка связи с сервером.'
+        );
+
+      } finally {
+
+        button.disabled = false;
+
+        button.textContent =
+          'Сгенерировать шедевр';
+      }
+    }
+
+    /*
+     * ========================================================
+     * EVENTS
+     * ========================================================
+     */
+
+    function setupEvents() {
+
+      /*
+       * GENRE
+       */
+
+      document
+        .querySelectorAll(
+          '[data-genre]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              'click',
+              () => {
+
+                selectedGenre =
+                  button.dataset.genre;
+
+                document
+                  .querySelectorAll(
+                    '[data-genre]'
+                  )
+                  .forEach(
+                    item =>
+                      item.classList.remove(
+                        'selected'
+                      )
+                  );
+
+                button.classList.add(
+                  'selected'
+                );
+
+                try {
+
+                  getMaxWebApp()
+                    ?.HapticFeedback
+                    ?.selectionChanged
+                    ?.();
+
+                } catch {}
+              }
+            );
+          }
+        );
+
+      /*
+       * VOCAL
+       */
+
+      document
+        .querySelectorAll(
+          '[data-vocal]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              'click',
+              () => {
+
+                selectedVocal =
+                  button.dataset.vocal;
+
+                document
+                  .querySelectorAll(
+                    '[data-vocal]'
+                  )
+                  .forEach(
+                    item =>
+                      item.classList.remove(
+                        'selected'
+                      )
+                  );
+
+                button.classList.add(
+                  'selected'
+                );
+
+                try {
+
+                  getMaxWebApp()
+                    ?.HapticFeedback
+                    ?.selectionChanged
+                    ?.();
+
+                } catch {}
+              }
+            );
+          }
+        );
+
+      /*
+       * TOPUP
+       */
+
+      document
+        .getElementById(
+          'balance-button'
+        )
+        .addEventListener(
+          'click',
+          openTopupModal
+        );
+
+      document
+        .getElementById(
+          'topup-close'
+        )
+        .addEventListener(
+          'click',
+          closeTopupModal
+        );
+
+      document
+        .querySelectorAll(
+          '[data-amount]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              'click',
+              () => {
+
+                selectTopupAmount(
+                  Number(
+                    button.dataset.amount
+                  ),
+                  button
+                );
+              }
+            );
+          }
+        );
+
+      document
+        .getElementById(
+          'process-topup-button'
+        )
+        .addEventListener(
+          'click',
+          processTopup
+        );
+
+      /*
+       * GENERATE
+       */
+
+      document
+        .getElementById(
+          'order-btn'
+        )
+        .addEventListener(
+          'click',
+          generateSong
+        );
+
+      /*
+       * EVENT DELEGATION
+       */
+
+      document
+        .getElementById(
+          'orders-list'
+        )
+        .addEventListener(
+          'click',
+          async event => {
+
+            const target =
+              event.target
+                ?.closest(
+                  'button'
+                );
+
+            if (!target) {
+              return;
+            }
+
+            /*
+             * UNLOCK
+             */
+
+            if (
+              target.dataset
+                .unlock === 'true'
+            ) {
+
+              await unlockSong(
+                Number(
+                  target.dataset.orderId
+                ),
+                Number(
+                  target.dataset.option
+                ),
+                target.dataset.url,
+                target.dataset.title
+              );
+
+              return;
+            }
+
+            /*
+             * DOWNLOAD
+             */
+
+            if (
+              target.dataset
+                .download === 'true'
+            ) {
+
+              downloadSongFile(
+                target.dataset.url,
+                target.dataset.title
+              );
+
+              return;
+            }
+
+            /*
+             * SHARE
+             */
+
+            if (
+              target.dataset
+                .share === 'true'
+            ) {
+
+              await shareSong(
+                target.dataset.url
+              );
+            }
+          }
+        );
+
+      /*
+       * DEMO AUDIO
+       */
+
+      document
+        .getElementById(
+          'orders-list'
+        )
+        .addEventListener(
+          'timeupdate',
+          event => {
+
+            const audio =
+              event.target;
+
+            if (
+              audio.matches(
+                '[data-demo-audio="true"]'
+              )
+            ) {
+
+              handleDemoTimeUpdate(
+                audio
+              );
+            }
+          },
+          true
+        );
+    }
+
+    /*
+     * ========================================================
+     * INIT
+     * ========================================================
+     */
 
     async function initMiniApp() {
+
+      /*
+       * Главное:
+       *
+       * интерфейс уже отрисован.
+       * Мы больше не ждём WebApp 10 секунд
+       * в цикле.
+       */
+
       try {
-        // WebApp создаётся MAX Bridge при загрузке библиотеки.
-        // Небольшая повторная проверка полезна, если WebView загрузил HTML
-        // раньше, чем CDN-скрипт.
-        let attempts = 0;
-        while (!window.WebApp && attempts < 40) {
-          await new Promise(resolve => setTimeout(resolve, 250));
-          attempts++;
-        }
+
+        console.log(
+          '[APP] DOM ready'
+        );
+
+        /*
+         * MAX Bridge загружается через defer.
+         *
+         * deferred script будет выполнен
+         * до DOMContentLoaded.
+         */
 
         if (!window.WebApp) {
-          throw new Error('MAX Bridge не доступен.');
+
+          const detail =
+            window.__MAX_BRIDGE_SCRIPT_ERROR__
+              ? 'MAX Bridge вернул ошибку загрузки.'
+              : 'MAX Bridge ещё не доступен.';
+
+          throw new Error(
+            detail +
+            ' Попробуйте открыть Mini App ещё раз.'
+          );
         }
 
-        console.log('[MAX] Bridge loaded');
+        console.log(
+          '[MAX] Bridge ready'
+        );
 
-        // Не используем Telegram API, URL max_id или guest-id.
-        // В production пользователь всегда идентифицируется через MAX initData.
+        /*
+         * Получаем и валидируем initData.
+         */
+
         await fetchUserData();
+
+        console.log(
+          '[APP] Mini App initialized'
+        );
+
       } catch (err) {
-        console.error('[INIT]', err);
-        showStartupError(err.message || 'Не удалось запустить Mini App.');
+
+        console.error(
+          '[INIT]',
+          err
+        );
+
+        showStartupError(
+          err.message ||
+          'Не удалось запустить Mini App.'
+        );
       }
     }
 
-    window.addEventListener('error', event => {
-      console.error('[GLOBAL ERROR]', event.error || event.message);
-    });
+    /*
+     * ========================================================
+     * GLOBAL ERROR LOGGING
+     * ========================================================
+     */
 
-    window.addEventListener('unhandledrejection', event => {
-      console.error('[UNHANDLED PROMISE]', event.reason);
-    });
+    window.addEventListener(
+      'error',
+      event => {
 
-    initMiniApp();
+        console.error(
+          '[GLOBAL ERROR]',
+          event.error ||
+          event.message
+        );
+      }
+    );
+
+    window.addEventListener(
+      'unhandledrejection',
+      event => {
+
+        console.error(
+          '[UNHANDLED PROMISE]',
+          event.reason
+        );
+      }
+    );
+
+    /*
+     * ========================================================
+     * START
+     * ========================================================
+     */
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
+
+        setupEvents();
+
+        initMiniApp();
+      }
+    );
   </script>
+
 </body>
 </html>
