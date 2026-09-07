@@ -1,4 +1,3 @@
-```javascript
 const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
@@ -9,85 +8,23 @@ const app = express();
 
 app.disable('x-powered-by');
 
-/*
- * ============================================================
- * CORS
- * ============================================================
- *
- * Frontend теперь будет находиться на:
- *
- * https://cbklexa-bot.github.io
- *
- * Backend остаётся на Render.
- *
- * Поэтому разрешаем запросы от GitHub Pages.
- */
+app.use(
+  cors({
+    origin: [
+      'https://cbklexa-bot.github.io',
+      'https://max-song-app.onrender.com'
+    ],
+    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type'],
+    credentials: false
+  })
+);
 
-app.use(cors({
-  origin: [
-    'https://cbklexa-bot.github.io'
-  ],
-  methods: [
-    'GET',
-    'POST',
-    'PATCH',
-    'OPTIONS'
-  ],
-  allowedHeaders: [
-    'Content-Type'
-  ]
-}));
-
-/*
- * ============================================================
- * JSON
- * ============================================================
- */
-
-app.use(express.json({
-  limit: '1mb'
-}));
-
-/*
- * ============================================================
- * CONFIG
- * ============================================================
- */
-
-const supabaseUrl = (process.env.SUPABASE_URL || '')
-  .trim()
-  .replace(/\/$/, '');
-
-const supabaseKey = (process.env.SUPABASE_KEY || '').trim();
-const PIAPI_KEY = (process.env.PIAPI_KEY || '').trim();
-const MAX_BOT_TOKEN = (process.env.MAX_BOT_TOKEN || '').trim();
-
-const SONG_PRICE = 200;
-
-/*
- * MAX рекомендует проверять актуальность auth_date.
- */
-const MAX_INITDATA_MAX_AGE_SECONDS = 60 * 60;
-
-const PORT = Number(process.env.PORT) || 10000;
-
-const PUBLIC_DIR = path.join(__dirname, 'public');
-
-const dbHeaders = {
-  apikey: supabaseKey,
-  Authorization: `Bearer ${supabaseKey}`,
-  'Content-Type': 'application/json',
-  Prefer: 'return=representation'
-};
-
-/*
- * ============================================================
- * REQUEST LOG
- * ============================================================
- *
- * Временная диагностика.
- * Показывает, какие запросы реально доходят до Render.
- */
+app.use(
+  express.json({
+    limit: '1mb'
+  })
+);
 
 app.use((req, res, next) => {
   console.log(
@@ -104,1762 +41,962 @@ app.use((req, res, next) => {
   next();
 });
 
-/*
- * ============================================================
- * HELPERS
- * ============================================================
- */
+const PORT = process.env.PORT || 10000;
 
-function getSunoStyleTags(genre, vocal) {
-  const genreMap = {
-    'Поп': 'pop, modern pop, catchy synth',
-    'Танцевальная': 'dance, EDM, club dance beat, energetic synth',
-    'Народная': 'russian folk, accordion, ethno folk, traditional',
-    'Шансон': 'russian chanson, acoustic guitar, accordion, emotional',
-    'Рок': 'rock, electric guitar, drive drums',
-    'Рэп': 'hip hop, rap, trap beat',
-    'Акустика': 'acoustic guitar, chill, warm vocal focus',
-    'Джаз': 'jazz, smooth jazz, saxophone',
-    'Электроника': 'synthwave, electro pop, electronic'
-  };
+const MAX_BOT_TOKEN = process.env.MAX_BOT_TOKEN || '';
+const SUPABASE_URL = process.env.SUPABASE_URL || '';
+const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
+const PIAPI_KEY = process.env.PIAPI_KEY || '';
 
-  const vocalMap = {
-    'Женский соло': 'female vocal, clear solo female singer',
-    'Мужской соло': 'male vocal, clear solo male singer',
-    'Дуэт': 'duet, male and female voices',
-    'Хор': 'choir, chorus, multiple voices',
-    'Детский голос': 'child vocal, clear child voice'
-  };
+const SONG_PRICE = 200;
 
-  return `${genreMap[genre] || 'pop'}, ${vocalMap[vocal] || 'male vocal'}, russian song`;
-}
+const dbHeaders = {
+  apikey: SUPABASE_KEY,
+  Authorization: 'Bearer ' + SUPABASE_KEY,
+  'Content-Type': 'application/json',
+  Prefer: 'return=representation'
+};
 
-function constantTimeEqualHex(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') {
-    return false;
-  }
-
-  const aa = Buffer.from(a.toLowerCase(), 'utf8');
-  const bb = Buffer.from(b.toLowerCase(), 'utf8');
-
-  if (aa.length !== bb.length) {
-    return false;
-  }
-
-  return crypto.timingSafeEqual(aa, bb);
-}
-
-/*
- * ============================================================
- * MAX INIT DATA
- * ============================================================
- *
- * window.WebApp.initData уже содержит WebAppData,
- * переданные MAX для проверки.
- *
- * Также оставляем совместимость с вариантом:
- *
- * WebAppData=...
- *
- * ============================================================
- */
-
-function extractWebAppData(rawInitData) {
-  if (typeof rawInitData !== 'string') {
-    throw new Error('Некорректные initData MAX');
-  }
-
-  const raw = rawInitData.trim();
-
-  if (!raw) {
-    throw new Error('Пустые initData MAX');
-  }
-
-  const normalized = raw.startsWith('#')
-    ? raw.slice(1)
-    : raw;
-
-  if (
-    normalized.startsWith('WebAppData=') ||
-    normalized.includes('&WebAppPlatform=')
-  ) {
-    try {
-      const outerParams =
-        new URLSearchParams(normalized);
-
-      const webAppData =
-        outerParams.get('WebAppData');
-
-      if (webAppData) {
-        return webAppData;
-      }
-    } catch (err) {
-      console.warn(
-        '[MAX] Не удалось разобрать outer initData:',
-        err.message
-      );
-    }
-  }
-
-  return raw;
-}
-
-function parseWebAppData(appData) {
-  if (
-    typeof appData !== 'string' ||
-    !appData.trim()
-  ) {
-    throw new Error('Пустой WebAppData');
-  }
-
-  const params = [];
-
-  for (const chunk of appData.split('&')) {
-    if (!chunk) {
-      continue;
-    }
-
-    const separatorIndex =
-      chunk.indexOf('=');
-
-    if (separatorIndex === -1) {
-      throw new Error(
-        `Некорректный параметр MAX: ${chunk}`
-      );
-    }
-
-    const key =
-      chunk.slice(0, separatorIndex);
-
-    const rawValue =
-      chunk.slice(separatorIndex + 1);
-
-    if (!key) {
-      throw new Error(
-        'Пустой ключ параметра MAX'
-      );
-    }
-
-    let value;
-
-    try {
-      value =
-        decodeURIComponent(rawValue);
-    } catch {
-      throw new Error(
-        `Не удалось декодировать параметр MAX: ${key}`
-      );
-    }
-
-    params.push([
-      key,
-      value
-    ]);
-  }
-
-  const hashEntries =
-    params.filter(
-      ([key]) => key === 'hash'
-    );
-
-  if (hashEntries.length !== 1) {
-    throw new Error(
-      'Параметр hash должен присутствовать ровно один раз'
-    );
-  }
-
-  const originalHash =
-    hashEntries[0][1];
-
-  if (!originalHash) {
-    throw new Error(
-      'Пустой hash MAX'
-    );
-  }
-
-  const duplicateKeys =
-    new Set();
-
-  const duplicates =
-    new Set();
-
-  for (const [key] of params) {
-    if (duplicateKeys.has(key)) {
-      duplicates.add(key);
-    }
-
-    duplicateKeys.add(key);
-  }
-
-  if (duplicates.size > 0) {
-    throw new Error(
-      `Повторяющиеся параметры MAX: ${Array.from(
-        duplicates
-      ).join(', ')}`
-    );
-  }
-
-  const sortedParams =
-    params
-      .filter(
-        ([key]) => key !== 'hash'
-      )
-      .sort(
-        ([a], [b]) =>
-          a.localeCompare(b)
-      );
-
-  const launchParams =
-    sortedParams
-      .map(
-        ([key, value]) =>
-          `${key}=${value}`
-      )
-      .join('\n');
-
-  const userEntry =
-    params.find(
-      ([key]) => key === 'user'
-    );
-
-  const authDateEntry =
-    params.find(
-      ([key]) =>
-        key === 'auth_date'
-    );
-
-  let user = null;
-
-  if (userEntry) {
-    try {
-      user =
-        JSON.parse(
-          userEntry[1]
-        );
-    } catch {
-      throw new Error(
-        'Не удалось разобрать user из WebAppData MAX'
-      );
-    }
-  }
-
-  let authDate = null;
-
-  if (authDateEntry) {
-    authDate =
-      Number(
-        authDateEntry[1]
-      );
-
-    if (
-      !Number.isFinite(authDate)
-    ) {
-      throw new Error(
-        'Некорректный auth_date MAX'
-      );
-    }
-  }
-
+function checkConfig() {
   return {
-    originalHash,
-    launchParams,
-    user,
-    authDate
+    maxBotTokenConfigured: Boolean(MAX_BOT_TOKEN),
+    supabaseConfigured: Boolean(SUPABASE_URL && SUPABASE_KEY),
+    piapiConfigured: Boolean(PIAPI_KEY)
   };
+}
+
+function createMaxSecretKey() {
+  return crypto
+    .createHmac('sha256', 'WebAppData')
+    .update(MAX_BOT_TOKEN)
+    .digest();
 }
 
 function validateMaxInitData(initData) {
   if (!MAX_BOT_TOKEN) {
-    const error =
-      new Error(
-        'На Render не задана переменная MAX_BOT_TOKEN'
-      );
-
-    error.code =
-      'MAX_BOT_TOKEN_MISSING';
-
-    throw error;
+    throw new Error('MAX_BOT_TOKEN is not configured');
   }
 
-  const webAppData =
-    extractWebAppData(
-      initData
-    );
-
-  const {
-    originalHash,
-    launchParams,
-    user,
-    authDate
-  } =
-    parseWebAppData(
-      webAppData
-    );
-
-  if (!user?.id) {
-    throw new Error(
-      'MAX не передал user.id'
-    );
+  if (!initData || typeof initData !== 'string') {
+    throw new Error('MAX initData is missing');
   }
 
-  if (authDate !== null) {
-    const now =
-      Math.floor(
-        Date.now() / 1000
-      );
+  const params = {};
 
-    if (
-      authDate >
-      now + 300
-    ) {
-      throw new Error(
-        'Некорректная дата авторизации MAX'
-      );
+  initData.split('&').forEach((part) => {
+    const separatorIndex = part.indexOf('=');
+
+    if (separatorIndex === -1) {
+      return;
     }
 
-    if (
-      now - authDate >
-      MAX_INITDATA_MAX_AGE_SECONDS
-    ) {
-      throw new Error(
-        'Данные запуска MAX устарели. Откройте Mini App заново.'
-      );
-    }
+    const key = part.slice(0, separatorIndex);
+    const value = part.slice(separatorIndex + 1);
+
+    params[key] = value;
+  });
+
+  const receivedHash = params.hash;
+
+  if (!receivedHash) {
+    throw new Error('MAX initData hash is missing');
   }
 
-  /*
-   * MAX:
-   *
-   * secret_key =
-   * HMAC-SHA256("WebAppData", BOT_TOKEN)
-   *
-   * hash =
-   * HMAC-SHA256(secret_key, launch_params)
-   */
+  const dataCheckString = Object.keys(params)
+    .filter((key) => key !== 'hash')
+    .sort()
+    .map((key) => {
+      return key + '=' + params[key];
+    })
+    .join('\n');
 
-  const secretKey =
-    crypto
-      .createHmac(
-        'sha256',
-        'WebAppData'
-      )
-      .update(
-        MAX_BOT_TOKEN,
-        'utf8'
-      )
-      .digest();
+  const secretKey = createMaxSecretKey();
 
-  const calculatedHash =
-    crypto
-      .createHmac(
-        'sha256',
-        secretKey
-      )
-      .update(
-        launchParams,
-        'utf8'
-      )
-      .digest('hex');
+  const calculatedHash = crypto
+    .createHmac('sha256', secretKey)
+    .update(dataCheckString)
+    .digest('hex');
+
+  const receivedBuffer = Buffer.from(receivedHash, 'hex');
+  const calculatedBuffer = Buffer.from(calculatedHash, 'hex');
 
   if (
-    !constantTimeEqualHex(
-      calculatedHash,
-      originalHash
-    )
+    receivedBuffer.length !== calculatedBuffer.length ||
+    !crypto.timingSafeEqual(receivedBuffer, calculatedBuffer)
   ) {
-    const error =
-      new Error(
-        'Не удалось подтвердить подлинность данных MAX'
-      );
+    throw new Error('Invalid MAX initData signature');
+  }
 
-    error.code =
-      'MAX_INITDATA_INVALID';
+  if (params.auth_date) {
+    const authDate = Number(params.auth_date);
 
-    throw error;
+    if (!Number.isNaN(authDate)) {
+      const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+
+      if (ageSeconds > 3600) {
+        throw new Error('MAX initData expired');
+      }
+    }
+  }
+
+  let user = null;
+
+  if (params.user) {
+    try {
+      user = JSON.parse(decodeURIComponent(params.user));
+    } catch (error) {
+      try {
+        user = JSON.parse(params.user);
+      } catch (parseError) {
+        user = null;
+      }
+    }
   }
 
   return {
-    user,
-    authDate
+    params,
+    user
   };
 }
 
-/*
- * ============================================================
- * CONFIG CHECK
- * ============================================================
- */
+function requireMaxUser(req) {
+  const initData = req.headers['x-max-init-data'];
 
-function requireConfig() {
-  const missing = [];
-
-  if (!supabaseUrl) {
-    missing.push(
-      'SUPABASE_URL'
-    );
+  if (!initData) {
+    throw new Error('X-MAX-Init-Data header is missing');
   }
 
-  if (!supabaseKey) {
-    missing.push(
-      'SUPABASE_KEY'
-    );
+  const result = validateMaxInitData(initData);
+
+  if (!result.user || !result.user.id) {
+    throw new Error('MAX user data is missing');
   }
 
-  if (!PIAPI_KEY) {
-    missing.push(
-      'PIAPI_KEY'
-    );
-  }
-
-  if (missing.length) {
-    throw new Error(
-      `Не заданы переменные окружения: ${missing.join(', ')}`
-    );
-  }
+  return result;
 }
 
-/*
- * ============================================================
- * USER
- * ============================================================
- */
+async function supabaseGet(table, query) {
+  const url = SUPABASE_URL + '/rest/v1/' + table;
 
-function getUserFromRequest(req) {
-  const initData =
-    req.body?.initData;
+  const response = await axios.get(url, {
+    headers: dbHeaders,
+    params: query
+  });
 
-  if (
-    typeof initData !== 'string' ||
-    !initData.trim()
-  ) {
-    const error =
-      new Error(
-        'Не переданы initData MAX'
-      );
+  return response.data;
+}
 
-    error.status = 400;
+async function supabasePost(table, body) {
+  const url = SUPABASE_URL + '/rest/v1/' + table;
+
+  const response = await axios.post(url, body, {
+    headers: dbHeaders
+  });
+
+  return response.data;
+}
+
+async function supabasePatch(table, query, body) {
+  const url = SUPABASE_URL + '/rest/v1/' + table;
+
+  const response = await axios.patch(url, body, {
+    headers: dbHeaders,
+    params: query
+  });
+
+  return response.data;
+}
+
+async function getUserByMaxId(maxUserId) {
+  const rows = await supabaseGet('users', {
+    max_user_id: 'eq.' + String(maxUserId),
+    select: '*',
+    limit: 1
+  });
+
+  return rows.length ? rows[0] : null;
+}
+
+async function createUser(maxUser) {
+  const firstName = maxUser.first_name || '';
+  const lastName = maxUser.last_name || '';
+  const username = maxUser.username || '';
+
+  const fullName =
+    (firstName + ' ' + lastName).trim() ||
+    username ||
+    'MAX пользователь';
+
+  const body = {
+    max_user_id: String(maxUser.id),
+    username: username || null,
+    first_name: firstName || null,
+    last_name: lastName || null,
+    name: fullName,
+    balance: 0
+  };
+
+  const rows = await supabasePost('users', body);
+
+  return rows[0];
+}
+
+async function getOrCreateUser(maxUser) {
+  let user = await getUserByMaxId(maxUser.id);
+
+  if (user) {
+    return user;
+  }
+
+  try {
+    user = await createUser(maxUser);
+    return user;
+  } catch (error) {
+    if (
+      error.response &&
+      error.response.status === 409
+    ) {
+      user = await getUserByMaxId(maxUser.id);
+
+      if (user) {
+        return user;
+      }
+    }
 
     throw error;
   }
+}
 
-  return validateMaxInitData(
-    initData
+function getPiApiHeaders() {
+  return {
+    'Content-Type': 'application/json',
+    'x-api-key': PIAPI_KEY
+  };
+}
+
+async function createPiApiTask(prompt) {
+  const url = 'https://api.piapi.ai/api/v1/task';
+
+  const body = {
+    model: 'suno',
+    task_type: 'music',
+    input: {
+      gpt_description_prompt: prompt,
+      make_instrumental: false
+    }
+  };
+
+  const response = await axios.post(url, body, {
+    headers: getPiApiHeaders(),
+    timeout: 60000
+  });
+
+  return response.data;
+}
+
+async function getPiApiTask(taskId) {
+  const url =
+    'https://api.piapi.ai/api/v1/task/' +
+    encodeURIComponent(taskId);
+
+  const response = await axios.get(url, {
+    headers: getPiApiHeaders(),
+    timeout: 60000
+  });
+
+  return response.data;
+}
+
+function extractPiApiSongs(taskResponse) {
+  const result = taskResponse && taskResponse.data
+    ? taskResponse.data
+    : taskResponse;
+
+  const output = result && result.output
+    ? result.output
+    : null;
+
+  if (!output) {
+    return [];
+  }
+
+  let songs = [];
+
+  if (Array.isArray(output)) {
+    songs = output;
+  } else if (Array.isArray(output.songs)) {
+    songs = output.songs;
+  } else if (Array.isArray(output.data)) {
+    songs = output.data;
+  } else if (output.audio_url || output.audioUrl || output.url) {
+    songs = [output];
+  }
+
+  return songs
+    .map((song) => {
+      const audioUrl =
+        song.audio_url ||
+        song.audioUrl ||
+        song.url ||
+        song.source_audio_url ||
+        null;
+
+      const title =
+        song.title ||
+        song.name ||
+        song.prompt ||
+        'Ваша песня';
+
+      return {
+        audioUrl,
+        title
+      };
+    })
+    .filter((song) => Boolean(song.audioUrl));
+}
+
+function getTaskStatus(taskResponse) {
+  const result = taskResponse && taskResponse.data
+    ? taskResponse.data
+    : taskResponse;
+
+  return (
+    result.status ||
+    result.task_status ||
+    (result.data && result.data.status) ||
+    'unknown'
   );
 }
 
-async function getUserRecord(
-  maxId,
-  name
-) {
-  const userRes =
-    await axios.get(
-      `${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}&select=*`,
+/* =========================================
+   HEALTH
+========================================= */
+
+app.get('/api/health', (req, res) => {
+  res.json({
+    ok: true,
+    service: 'max-song-app',
+    config: checkConfig(),
+    time: new Date().toISOString()
+  });
+});
+
+/* =========================================
+   MAX PROBE
+========================================= */
+
+app.get('/api/max-probe', (req, res) => {
+  res.json({
+    ok: true,
+    service: 'max-song-app',
+    cors: true,
+    time: new Date().toISOString(),
+    origin: req.headers.origin || null,
+    userAgent: req.headers['user-agent'] || ''
+  });
+});
+
+/* =========================================
+   GET USER
+========================================= */
+
+app.get('/api/user', async (req, res) => {
+  try {
+    const auth = requireMaxUser(req);
+
+    const user = await getOrCreateUser(auth.user);
+
+    const orders = await supabaseGet('orders', {
+      user_id: 'eq.' + String(user.id),
+      select: '*',
+      order: 'created_at.desc',
+      limit: 20
+    });
+
+    res.json({
+      ok: true,
+      user,
+      orders
+    });
+  } catch (error) {
+    console.error(
+      '[GET /api/user]',
+      error.response
+        ? error.response.data
+        : error.message
+    );
+
+    res.status(401).json({
+      ok: false,
+      error: error.message || 'Authorization error'
+    });
+  }
+});
+
+/* =========================================
+   TOP UP — TEST MODE
+========================================= */
+
+app.post('/api/topup', async (req, res) => {
+  try {
+    const auth = requireMaxUser(req);
+
+    const amount = Number(req.body.amount);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Некорректная сумма'
+      });
+    }
+
+    const user = await getOrCreateUser(auth.user);
+
+    let bonus = 0;
+
+    if (amount >= 800) {
+      bonus = amount * 0.2;
+    } else if (amount >= 400) {
+      bonus = amount * 0.1;
+    }
+
+    const totalCredit = amount + bonus;
+
+    const newBalance =
+      Number(user.balance || 0) + totalCredit;
+
+    const updatedRows = await supabasePatch(
+      'users',
       {
-        headers: dbHeaders,
-        timeout: 10000
+        id: 'eq.' + String(user.id)
+      },
+      {
+        balance: newBalance
       }
     );
 
-  let user =
-    userRes.data[0];
+    await supabasePost('transactions', {
+      user_id: user.id,
+      type: 'topup_test',
+      amount: totalCredit,
+      description:
+        'Тестовое пополнение без реальной оплаты'
+    });
 
-  if (!user) {
-    const createRes =
-      await axios.post(
-        `${supabaseUrl}/rest/v1/users`,
-        {
-          max_id: maxId,
-          name:
-            name ||
-            'Пользователь MAX',
-          balance: 0
-        },
-        {
-          headers: dbHeaders,
-          timeout: 10000
-        }
+    res.json({
+      ok: true,
+      testMode: true,
+      added: totalCredit,
+      bonus,
+      balance:
+        updatedRows[0] && updatedRows[0].balance !== undefined
+          ? updatedRows[0].balance
+          : newBalance
+    });
+  } catch (error) {
+    console.error(
+      '[POST /api/topup]',
+      error.response
+        ? error.response.data
+        : error.message
+    );
+
+    res.status(400).json({
+      ok: false,
+      error: error.message || 'Ошибка пополнения'
+    });
+  }
+});
+
+/* =========================================
+   GENERATE SONG
+========================================= */
+
+app.post('/api/generate-song', async (req, res) => {
+  try {
+    const auth = requireMaxUser(req);
+
+    const user = await getOrCreateUser(auth.user);
+
+    const currentBalance = Number(user.balance || 0);
+
+    if (currentBalance < SONG_PRICE) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Недостаточно средств. Для генерации необходимо 200 ₽.'
+      });
+    }
+
+    const genre = String(req.body.genre || '').trim();
+    const vocal = String(req.body.vocal || '').trim();
+    const prompt = String(req.body.prompt || '').trim();
+
+    if (!prompt) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Введите описание песни'
+      });
+    }
+
+    const fullPrompt =
+      [
+        genre ? 'Жанр: ' + genre : '',
+        vocal ? 'Вокал: ' + vocal : '',
+        'Описание: ' + prompt
+      ]
+        .filter(Boolean)
+        .join('. ');
+
+    const piApiResult = await createPiApiTask(fullPrompt);
+
+    const piData =
+      piApiResult && piApiResult.data
+        ? piApiResult.data
+        : piApiResult;
+
+    const taskId =
+      piData.id ||
+      piData.task_id ||
+      piApiResult.id ||
+      piApiResult.task_id;
+
+    if (!taskId) {
+      console.error(
+        '[PIAPI CREATE TASK]',
+        JSON.stringify(piApiResult)
       );
 
-    user =
-      createRes.data[0];
-  }
+      return res.status(502).json({
+        ok: false,
+        error: 'PiAPI не вернул task_id'
+      });
+    }
 
-  return user;
-}
+    const orderRows = await supabasePost('orders', {
+      user_id: user.id,
+      genre,
+      vocal,
+      prompt,
+      status: 'processing',
+      task_id: String(taskId),
+      price: SONG_PRICE
+    });
 
-async function getOrdersForUser(
-  maxId
-) {
-  const ordersRes =
-    await axios.get(
-      `${supabaseUrl}/rest/v1/orders?max_id=eq.${encodeURIComponent(maxId)}&order=created_at.desc`,
-      {
-        headers: dbHeaders,
-        timeout: 10000
-      }
+    res.json({
+      ok: true,
+      order: orderRows[0] || null,
+      task_id: String(taskId)
+    });
+  } catch (error) {
+    console.error(
+      '[POST /api/generate-song]',
+      error.response
+        ? error.response.data
+        : error.message
     );
 
-  return ordersRes.data || [];
-}
+    res.status(400).json({
+      ok: false,
+      error:
+        error.message ||
+        'Не удалось запустить генерацию'
+    });
+  }
+});
 
-/*
- * ============================================================
- * HEALTH
- * ============================================================
- */
+/* =========================================
+   ORDERS
+========================================= */
 
-app.get(
-  '/api/health',
-  (req, res) => {
+app.get('/api/orders', async (req, res) => {
+  try {
+    const auth = requireMaxUser(req);
 
-    res.json({
-      ok: true,
-      service:
-        'max-song-app',
-      time:
-        new Date().toISOString(),
-      maxBotTokenConfigured:
-        Boolean(
-          MAX_BOT_TOKEN
-        ),
-      supabaseConfigured:
-        Boolean(
-          supabaseUrl &&
-          supabaseKey
-        ),
-      piapiConfigured:
-        Boolean(
-          PIAPI_KEY
-        )
+    const user = await getOrCreateUser(auth.user);
+
+    let orders = await supabaseGet('orders', {
+      user_id: 'eq.' + String(user.id),
+      select: '*',
+      order: 'created_at.desc',
+      limit: 50
     });
 
-  }
-);
-
-/*
- * ============================================================
- * MAX PROBE
- * ============================================================
- *
- * Этот endpoint нужен для проверки:
- *
- * GitHub Pages
- *      ↓
- * CORS
- *      ↓
- * Render
- *
- * ============================================================
- */
-
-app.get(
-  '/api/max-probe',
-  (req, res) => {
-
-    res.json({
-      ok: true,
-      service:
-        'max-song-app',
-      cors: true,
-      time:
-        new Date().toISOString(),
-      origin:
-        req.headers.origin || null,
-      userAgent:
-        req.headers['user-agent'] || ''
-    });
-
-  }
-);
-
-/*
- * ============================================================
- * USER PROFILE
- * ============================================================
- */
-
-app.post(
-  '/api/user',
-  async (req, res) => {
-
-    try {
-
-      requireConfig();
-
-      const {
-        user: maxUser
-      } =
-        getUserFromRequest(
-          req
-        );
-
-      const maxId =
-        String(
-          maxUser.id
-        );
-
-      const name =
-        maxUser.first_name ||
-        maxUser.name ||
-        'Пользователь MAX';
-
-      const user =
-        await getUserRecord(
-          maxId,
-          name
-        );
-
-      let orders = [];
+    for (const order of orders) {
+      if (
+        order.status !== 'processing' ||
+        !order.task_id
+      ) {
+        continue;
+      }
 
       try {
-
-        orders =
-          await getOrdersForUser(
-            maxId
-          );
-
-      } catch (ordersError) {
-
-        console.error(
-          '[USER ORDERS ERROR]:',
-          ordersError.response?.data ||
-          ordersError.message
-        );
-
-      }
-
-      res.json({
-        success: true,
-        user,
-
-        hasActiveGeneration:
-          orders.some(
-            order =>
-              order.status ===
-                'processing' ||
-              order.status ===
-                'preview'
-          ),
-
-        max: {
-          id: maxId,
-          name
-        }
-      });
-
-    } catch (err) {
-
-      console.error(
-        '[USER ERROR]:',
-        err.response?.data ||
-        err.message
-      );
-
-      const status =
-        err.status ||
-        (
-          err.code ===
-          'MAX_INITDATA_INVALID'
-            ? 401
-            : 500
-        );
-
-      res.status(
-        status
-      ).json({
-
-        success: false,
-
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          'Ошибка сервера'
-      });
-
-    }
-
-  }
-);
-
-/*
- * ============================================================
- * TOPUP
- * ============================================================
- *
- * Пока тестовое пополнение.
- * Реальную оплату подключим позже.
- * ============================================================
- */
-
-app.post(
-  '/api/topup',
-  async (req, res) => {
-
-    try {
-
-      requireConfig();
-
-      const {
-        user: maxUser
-      } =
-        getUserFromRequest(
-          req
-        );
-
-      const maxId =
-        String(
-          maxUser.id
-        );
-
-      const numAmount =
-        Number(
-          req.body?.amount
-        );
-
-      if (
-        !Number.isFinite(
-          numAmount
-        ) ||
-        numAmount < 200
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              'Минимальное пополнение 200 ₽'
-          });
-      }
-
-      let bonusPercent = 0;
-
-      if (
-        numAmount >= 800
-      ) {
-
-        bonusPercent = 20;
-
-      } else if (
-        numAmount >= 400
-      ) {
-
-        bonusPercent = 10;
-      }
-
-      const bonusAmount =
-        Math.floor(
-          (
-            numAmount *
-            bonusPercent
-          ) / 100
-        );
-
-      const totalCredited =
-        numAmount +
-        bonusAmount;
-
-      const userRes =
-        await axios.get(
-          `${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}&select=balance`,
-          {
-            headers: dbHeaders,
-            timeout: 10000
-          }
-        );
-
-      if (
-        !userRes.data[0]
-      ) {
-
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              'Пользователь не найден.'
-          });
-      }
-
-      const currentBalance =
-        Number(
-          userRes.data[0]?.balance ||
-          0
-        );
-
-      const newBalance =
-        currentBalance +
-        totalCredited;
-
-      await axios.patch(
-        `${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}`,
-        {
-          balance:
-            newBalance
-        },
-        {
-          headers: dbHeaders,
-          timeout: 10000
-        }
-      );
-
-      await axios.post(
-        `${supabaseUrl}/rest/v1/transactions`,
-        {
-          user_max_id:
-            maxId,
-          amount:
-            totalCredited,
-          type:
-            'topup'
-        },
-        {
-          headers: dbHeaders,
-          timeout: 10000
-        }
-      );
-
-      res.json({
-        success: true,
-        message:
-          `Баланс пополнен на ${totalCredited} ₽! ` +
-          `(Бонус: ${bonusAmount} ₽)`,
-        newBalance
-      });
-
-    } catch (err) {
-
-      console.error(
-        '[TOPUP ERROR]:',
-        err.response?.data ||
-        err.message
-      );
-
-      const status =
-        err.status ||
-        (
-          err.code ===
-          'MAX_INITDATA_INVALID'
-            ? 401
-            : 500
-        );
-
-      res.status(
-        status
-      ).json({
-        success: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          'Ошибка пополнения'
-      });
-    }
-  }
-);
-
-/*
- * ============================================================
- * GENERATE SONG
- * ============================================================
- */
-
-app.post(
-  '/api/generate-song',
-  async (req, res) => {
-
-    try {
-
-      requireConfig();
-
-      const {
-        user: maxUser
-      } =
-        getUserFromRequest(
-          req
-        );
-
-      const maxId =
-        String(
-          maxUser.id
-        );
-
-      const genre =
-        String(
-          req.body?.genre ||
-          'Поп'
-        );
-
-      const vocal =
-        String(
-          req.body?.vocal ||
-          'Мужской соло'
-        );
-
-      const prompt =
-        String(
-          req.body?.prompt ||
-          ''
-        ).trim();
-
-      if (!prompt) {
-
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              'Необходимо заполнить описание песни.'
-          });
-      }
-
-      if (
-        prompt.length >
-        2000
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              'Описание песни слишком длинное.'
-          });
-      }
-
-      const userRes =
-        await axios.get(
-          `${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}&select=balance`,
-          {
-            headers: dbHeaders,
-            timeout: 10000
-          }
-        );
-
-      if (
-        !userRes.data[0]
-      ) {
-
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              'Пользователь не найден.'
-          });
-      }
-
-      const balance =
-        Number(
-          userRes.data[0]?.balance ||
-          0
-        );
-
-      if (
-        balance <
-        SONG_PRICE
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              `Недостаточно средств. ` +
-              `Ваш баланс: ${balance} ₽`
-          });
-      }
-
-      const fullPrompt =
-        `${prompt}. Стиль: ` +
-        `${getSunoStyleTags(
-          genre,
-          vocal
-        )}`;
-
-      const piApiResponse =
-        await axios.post(
-          'https://api.piapi.ai/api/v1/task',
-          {
-            model: 'suno',
-
-            task_type:
-              'music',
-
-            input: {
-              gpt_description_prompt:
-                fullPrompt,
-
-              make_instrumental:
-                false
-            }
-          },
-          {
-            headers: {
-              'x-api-key':
-                PIAPI_KEY,
-
-              'Content-Type':
-                'application/json'
-            },
-
-            timeout:
-              30000
-          }
-        );
-
-      const taskId =
-        piApiResponse.data?.data?.task_id ||
-        piApiResponse.data?.task_id;
-
-      if (!taskId) {
-
-        return res
-          .status(500)
-          .json({
-            success: false,
-            message:
-              'Не удалось получить Task ID от PiAPI.'
-          });
-      }
-
-      const orderRes =
-        await axios.post(
-          `${supabaseUrl}/rest/v1/orders`,
-          {
-            max_id:
-              maxId,
-
-            genre,
-
-            vocal,
-
-            prompt,
-
-            task_id:
-              taskId,
-
+        const taskResponse =
+          await getPiApiTask(order.task_id);
+
+        const status =
+          String(getTaskStatus(taskResponse)).toLowerCase();
+
+        const songs =
+          extractPiApiSongs(taskResponse);
+
+        if (
+          songs.length > 0 ||
+          status === 'completed' ||
+          status === 'success' ||
+          status === 'succeeded' ||
+          status === 'done'
+        ) {
+          const song1 = songs[0] || {};
+          const song2 = songs[1] || {};
+
+          const patch = {
             status:
-              'processing'
-          },
-          {
-            headers: dbHeaders,
-            timeout: 10000
+              songs.length > 0
+                ? 'preview'
+                : 'processing'
+          };
+
+          if (song1.audioUrl) {
+            patch.audio_url = song1.audioUrl;
           }
+
+          if (song1.title) {
+            patch.title = song1.title;
+          }
+
+          if (song2.audioUrl) {
+            patch.audio_url_2 = song2.audioUrl;
+          }
+
+          if (song2.title) {
+            patch.title_2 = song2.title;
+          }
+
+          const updatedRows =
+            await supabasePatch(
+              'orders',
+              {
+                id: 'eq.' + String(order.id),
+                user_id: 'eq.' + String(user.id)
+              },
+              patch
+            );
+
+          if (updatedRows[0]) {
+            Object.assign(
+              order,
+              updatedRows[0]
+            );
+          }
+        } else if (
+          status === 'failed' ||
+          status === 'error' ||
+          status === 'cancelled' ||
+          status === 'canceled'
+        ) {
+          const updatedRows =
+            await supabasePatch(
+              'orders',
+              {
+                id: 'eq.' + String(order.id),
+                user_id: 'eq.' + String(user.id)
+              },
+              {
+                status: 'failed'
+              }
+            );
+
+          if (updatedRows[0]) {
+            Object.assign(
+              order,
+              updatedRows[0]
+            );
+          }
+        }
+      } catch (taskError) {
+        console.error(
+          '[PIAPI TASK CHECK]',
+          order.task_id,
+          taskError.response
+            ? taskError.response.data
+            : taskError.message
         );
-
-      res.json({
-        success: true,
-        message:
-          'Генерация запущена!',
-        order:
-          orderRes.data[0]
-      });
-
-    } catch (err) {
-
-      console.error(
-        '[GENERATE ERROR]:',
-        err.response?.data ||
-        err.message
-      );
-
-      const status =
-        err.status ||
-        (
-          err.code ===
-          'MAX_INITDATA_INVALID'
-            ? 401
-            : 500
-        );
-
-      res.status(
-        status
-      ).json({
-        success: false,
-        message:
-          'Ошибка генерации: ' +
-          (
-            err.response?.data?.message ||
-            err.message ||
-            'Неизвестная ошибка'
-          )
-      });
+      }
     }
+
+    res.json({
+      ok: true,
+      orders
+    });
+  } catch (error) {
+    console.error(
+      '[GET /api/orders]',
+      error.response
+        ? error.response.data
+        : error.message
+    );
+
+    res.status(400).json({
+      ok: false,
+      error:
+        error.message ||
+        'Не удалось получить заказы'
+    });
   }
-);
+});
 
-/*
- * ============================================================
- * UNLOCK SONG
- * ============================================================
- */
+/* =========================================
+   UNLOCK SONG
+========================================= */
 
-app.post(
-  '/api/unlock-song',
-  async (req, res) => {
+app.post('/api/unlock-song', async (req, res) => {
+  try {
+    const auth = requireMaxUser(req);
 
-    try {
+    const user = await getOrCreateUser(auth.user);
 
-      requireConfig();
+    const orderId = req.body.orderId;
+    const selectedVariant =
+      Number(req.body.variant || 1);
 
-      const {
-        user: maxUser
-      } =
-        getUserFromRequest(
-          req
-        );
-
-      const maxId =
-        String(
-          maxUser.id
-        );
-
-      const orderId =
-        req.body?.orderId;
-
-      const audioUrl =
-        String(
-          req.body?.audioUrl ||
-          ''
-        );
-
-      const title =
-        String(
-          req.body?.title ||
-          'Именная песня'
-        );
-
-      if (
-        !orderId ||
-        !audioUrl
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              'Не переданы данные заказа.'
-          });
-      }
-
-      const userRes =
-        await axios.get(
-          `${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}&select=balance`,
-          {
-            headers: dbHeaders,
-            timeout: 10000
-          }
-        );
-
-      if (
-        !userRes.data[0]
-      ) {
-
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              'Пользователь не найден.'
-          });
-      }
-
-      const currentBalance =
-        Number(
-          userRes.data[0]?.balance ||
-          0
-        );
-
-      if (
-        currentBalance <
-        SONG_PRICE
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              'Недостаточно средств на балансе!'
-          });
-      }
-
-      const orderRes =
-        await axios.get(
-          `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&max_id=eq.${encodeURIComponent(maxId)}&select=id,status`,
-          {
-            headers: dbHeaders,
-            timeout: 10000
-          }
-        );
-
-      if (
-        !orderRes.data[0]
-      ) {
-
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              'Заказ не найден.'
-          });
-      }
-
-      if (
-        orderRes.data[0].status !==
-        'preview'
-      ) {
-
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              'Этот заказ нельзя разблокировать ' +
-              'в текущем статусе.'
-          });
-      }
-
-      const newBalance =
-        currentBalance -
-        SONG_PRICE;
-
-      await axios.patch(
-        `${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}`,
-        {
-          balance:
-            newBalance
-        },
-        {
-          headers: dbHeaders,
-          timeout: 10000
-        }
-      );
-
-      await axios.patch(
-        `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(orderId)}&max_id=eq.${encodeURIComponent(maxId)}`,
-        {
-          status:
-            'completed',
-
-          audio_url:
-            audioUrl,
-
-          title
-        },
-        {
-          headers: dbHeaders,
-          timeout: 10000
-        }
-      );
-
-      await axios.post(
-        `${supabaseUrl}/rest/v1/transactions`,
-        {
-          user_max_id:
-            maxId,
-
-          amount:
-            -SONG_PRICE,
-
-          type:
-            'song_unlock'
-        },
-        {
-          headers: dbHeaders,
-          timeout: 10000
-        }
-      );
-
-      res.json({
-        success: true,
-        message:
-          'Песня разблокирована!',
-        newBalance
+    if (!orderId) {
+      return res.status(400).json({
+        ok: false,
+        error: 'orderId не указан'
       });
-
-    } catch (err) {
-
-      console.error(
-        '[UNLOCK ERROR]:',
-        err.response?.data ||
-        err.message
-      );
-
-      const status =
-        err.status ||
-        (
-          err.code ===
-          'MAX_INITDATA_INVALID'
-            ? 401
-            : 500
-        );
-
-      res.status(
-        status
-      ).json({
-        success: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          'Ошибка разблокировки'
-      });
-    }
-  }
-);
-
-/*
- * ============================================================
- * DOWNLOAD
- * ============================================================
- */
-
-app.get(
-  '/api/download',
-  async (req, res) => {
-
-    const fileUrl =
-      String(
-        req.query?.url ||
-        ''
-      ).trim();
-
-    const fileName =
-      String(
-        req.query?.name ||
-        'song'
-      ).replace(
-        /[\\/:*?"<>|]/g,
-        '_'
-      );
-
-    if (!fileUrl) {
-
-      return res
-        .status(400)
-        .send(
-          'Не указана ссылка на файл'
-        );
     }
 
     if (
-      !/^https:\/\//i.test(
-        fileUrl
-      )
+      selectedVariant !== 1 &&
+      selectedVariant !== 2
     ) {
-
-      return res
-        .status(400)
-        .send(
-          'Разрешены только HTTPS-ссылки'
-        );
-    }
-
-    try {
-
-      const response =
-        await axios.get(
-          fileUrl,
-          {
-            responseType:
-              'stream',
-
-            timeout:
-              60000
-          }
-        );
-
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${encodeURIComponent(fileName)}.mp3"`
-      );
-
-      res.setHeader(
-        'Content-Type',
-        'audio/mpeg'
-      );
-
-      response.data.pipe(
-        res
-      );
-
-    } catch (err) {
-
-      console.error(
-        '[DOWNLOAD ERROR]:',
-        err.message
-      );
-
-      res.status(
-        500
-      ).json({
-        success: false,
-        message:
-          'Ошибка при скачивании файла'
+      return res.status(400).json({
+        ok: false,
+        error: 'Некорректный вариант песни'
       });
     }
-  }
-);
 
-/*
- * ============================================================
- * ORDERS
- * ============================================================
- */
+    const rows = await supabaseGet('orders', {
+      id: 'eq.' + String(orderId),
+      user_id: 'eq.' + String(user.id),
+      select: '*',
+      limit: 1
+    });
 
-app.post(
-  '/api/orders',
-  async (req, res) => {
+    if (!rows.length) {
+      return res.status(404).json({
+        ok: false,
+        error: 'Заказ не найден'
+      });
+    }
 
-    try {
+    const order = rows[0];
 
-      requireConfig();
+    if (order.status !== 'preview') {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Этот заказ пока нельзя разблокировать'
+      });
+    }
 
-      const {
-        user: maxUser
-      } =
-        getUserFromRequest(
-          req
-        );
+    let selectedAudioUrl = null;
+    let selectedTitle = null;
 
-      const maxId =
-        String(
-          maxUser.id
-        );
+    if (selectedVariant === 1) {
+      selectedAudioUrl = order.audio_url;
+      selectedTitle = order.title;
+    } else {
+      selectedAudioUrl = order.audio_url_2;
+      selectedTitle = order.title_2;
+    }
 
-      const orders =
-        await getOrdersForUser(
-          maxId
-        );
+    if (!selectedAudioUrl) {
+      return res.status(400).json({
+        ok: false,
+        error: 'Выбранный вариант песни отсутствует'
+      });
+    }
 
-      for (
-        const order
-        of orders
-      ) {
+    const balance = Number(user.balance || 0);
 
-        if (
-          order.status !==
-            'processing' ||
-          !order.task_id ||
-          !PIAPI_KEY
-        ) {
-          continue;
+    if (balance < SONG_PRICE) {
+      return res.status(400).json({
+        ok: false,
+        error:
+          'Недостаточно средств для покупки'
+      });
+    }
+
+    const newBalance =
+      balance - SONG_PRICE;
+
+    const updatedUserRows =
+      await supabasePatch(
+        'users',
+        {
+          id: 'eq.' + String(user.id)
+        },
+        {
+          balance: newBalance
         }
-
-        try {
-
-          const checkRes =
-            await axios.get(
-              `https://api.piapi.ai/api/v1/task/${encodeURIComponent(order.task_id)}`,
-              {
-                headers: {
-                  'x-api-key':
-                    PIAPI_KEY
-                },
-
-                timeout:
-                  30000
-              }
-            );
-
-          const taskData =
-            checkRes.data?.data ||
-            checkRes.data;
-
-          if (!taskData) {
-            continue;
-          }
-
-          const taskStatus =
-            String(
-              taskData.status ||
-              ''
-            ).toLowerCase();
-
-          if (
-            taskStatus ===
-              'completed' ||
-            taskStatus ===
-              'success'
-          ) {
-
-            const output =
-              taskData.output ||
-              {};
-
-            const clips =
-              output.clips ||
-              output.data ||
-              (
-                Array.isArray(
-                  output
-                )
-                  ? output
-                  : []
-              );
-
-            const getUrl =
-              item =>
-                item?.audio_url ||
-                item?.url ||
-                item?.audio ||
-                item?.stream_url ||
-                '';
-
-            const getTitle =
-              (
-                item,
-                defaultTitle
-              ) =>
-                item?.title ||
-                defaultTitle;
-
-            const url1 =
-              getUrl(
-                clips[0]
-              ) ||
-              getUrl(output) ||
-              '';
-
-            const url2 =
-              getUrl(
-                clips[1]
-              ) ||
-              '';
-
-            const title1 =
-              getTitle(
-                clips[0],
-                `Вариант 1 (${order.genre})`
-              );
-
-            const title2 =
-              getTitle(
-                clips[1],
-                `Вариант 2 (${order.genre})`
-              );
-
-            await axios.patch(
-              `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(order.id)}&max_id=eq.${encodeURIComponent(maxId)}`,
-              {
-                status:
-                  'preview',
-
-                audio_url:
-                  url1,
-
-                audio_url_2:
-                  url2,
-
-                title:
-                  title1,
-
-                title_2:
-                  title2
-              },
-              {
-                headers:
-                  dbHeaders,
-
-                timeout:
-                  10000
-              }
-            );
-
-            order.status =
-              'preview';
-
-            order.audio_url =
-              url1;
-
-            order.audio_url_2 =
-              url2;
-
-            order.title =
-              title1;
-
-            order.title_2 =
-              title2;
-
-          } else if (
-            taskStatus ===
-            'failed'
-          ) {
-
-            await axios.patch(
-              `${supabaseUrl}/rest/v1/orders?id=eq.${encodeURIComponent(order.id)}&max_id=eq.${encodeURIComponent(maxId)}`,
-              {
-                status:
-                  'failed'
-              },
-              {
-                headers:
-                  dbHeaders,
-
-                timeout:
-                  10000
-              }
-            );
-
-            order.status =
-              'failed';
-          }
-
-        } catch (taskError) {
-
-          console.error(
-            `[TASK CHECK ERROR order=${order.id}]:`,
-            taskError.response?.data ||
-            taskError.message
-          );
-        }
-      }
-
-      res.json({
-        success: true,
-        orders
-      });
-
-    } catch (err) {
-
-      console.error(
-        '[ORDERS ERROR]:',
-        err.response?.data ||
-        err.message
       );
 
-      const status =
-        err.status ||
-        (
-          err.code ===
-          'MAX_INITDATA_INVALID'
-            ? 401
-            : 500
-        );
+    const updatedOrderRows =
+      await supabasePatch(
+        'orders',
+        {
+          id: 'eq.' + String(order.id),
+          user_id: 'eq.' + String(user.id),
+          status: 'eq.preview'
+        },
+        {
+          status: 'completed',
+          selected_variant: selectedVariant,
+          audio_url_selected: selectedAudioUrl,
+          title_selected:
+            selectedTitle || 'Ваша песня'
+        }
+      );
 
-      res.status(
-        status
-      ).json({
-        success: false,
-        message:
-          err.response?.data?.message ||
-          err.message ||
-          'Ошибка загрузки заказов'
+    if (!updatedOrderRows.length) {
+      return res.status(409).json({
+        ok: false,
+        error:
+          'Заказ уже был обработан или изменён'
       });
     }
-  }
-);
 
-/*
- * ============================================================
- * STATIC FRONTEND
- * ============================================================
- *
- * Render всё ещё может самостоятельно отдавать frontend
- * из /public. Это оставляем, чтобы backend продолжал работать.
- * ============================================================
- */
+    await supabasePost('transactions', {
+      user_id: user.id,
+      type: 'song_purchase',
+      amount: -SONG_PRICE,
+      description:
+        'Покупка полной версии песни',
+      order_id: order.id
+    });
+
+    res.json({
+      ok: true,
+      user:
+        updatedUserRows[0] || {
+          ...user,
+          balance: newBalance
+        },
+      order: updatedOrderRows[0],
+      audioUrl: selectedAudioUrl,
+      title:
+        selectedTitle || 'Ваша песня'
+    });
+  } catch (error) {
+    console.error(
+      '[POST /api/unlock-song]',
+      error.response
+        ? error.response.data
+        : error.message
+    );
+
+    res.status(400).json({
+      ok: false,
+      error:
+        error.message ||
+        'Не удалось купить песню'
+    });
+  }
+});
+
+/* =========================================
+   DOWNLOAD PROXY
+========================================= */
+
+app.get('/api/download', async (req, res) => {
+  try {
+    const url = String(req.query.url || '').trim();
+
+    if (!url) {
+      return res.status(400).send('URL is required');
+    }
+
+    if (!url.startsWith('https://')) {
+      return res.status(400).send('Only HTTPS URLs are allowed');
+    }
+
+    const response = await axios.get(url, {
+      responseType: 'stream',
+      timeout: 60000
+    });
+
+    const contentType =
+      response.headers['content-type'] ||
+      'audio/mpeg';
+
+    res.setHeader(
+      'Content-Type',
+      contentType
+    );
+
+    res.setHeader(
+      'Content-Disposition',
+      'attachment; filename="song.mp3"'
+    );
+
+    response.data.pipe(res);
+  } catch (error) {
+    console.error(
+      '[GET /api/download]',
+      error.response
+        ? error.response.data
+        : error.message
+    );
+
+    res.status(500).send(
+      'Не удалось скачать файл'
+    );
+  }
+});
+
+/* =========================================
+   STATIC FRONTEND
+========================================= */
 
 app.use(
   express.static(
-    PUBLIC_DIR,
-    {
-      index:
-        'index.html'
-    }
+    path.join(__dirname, 'public')
   )
 );
 
-app.get(
-  '/',
-  (req, res) => {
+app.get('*', (req, res) => {
+  res.sendFile(
+    path.join(__dirname, 'public', 'index.html')
+  );
+});
 
-    res.sendFile(
-      path.join(
-        PUBLIC_DIR,
-        'index.html'
-      )
-    );
+/* =========================================
+   ERROR HANDLER
+========================================= */
 
+app.use((err, req, res, next) => {
+  console.error('[SERVER ERROR]', err);
+
+  if (res.headersSent) {
+    return next(err);
   }
-);
 
-/*
- * ============================================================
- * SPA FALLBACK
- * ============================================================
- */
+  res.status(500).json({
+    ok: false,
+    error: 'Внутренняя ошибка сервера'
+  });
+});
 
-app.get(
-  '*',
-  (req, res) => {
+app.listen(PORT, () => {
+  console.log(
+    'MAX Song App server started on port ' + PORT
+  );
 
-    if (
-      req.path.startsWith(
-        '/api/'
-      )
-    ) {
-
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message:
-            'API endpoint not found'
-        });
-    }
-
-    res.sendFile(
-      path.join(
-        PUBLIC_DIR,
-        'index.html'
-      )
-    );
-  }
-);
-
-/*
- * ============================================================
- * START
- * ============================================================
- */
-
-app.listen(
-  PORT,
-  () => {
-
-    console.log(
-      `Server running on port ${PORT}`
-    );
-
-    console.log(
-      `Supabase configured: ${
-        Boolean(
-          supabaseUrl &&
-          supabaseKey
-        )
-      }`
-    );
-
-    console.log(
-      `PiAPI configured: ${
-        Boolean(
-          PIAPI_KEY
-        )
-      }`
-    );
-
-    console.log(
-      `MAX Bot Token configured: ${
-        Boolean(
-          MAX_BOT_TOKEN
-        )
-      }`
-    );
-
-  }
-);
-```
+  console.log(
+    'Config:',
+    checkConfig()
+  );
+});
 
