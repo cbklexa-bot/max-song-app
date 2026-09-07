@@ -2,20 +2,37 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#0f172a">
   <title>Песня на заказ | MAX Mini App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Официальная библиотека MAX Bridge для связи с мессенджером -->
+
+  <!-- MAX Bridge -->
   <script src="https://st.max.ru/js/max-web-app.js"></script>
+
+  <!-- Для текущего прототипа оставляем Tailwind CDN.
+       Для production лучше собрать CSS локально, чтобы уменьшить внешние зависимости. -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
   <style>
     body {
       background-color: #0f172a;
       color: #f8fafc;
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    button:disabled {
+      opacity: .65;
+      cursor: not-allowed;
     }
   </style>
 </head>
+
 <body class="min-h-screen flex flex-col items-center p-3">
+
+  <!-- Диагностический статус -->
+  <div id="startup-status"
+       class="hidden w-full max-w-md mb-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-200">
+  </div>
 
   <!-- Шапка пользователя -->
   <div class="w-full max-w-md bg-slate-800/80 rounded-2xl p-3 mb-3 flex justify-between items-center border border-slate-700 shadow-lg backdrop-blur">
@@ -28,19 +45,17 @@
         <p class="text-[10px] text-slate-400">MAX Account</p>
       </div>
     </div>
-    
-    <!-- Кнопка баланса и пополнения -->
-    <div onclick="openTopupModal()" class="cursor-pointer bg-slate-900 hover:bg-slate-950 border border-purple-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-md">
+
+    <div onclick="openTopupModal()"
+         class="cursor-pointer bg-slate-900 hover:bg-slate-950 border border-purple-500/40 px-2.5 py-1 rounded-xl flex items-center gap-1.5 transition active:scale-95 shadow-md">
       <span class="font-bold text-emerald-400 text-xs" id="user-balance">0 ₽</span>
-      <div class="w-4 h-4 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow">
-        +
-      </div>
+      <div class="w-4 h-4 bg-purple-600 hover:bg-purple-500 rounded-full flex items-center justify-center text-white text-[10px] font-bold shadow">+</div>
     </div>
   </div>
 
-  <!-- Главный контейнер заказа -->
+  <!-- Главный контейнер -->
   <div class="w-full max-w-md bg-slate-800/50 rounded-2xl p-4 border border-slate-700 shadow-xl backdrop-blur mb-4">
-    
+
     <div class="text-center mb-4">
       <span class="bg-purple-500/10 text-purple-400 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-purple-500/20">
         AI Студия музыки
@@ -50,85 +65,84 @@
       </h1>
     </div>
 
-    <!-- Выбор жанра -->
+    <!-- Жанр -->
     <div class="mb-3.5">
       <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">🎵 Жанр музыки</label>
       <div class="grid grid-cols-3 gap-1.5" id="genre-select">
-        <button onclick="selectGenre(this, 'Поп')" class="genre-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Поп</button>
-        <button onclick="selectGenre(this, 'Танцевальная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Танцевальная</button>
-        <button onclick="selectGenre(this, 'Народная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Народная</button>
-        <button onclick="selectGenre(this, 'Шансон')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Шансон</button>
-        <button onclick="selectGenre(this, 'Рэп')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Рэп</button>
+        <button onclick="selectGenre(this, 'Поп')" class="genre-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Поп</button>
+        <button onclick="selectGenre(this, 'Танцевальная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Танцевальная</button>
+        <button onclick="selectGenre(this, 'Народная')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Народная</button>
+        <button onclick="selectGenre(this, 'Шансон')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Шансон</button>
+        <button onclick="selectGenre(this, 'Рэп')" class="genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Рэп</button>
       </div>
     </div>
 
-    <!-- Выбор вокала -->
+    <!-- Вокал -->
     <div class="mb-3.5">
       <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">🎙 Исполнение / Вокал</label>
       <div class="grid grid-cols-2 gap-1.5" id="vocal-select">
-        <button onclick="selectVocal(this, 'Мужской соло')" class="vocal-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Мужской соло</button>
-        <button onclick="selectVocal(this, 'Женский соло')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Женский соло</button>
-        <button onclick="selectVocal(this, 'Дуэт')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Дуэт</button>
-        <button onclick="selectVocal(this, 'Детский голос')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition">Детский голос</button>
+        <button onclick="selectVocal(this, 'Мужской соло')" class="vocal-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition">Мужской соло</button>
+        <button onclick="selectVocal(this, 'Женский соло')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Женский соло</button>
+        <button onclick="selectVocal(this, 'Дуэт')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Дуэт</button>
+        <button onclick="selectVocal(this, 'Детский голос')" class="vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition">Детский голос</button>
       </div>
     </div>
 
-    <!-- Текст / Описание -->
+    <!-- Текст -->
     <div class="mb-4">
       <label class="block text-[11px] font-semibold text-slate-300 mb-1.5">💬 Детали и пожелания к песне</label>
-      <textarea id="prompt-input" rows="2.5" placeholder="Имя человека, праздник, ключевые фразы..." class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition resize-none"></textarea>
+      <textarea id="prompt-input"
+                rows="3"
+                maxlength="2000"
+                placeholder="Имя человека, праздник, ключевые фразы..."
+                class="w-full bg-slate-900/80 border border-slate-700 rounded-xl p-2.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition resize-none"></textarea>
     </div>
 
-    <!-- Кнопка заказа -->
-    <button id="order-btn" onclick="generateSong()" class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-3 px-4 rounded-xl text-xs shadow-lg shadow-purple-500/25 active:scale-98 transition flex items-center justify-center gap-2">
+    <button id="order-btn"
+            onclick="generateSong()"
+            class="w-full bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-3 px-4 rounded-xl text-xs shadow-lg shadow-purple-500/25 transition flex items-center justify-center gap-2">
       <span>Сгенерировать шедевр</span>
     </button>
-
   </div>
 
-  <!-- Раздел: Мои песни -->
+  <!-- Мои песни -->
   <div class="w-full max-w-md bg-slate-800/50 rounded-2xl p-4 border border-slate-700 shadow-xl backdrop-blur mb-4">
-    <h2 class="text-sm font-bold mb-3 text-slate-200 flex items-center gap-2">
-      🎧 Мои песни
-    </h2>
+    <h2 class="text-sm font-bold mb-3 text-slate-200 flex items-center gap-2">🎧 Мои песни</h2>
     <div id="orders-list" class="space-y-3">
       <p class="text-xs text-slate-500 text-center py-3">У вас пока нет сгенерированных песен.</p>
     </div>
   </div>
 
-  <!-- Модальное окно пополнения баланса -->
+  <!-- Пополнение -->
   <div id="topup-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-3xl p-5 shadow-2xl relative">
       <button onclick="closeTopupModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white font-bold text-base">✕</button>
-      
+
       <h3 class="text-base font-bold text-slate-100 mb-1">Пополнение баланса</h3>
       <p class="text-xs text-slate-400 mb-4">Минимальная сумма пополнения — 200 ₽</p>
 
-      <!-- Выбор суммы с бонусами -->
       <div class="space-y-2 mb-4">
-        <button onclick="selectTopupAmount(200)" class="amount-btn w-full bg-slate-800 border border-purple-500/50 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
-          <span>200 ₽</span>
-          <span class="text-slate-400">Стандарт (1 песня)</span>
+        <button onclick="selectTopupAmount(200)" class="amount-btn w-full bg-slate-800 border border-purple-500/50 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
+          <span>200 ₽</span><span class="text-slate-400">Стандарт (1 песня)</span>
         </button>
 
-        <button onclick="selectTopupAmount(400)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
+        <button onclick="selectTopupAmount(400)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
           <div class="flex items-center gap-2">
             <span>400 ₽</span>
             <span class="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-md border border-emerald-500/30">+10% БОНУС</span>
           </div>
-          <span class="text-emerald-400">+40 ₽ в подарок</span>
+          <span class="text-emerald-400">+40 ₽</span>
         </button>
 
-        <button onclick="selectTopupAmount(800)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold hover:border-purple-400 transition">
+        <button onclick="selectTopupAmount(800)" class="amount-btn w-full bg-slate-800 border border-slate-700 p-2.5 rounded-xl flex justify-between items-center text-xs font-semibold">
           <div class="flex items-center gap-2">
             <span>800 ₽</span>
             <span class="bg-amber-500/20 text-amber-400 text-[10px] px-2 py-0.5 rounded-md border border-amber-500/30">+20% БОНУС</span>
           </div>
-          <span class="text-amber-400">+160 ₽ в подарок</span>
+          <span class="text-amber-400">+160 ₽</span>
         </button>
       </div>
 
-      <!-- Итоговое зачисление -->
       <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800 mb-4 flex justify-between items-center text-xs">
         <span class="text-slate-400">Будет зачислено:</span>
         <span class="font-bold text-emerald-400 text-sm" id="modal-credited-calc">200 ₽</span>
@@ -141,17 +155,19 @@
   </div>
 
   <script>
-    const BACKEND_URL = 'https://max-song-app.onrender.com';
-    
+    // ВАЖНО:
+    // Frontend и API находятся на одном Render Web Service.
+    // Поэтому используем относительные URL и не ходим на другой origin.
+    const API_BASE = '';
+
     let selectedGenre = 'Поп';
     let selectedVocal = 'Мужской соло';
     let currentMaxId = '';
     let currentUserName = '';
     let currentBalance = 0;
+    let maxInitData = '';
 
     let selectedTopupSum = 200;
-    let hasActiveGen = false;
-
     let phraseIndex = 0;
     let phraseTimer = null;
     let pollTimer = null;
@@ -160,9 +176,19 @@
       "✨ AI пишет 2 варианта текста...",
       "🎵 Сочиняем 2 разные мелодии...",
       "🎤 Записываем нейро-вокал...",
-      "🎧 Сводим и создаем Демо...",
+      "🎧 Сводим и создаем демо...",
       "🚀 Готовим треки к прослушиванию..."
     ];
+
+    function showStartupError(message) {
+      const box = document.getElementById('startup-status');
+      box.textContent = message;
+      box.classList.remove('hidden');
+    }
+
+    function clearStartupError() {
+      document.getElementById('startup-status').classList.add('hidden');
+    }
 
     function startPhraseAnimation() {
       if (phraseTimer) return;
@@ -181,57 +207,82 @@
       }
     }
 
-    function detectUser() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+    function getMaxUser() {
+      return window.WebApp?.initDataUnsafe?.user || null;
+    }
 
-      const getParam = (key) => urlParams.get(key) || hashParams.get(key);
-
-      const urlMaxId = getParam('max_id') || getParam('user_id') || getParam('id') || getParam('tgWebAppStartParam');
-      const urlName = getParam('name') || getParam('first_name');
-
-      const maxUser = 
-        window.WebApp?.initDataUnsafe?.user || 
-        window.MAXWebApp?.initDataUnsafe?.user || 
-        window.MaxApp?.initDataUnsafe?.user ||
-        window.max?.initDataUnsafe?.user ||
-        window.Max?.initDataUnsafe?.user ||
-        window.Telegram?.WebApp?.initDataUnsafe?.user;
-
-      if (maxUser && maxUser.id) {
-        currentMaxId = String(maxUser.id);
-        currentUserName = maxUser.first_name || maxUser.name || 'Пользователь Max';
-      } else if (urlMaxId) {
-        currentMaxId = String(urlMaxId);
-        currentUserName = urlName ? decodeURIComponent(urlName) : 'Пользователь Max';
-      } else {
-        let savedGuestId = localStorage.getItem('max_guest_id');
-        if (!savedGuestId) {
-          savedGuestId = 'guest_' + Math.random().toString(36).substring(2, 11);
-          localStorage.setItem('max_guest_id', savedGuestId);
-        }
-        currentMaxId = savedGuestId;
-        currentUserName = 'Гость (Браузер)';
+    function detectUserFromMax() {
+      if (!window.WebApp) {
+        throw new Error('MAX Bridge не загрузился. Откройте приложение из MAX, а не как обычную веб-страницу.');
       }
 
+      maxInitData = String(window.WebApp.initData || '').trim();
+      const user = getMaxUser();
+
+      if (!maxInitData || !user?.id) {
+        throw new Error('MAX не передал данные пользователя. Проверьте, что приложение открыто через Mini App внутри MAX и URL привязан к боту.');
+      }
+
+      currentMaxId = String(user.id);
+      currentUserName = user.first_name || user.name || 'Пользователь MAX';
+
       document.getElementById('user-name').innerText = currentUserName;
-      document.getElementById('user-avatar').innerText = currentUserName.charAt(0).toUpperCase();
+      document.getElementById('user-avatar').innerText =
+        currentUserName.charAt(0).toUpperCase();
+
+      // Передаём минимально необходимую отладочную информацию в консоль.
+      console.log('[MAX] platform:', window.WebApp.platform);
+      console.log('[MAX] version:', window.WebApp.version);
+      console.log('[MAX] device:', window.WebApp.deviceName);
+      console.log('[MAX] user id:', currentMaxId);
+    }
+
+    async function apiFetch(path, options = {}) {
+      const headers = new Headers(options.headers || {});
+      headers.set('Content-Type', 'application/json');
+
+      const finalOptions = {
+        ...options,
+        headers
+      };
+
+      const response = await fetch(`${API_BASE}${path}`, finalOptions);
+
+      const text = await response.text();
+      let data = {};
+
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch {
+        throw new Error(`Сервер вернул не JSON (${response.status}): ${text.slice(0, 200)}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(data.message || `Ошибка HTTP ${response.status}`);
+      }
+
+      return data;
     }
 
     async function fetchUserData() {
-      detectUser();
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/user/${currentMaxId}?name=${encodeURIComponent(currentUserName)}`);
-        const data = await res.json();
-        if (data.success) {
-          currentBalance = Number(data.user.balance || 0);
-          hasActiveGen = data.hasActiveGeneration;
-          document.getElementById('user-balance').innerText = `${currentBalance} ₽`;
-        }
-      } catch (err) {
-        console.error('Ошибка загрузки профиля:', err);
+      detectUserFromMax();
+
+      const data = await apiFetch('/api/user', {
+        method: 'POST',
+        body: JSON.stringify({
+          initData: maxInitData
+        })
+      });
+
+      if (!data.success) {
+        throw new Error(data.message || 'Не удалось загрузить профиль.');
       }
-      loadOrders();
+
+      currentBalance = Number(data.user.balance || 0);
+      document.getElementById('user-balance').innerText = `${currentBalance} ₽`;
+
+      await loadOrders();
+      clearStartupError();
     }
 
     function openTopupModal() {
@@ -252,12 +303,14 @@
 
     async function processTopup() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/topup`, {
+        const data = await apiFetch('/api/topup', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ maxId: currentMaxId, amount: selectedTopupSum })
+          body: JSON.stringify({
+            initData: maxInitData,
+            amount: selectedTopupSum
+          })
         });
-        const data = await res.json();
+
         if (data.success) {
           currentBalance = Number(data.newBalance);
           document.getElementById('user-balance').innerText = `${currentBalance} ₽`;
@@ -267,20 +320,26 @@
           alert('Ошибка: ' + data.message);
         }
       } catch (e) {
-        alert('Ошибка сервера при пополнении.');
+        console.error('[TOPUP]', e);
+        alert(e.message || 'Ошибка сервера при пополнении.');
       }
     }
 
     async function loadOrders() {
       try {
-        const res = await fetch(`${BACKEND_URL}/api/orders/${currentMaxId}`);
-        const data = await res.json();
+        const data = await apiFetch('/api/orders', {
+          method: 'POST',
+          body: JSON.stringify({
+            initData: maxInitData
+          })
+        });
 
         if (data.success) {
           const validOrders = (data.orders || []).filter(o => o.status !== 'failed');
           renderOrders(validOrders);
 
           const hasProcessing = validOrders.some(o => o.status === 'processing');
+
           if (hasProcessing) {
             startPhraseAnimation();
             scheduleNextPoll();
@@ -289,7 +348,7 @@
           }
         }
       } catch (err) {
-        console.error('Ошибка загрузки заказов:', err);
+        console.error('[ORDERS]', err);
       }
     }
 
@@ -319,38 +378,50 @@
       if (!confirm(`Разблокировать полную версию (${title}) за 200 ₽?`)) return;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/unlock-song`, {
+        const data = await apiFetch('/api/unlock-song', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            maxId: currentMaxId,
-            orderId: orderId,
+            initData: maxInitData,
+            orderId,
             selectedOption: optionIndex,
-            audioUrl: audioUrl,
-            title: title
+            audioUrl,
+            title
           })
         });
 
-        const data = await res.json();
         if (data.success) {
           currentBalance = Number(data.newBalance);
           document.getElementById('user-balance').innerText = `${currentBalance} ₽`;
           alert('🎉 Песня успешно разблокирована!');
-          hasActiveGen = false;
-          loadOrders();
+          await loadOrders();
         } else {
           alert('Ошибка: ' + data.message);
         }
       } catch (e) {
-        alert('Ошибка связи с сервером.');
+        console.error('[UNLOCK]', e);
+        alert(e.message || 'Ошибка связи с сервером.');
       }
     }
 
     function downloadSongFile(audioUrl, songTitle) {
-      const downloadUrl = `${BACKEND_URL}/api/download?url=${encodeURIComponent(audioUrl)}&name=${encodeURIComponent(songTitle || 'song')}`;
+      const safeName = (songTitle || 'song').replace(/[\\/:*?"<>|]/g, '_');
+
+      // В MAX используем официальный downloadFile(), когда доступен.
+      if (window.WebApp?.downloadFile && /^https:\/\//i.test(audioUrl)) {
+        try {
+          window.WebApp.downloadFile(audioUrl, `${safeName}.mp3`);
+          return;
+        } catch (e) {
+          console.warn('[MAX DOWNLOAD FALLBACK]', e);
+        }
+      }
+
+      const downloadUrl =
+        `${API_BASE}/api/download?url=${encodeURIComponent(audioUrl)}&name=${encodeURIComponent(safeName)}`;
+
       const a = document.createElement('a');
       a.href = downloadUrl;
-      a.download = `${songTitle || 'song'}.mp3`;
+      a.download = `${safeName}.mp3`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -358,8 +429,10 @@
 
     function renderOrders(orders) {
       const listContainer = document.getElementById('orders-list');
+
       if (!orders || orders.length === 0) {
-        listContainer.innerHTML = '<p class="text-xs text-slate-500 text-center py-3">У вас пока нет сгенерированных песен.</p>';
+        listContainer.innerHTML =
+          '<p class="text-xs text-slate-500 text-center py-3">У вас пока нет сгенерированных песен.</p>';
         return;
       }
 
@@ -372,12 +445,10 @@
           card.className = 'bg-slate-900/90 border border-purple-500/40 rounded-xl p-3 space-y-2.5';
           card.innerHTML = `
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 text-sm font-bold animate-spin">
-                ⏳
-              </div>
+              <div class="w-8 h-8 rounded-lg bg-purple-600/30 border border-purple-500/50 flex items-center justify-center text-purple-300 text-sm font-bold animate-spin">⏳</div>
               <div>
                 <h3 class="text-xs font-bold text-purple-300">Генерируем 2 варианта...</h3>
-                <p class="text-[10px] text-slate-400">${order.genre} • ${order.vocal}</p>
+                <p class="text-[10px] text-slate-400">${escapeHtml(order.genre)} • ${escapeHtml(order.vocal)}</p>
               </div>
             </div>
             <div class="flex items-center gap-2 pt-0.5">
@@ -387,6 +458,12 @@
           `;
         } else if (order.status === 'preview') {
           card.className = 'bg-slate-900/90 border border-amber-500/50 rounded-xl p-3 space-y-3';
+
+          const title1 = escapeAttr(order.title || 'Вариант 1');
+          const title2 = escapeAttr(order.title_2 || 'Вариант 2');
+          const url1 = escapeAttr(order.audio_url || '');
+          const url2 = escapeAttr(order.audio_url_2 || '');
+
           card.innerHTML = `
             <div class="border-b border-slate-800 pb-1.5">
               <span class="bg-amber-500/20 text-amber-300 text-[9px] font-bold px-2 py-0.5 rounded border border-amber-500/30">
@@ -400,50 +477,54 @@
                 <span>🎵 Вариант 1</span>
               </div>
               <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800">
-                <source src="${order.audio_url}" type="audio/mpeg">
+                <source src="${url1}" type="audio/mpeg">
               </audio>
-              <button onclick="unlockSong(${order.id}, 1, '${order.audio_url}', '${order.title || 'Вариант 1'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
+              <button onclick="unlockSong(${Number(order.id)}, 1, '${url1}', '${title1}')"
+                      class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
                 Скачать полную версию (200 ₽)
               </button>
             </div>
 
             ${order.audio_url_2 ? `
-            <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
-              <div class="flex justify-between items-center text-[11px] font-bold text-slate-200">
-                <span>🎵 Вариант 2</span>
+              <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800 space-y-1.5">
+                <div class="flex justify-between items-center text-[11px] font-bold text-slate-200">
+                  <span>🎵 Вариант 2</span>
+                </div>
+                <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800">
+                  <source src="${url2}" type="audio/mpeg">
+                </audio>
+                <button onclick="unlockSong(${Number(order.id)}, 2, '${url2}', '${title2}')"
+                        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
+                  Скачать полную версию (200 ₽)
+                </button>
               </div>
-              <audio ontimeupdate="handleDemoTimeUpdate(this)" controls class="w-full h-7 rounded border border-slate-800">
-                <source src="${order.audio_url_2}" type="audio/mpeg">
-              </audio>
-              <button onclick="unlockSong(${order.id}, 2, '${order.audio_url_2}', '${order.title_2 || 'Вариант 2'}')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-1.5 rounded-lg text-[11px] transition">
-                Скачать полную версию (200 ₽)
-              </button>
-            </div>
             ` : ''}
           `;
         } else if (order.status === 'completed' && order.audio_url) {
-          const safeTitle = (order.title || 'Именная песня').replace(/'/g, "\\'");
+          const safeTitle = escapeAttr(order.title || 'Именная песня');
+          const safeUrl = escapeAttr(order.audio_url);
+
           card.className = 'bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 space-y-2.5';
           card.innerHTML = `
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-xs">
-                🎵
-              </div>
+              <div class="w-8 h-8 rounded-lg bg-emerald-600/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold text-xs">🎵</div>
               <div class="flex-1 overflow-hidden">
-                <h3 class="text-xs font-bold text-slate-100 truncate">${order.title || 'Именная песня'}</h3>
-                <p class="text-[10px] text-slate-400">${order.genre} • ${order.vocal}</p>
+                <h3 class="text-xs font-bold text-slate-100 truncate">${escapeHtml(order.title || 'Именная песня')}</h3>
+                <p class="text-[10px] text-slate-400">${escapeHtml(order.genre)} • ${escapeHtml(order.vocal)}</p>
               </div>
             </div>
 
             <audio controls class="w-full h-8 rounded-lg border border-slate-700 bg-slate-950">
-              <source src="${order.audio_url}" type="audio/mpeg">
+              <source src="${safeUrl}" type="audio/mpeg">
             </audio>
 
             <div class="grid grid-cols-2 gap-1.5 pt-0.5">
-              <button onclick="downloadSongFile('${order.audio_url}', '${safeTitle}')" class="bg-purple-600/80 hover:bg-purple-600 text-white text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
+              <button onclick="downloadSongFile('${safeUrl}', '${safeTitle}')"
+                      class="bg-purple-600/80 hover:bg-purple-600 text-white text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
                 📥 Скачать MP3
               </button>
-              <button onclick="shareSong('${order.audio_url}')" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
+              <button onclick="shareSong('${safeUrl}')"
+                      class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 text-[11px] font-semibold py-1.5 px-2.5 rounded-xl flex items-center justify-center gap-1 transition">
                 📤 Поделиться
               </button>
             </div>
@@ -454,77 +535,159 @@
       });
     }
 
-    function shareSong(url) {
-      if (navigator.share) {
-        navigator.share({ title: 'Моя новая песня на заказ', url: url });
-      } else {
-        navigator.clipboard.writeText(url);
+    function escapeHtml(value) {
+      return String(value ?? '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;');
+    }
+
+    function escapeAttr(value) {
+      return String(value ?? '')
+        .replaceAll('\\', '\\\\')
+        .replaceAll("'", "\\'")
+        .replaceAll('\n', ' ')
+        .replaceAll('\r', ' ');
+    }
+
+    async function shareSong(url) {
+      try {
+        if (window.WebApp?.shareContent) {
+          await window.WebApp.shareContent({
+            link: url,
+            text: 'Моя новая песня на заказ 🎵'
+          });
+          return;
+        }
+
+        if (navigator.share) {
+          await navigator.share({
+            title: 'Моя новая песня на заказ',
+            url
+          });
+          return;
+        }
+
+        await navigator.clipboard.writeText(url);
         alert('Ссылка скопирована!');
+      } catch (e) {
+        console.warn('[SHARE]', e);
       }
     }
 
     function selectGenre(btn, genre) {
       document.querySelectorAll('.genre-btn').forEach(b => {
-        b.className = 'genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition';
+        b.className =
+          'genre-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition';
       });
-      btn.className = 'genre-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
+
+      btn.className =
+        'genre-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
+
       selectedGenre = genre;
+
+      try {
+        window.WebApp?.HapticFeedback?.selectionChanged?.();
+      } catch {}
     }
 
     function selectVocal(btn, vocal) {
       document.querySelectorAll('.vocal-btn').forEach(b => {
-        b.className = 'vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border hover:border-slate-500 transition';
+        b.className =
+          'vocal-btn bg-slate-700/50 border-slate-600 text-slate-300 p-2 rounded-xl text-[11px] font-medium border transition';
       });
-      btn.className = 'vocal-btn bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
+
+      btn.className =
+        'vocal-btn selected bg-purple-600 border-purple-400 text-white p-2 rounded-xl text-[11px] font-medium border transition';
+
       selectedVocal = vocal;
+
+      try {
+        window.WebApp?.HapticFeedback?.selectionChanged?.();
+      } catch {}
     }
 
     async function generateSong() {
       const prompt = document.getElementById('prompt-input').value.trim();
+
       if (!prompt) {
         alert('Пожалуйста, напишите пожелания к песне!');
         return;
       }
 
       if (currentBalance < 200) {
-        alert(`Для генерации необходимо минимум 200 ₽. Пополните баланс.`);
+        alert('Для генерации необходимо минимум 200 ₽. Пополните баланс.');
         openTopupModal();
         return;
       }
 
       const btn = document.getElementById('order-btn');
       btn.disabled = true;
-      btn.innerHTML = `<span>Отправка заказа...</span>`;
+      btn.innerHTML = '<span>Отправка заказа...</span>';
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/generate-song`, {
+        const data = await apiFetch('/api/generate-song', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            maxId: currentMaxId,
+            initData: maxInitData,
             genre: selectedGenre,
             vocal: selectedVocal,
-            prompt: prompt
+            prompt
           })
         });
-
-        const data = await res.json();
 
         if (data.success) {
           document.getElementById('prompt-input').value = '';
           await loadOrders();
         } else {
-          alert(data.message);
+          alert(data.message || 'Не удалось запустить генерацию.');
         }
       } catch (err) {
-        alert('Ошибка связи с сервером.');
+        console.error('[GENERATE]', err);
+        alert(err.message || 'Ошибка связи с сервером.');
       } finally {
         btn.disabled = false;
-        btn.innerHTML = `<span>Сгенерировать шедевр</span>`;
+        btn.innerHTML = '<span>Сгенерировать шедевр</span>';
       }
     }
 
-    fetchUserData();
+    async function initMiniApp() {
+      try {
+        // WebApp создаётся MAX Bridge при загрузке библиотеки.
+        // Небольшая повторная проверка полезна, если WebView загрузил HTML
+        // раньше, чем CDN-скрипт.
+        let attempts = 0;
+        while (!window.WebApp && attempts < 40) {
+          await new Promise(resolve => setTimeout(resolve, 250));
+          attempts++;
+        }
+
+        if (!window.WebApp) {
+          throw new Error('MAX Bridge не доступен.');
+        }
+
+        console.log('[MAX] Bridge loaded');
+
+        // Не используем Telegram API, URL max_id или guest-id.
+        // В production пользователь всегда идентифицируется через MAX initData.
+        await fetchUserData();
+      } catch (err) {
+        console.error('[INIT]', err);
+        showStartupError(err.message || 'Не удалось запустить Mini App.');
+      }
+    }
+
+    window.addEventListener('error', event => {
+      console.error('[GLOBAL ERROR]', event.error || event.message);
+    });
+
+    window.addEventListener('unhandledrejection', event => {
+      console.error('[UNHANDLED PROMISE]', event.reason);
+    });
+
+    initMiniApp();
   </script>
 </body>
 </html>
