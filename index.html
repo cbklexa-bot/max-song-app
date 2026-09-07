@@ -1,0 +1,3704 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  >
+
+  <meta
+    name="theme-color"
+    content="#0d0718"
+  >
+
+  <title>Песня на заказ | MAX</title>
+
+  <script
+    defer
+    src="https://st.max.ru/js/max-web-app.js"
+  ></script>
+
+  <style>
+    :root {
+      --bg: #0d0718;
+      --bg-soft: #130b20;
+
+      --panel: rgba(29, 17, 43, 0.90);
+      --panel-2: rgba(38, 21, 56, 0.92);
+
+      --border: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(173, 91, 255, 0.30);
+
+      --text: #ffffff;
+      --text-soft: #d8cedf;
+      --muted: #9689a1;
+      --muted-2: #6d6177;
+
+      --purple: #9148ff;
+      --purple-2: #b95bff;
+      --pink: #ef3d9a;
+
+      --green: #18c996;
+      --green-dark: #0d9d78;
+
+      --yellow: #ffc34d;
+      --red: #ff6170;
+
+      --radius-xl: 25px;
+      --radius-lg: 20px;
+      --radius-md: 15px;
+      --radius-sm: 11px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      min-height: 100%;
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+
+      background:
+        radial-gradient(
+          500px 300px at 50% -80px,
+          rgba(145, 72, 255, 0.27),
+          transparent 72%
+        ),
+        radial-gradient(
+          420px 300px at 100% 35%,
+          rgba(239, 61, 154, 0.08),
+          transparent 75%
+        ),
+        linear-gradient(
+          180deg,
+          #0d0718 0%,
+          #10091a 100%
+        );
+
+      color: var(--text);
+
+      font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
+      padding:
+        max(10px, env(safe-area-inset-top))
+        11px
+        max(18px, env(safe-area-inset-bottom));
+
+      overflow-x: hidden;
+    }
+
+    button,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      border: 0;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 560px;
+      margin: 0 auto;
+    }
+
+    /* =========================================================
+       STATUS
+       ========================================================= */
+
+    .status {
+      display: none;
+
+      margin-bottom: 11px;
+      padding: 12px 13px;
+
+      border-radius: 14px;
+
+      background:
+        rgba(255, 193, 77, 0.08);
+
+      border:
+        1px solid rgba(255, 193, 77, 0.20);
+
+      color: #ffd98c;
+
+      font-size: 11px;
+      line-height: 1.5;
+
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .status.visible {
+      display: block;
+    }
+
+    .status.error {
+      background:
+        rgba(255, 97, 112, 0.08);
+
+      border-color:
+        rgba(255, 97, 112, 0.22);
+
+      color: #ffb4bc;
+    }
+
+    /* =========================================================
+       HEADER
+       ========================================================= */
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 10px;
+
+      padding: 11px 12px;
+
+      margin-bottom: 11px;
+
+      border:
+        1px solid var(--border);
+
+      border-radius: var(--radius-lg);
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(44, 24, 63, 0.96),
+          rgba(21, 11, 33, 0.96)
+        );
+
+      box-shadow:
+        0 15px 45px
+        rgba(0, 0, 0, 0.28);
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+
+      gap: 9px;
+
+      min-width: 0;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+
+      flex: 0 0 40px;
+
+      border-radius: 13px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      color: #ffffff;
+
+      background:
+        linear-gradient(
+          135deg,
+          var(--purple),
+          var(--pink)
+        );
+
+      box-shadow:
+        0 9px 25px
+        rgba(145, 72, 255, 0.25);
+
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .profile-info {
+      min-width: 0;
+    }
+
+    .profile-name {
+      margin: 0;
+
+      font-size: 13px;
+      line-height: 1.15;
+
+      font-weight: 850;
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .profile-subtitle {
+      margin: 3px 0 0;
+
+      color: var(--muted);
+
+      font-size: 9px;
+    }
+
+    .balance {
+      display: flex;
+      align-items: center;
+
+      gap: 6px;
+
+      flex-shrink: 0;
+
+      min-height: 37px;
+
+      padding: 6px 8px;
+
+      border-radius: 13px;
+
+      background:
+        rgba(8, 4, 14, 0.72);
+
+      border:
+        1px solid rgba(145, 72, 255, 0.23);
+
+      color: #ffffff;
+
+      cursor: pointer;
+    }
+
+    .balance-value {
+      color: #63e4bc;
+
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .balance-plus {
+      width: 19px;
+      height: 19px;
+
+      border-radius: 50%;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: var(--purple);
+
+      color: #ffffff;
+
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    /* =========================================================
+       HERO
+       ========================================================= */
+
+    .hero {
+      position: relative;
+
+      overflow: hidden;
+
+      padding: 22px 19px;
+
+      margin-bottom: 11px;
+
+      border-radius: var(--radius-xl);
+
+      border:
+        1px solid var(--border);
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(51, 27, 77, 0.96),
+          rgba(23, 12, 36, 0.96)
+        );
+
+      box-shadow:
+        0 18px 55px
+        rgba(0, 0, 0, 0.28);
+    }
+
+    .hero::after {
+      content: "";
+
+      position: absolute;
+
+      width: 220px;
+      height: 220px;
+
+      right: -120px;
+      top: -110px;
+
+      border-radius: 50%;
+
+      background:
+        radial-gradient(
+          circle,
+          rgba(239, 61, 154, 0.19),
+          transparent 68%
+        );
+    }
+
+    .badge {
+      position: relative;
+      z-index: 1;
+
+      display: inline-flex;
+
+      padding: 5px 9px;
+
+      border-radius: 999px;
+
+      background:
+        rgba(145, 72, 255, 0.12);
+
+      border:
+        1px solid rgba(189, 91, 255, 0.20);
+
+      color: #d8b6ff;
+
+      font-size: 9px;
+      font-weight: 850;
+
+      letter-spacing: 0.04em;
+    }
+
+    .hero-title {
+      position: relative;
+      z-index: 1;
+
+      margin: 10px 0 6px;
+
+      font-size: 27px;
+      line-height: 1.04;
+
+      font-weight: 950;
+
+      letter-spacing: -0.035em;
+    }
+
+    .hero-title span {
+      background:
+        linear-gradient(
+          90deg,
+          #ca7cff,
+          #ff62b0
+        );
+
+      -webkit-background-clip: text;
+      background-clip: text;
+
+      color: transparent;
+    }
+
+    .hero-text {
+      position: relative;
+      z-index: 1;
+
+      margin: 0;
+
+      max-width: 460px;
+
+      color: #aaa0b3;
+
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    /* =========================================================
+       CARDS
+       ========================================================= */
+
+    .card {
+      margin-bottom: 11px;
+
+      padding: 15px;
+
+      border-radius: var(--radius-xl);
+
+      border:
+        1px solid var(--border);
+
+      background:
+        rgba(24, 14, 36, 0.86);
+
+      box-shadow:
+        0 15px 45px
+        rgba(0, 0, 0, 0.22);
+    }
+
+    .section {
+      margin-bottom: 17px;
+    }
+
+    .section:last-child {
+      margin-bottom: 0;
+    }
+
+    .section-label {
+      display: flex;
+      align-items: center;
+
+      gap: 7px;
+
+      margin-bottom: 8px;
+
+      color: #e9e2ed;
+
+      font-size: 11px;
+      font-weight: 850;
+    }
+
+    .section-number {
+      width: 19px;
+      height: 19px;
+
+      border-radius: 7px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        rgba(145, 72, 255, 0.10);
+
+      border:
+        1px solid rgba(145, 72, 255, 0.18);
+
+      color: #d0b0ff;
+
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+    /* =========================================================
+       CHOICES
+       ========================================================= */
+
+    .choices {
+      display: grid;
+      gap: 7px;
+    }
+
+    .genres {
+      grid-template-columns:
+        repeat(3, minmax(0, 1fr));
+    }
+
+    .vocals {
+      grid-template-columns:
+        repeat(2, minmax(0, 1fr));
+    }
+
+    .choice {
+      min-height: 39px;
+
+      padding: 8px 7px;
+
+      border-radius: 12px;
+
+      border:
+        1px solid rgba(255,255,255,0.07);
+
+      background:
+        rgba(255,255,255,0.025);
+
+      color: #bdb3c5;
+
+      font-size: 10px;
+      font-weight: 800;
+
+      cursor: pointer;
+
+      transition:
+        transform .12s ease,
+        background .12s ease,
+        border-color .12s ease,
+        color .12s ease;
+    }
+
+    .choice:active {
+      transform: scale(0.985);
+    }
+
+    .choice.selected {
+      color: #ffffff;
+
+      border-color:
+        rgba(190, 97, 255, 0.45);
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(145,72,255,0.42),
+          rgba(239,61,154,0.18)
+        );
+
+      box-shadow:
+        inset 0 0 0 1px
+        rgba(255,255,255,0.03);
+    }
+
+    /* =========================================================
+       PROMPT
+       ========================================================= */
+
+    .prompt-wrap {
+      position: relative;
+    }
+
+    .prompt {
+      width: 100%;
+
+      min-height: 112px;
+
+      resize: vertical;
+
+      outline: none;
+
+      padding: 12px 12px 25px;
+
+      border-radius: 14px;
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      background:
+        rgba(7, 3, 12, 0.66);
+
+      color: #eee8f2;
+
+      font-size: 11px;
+      line-height: 1.52;
+
+      transition:
+        border-color .15s ease,
+        box-shadow .15s ease;
+    }
+
+    .prompt::placeholder {
+      color: #706577;
+    }
+
+    .prompt:focus {
+      border-color:
+        rgba(186, 87, 255, 0.44);
+
+      box-shadow:
+        0 0 0 3px
+        rgba(145,72,255,0.08);
+    }
+
+    .counter {
+      position: absolute;
+
+      right: 10px;
+      bottom: 8px;
+
+      color: #64596d;
+
+      font-size: 8px;
+    }
+
+    /* =========================================================
+       PRICE INFO
+       ========================================================= */
+
+    .price-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 12px;
+
+      margin-top: 11px;
+      margin-bottom: 10px;
+
+      padding: 10px 11px;
+
+      border-radius: 12px;
+
+      background:
+        rgba(255,255,255,0.025);
+
+      border:
+        1px solid rgba(255,255,255,0.05);
+    }
+
+    .price-label {
+      color: #8f8398;
+
+      font-size: 9px;
+    }
+
+    .price-value {
+      color: #6ce5bc;
+
+      font-size: 12px;
+      font-weight: 900;
+    }
+
+    /* =========================================================
+       GENERATE
+       ========================================================= */
+
+    .generate {
+      width: 100%;
+
+      min-height: 51px;
+
+      padding: 10px 14px;
+
+      border-radius: 15px;
+
+      color: #ffffff;
+
+      background:
+        linear-gradient(
+          100deg,
+          #873cff,
+          #bf55ff 47%,
+          #ef3d9a
+        );
+
+      font-size: 12px;
+      font-weight: 900;
+
+      cursor: pointer;
+
+      box-shadow:
+        0 13px 30px
+        rgba(145, 72, 255, 0.22);
+    }
+
+    .generate:active {
+      transform: scale(0.99);
+    }
+
+    .generate:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .generate-hint {
+      margin-top: 7px;
+
+      color: #736978;
+
+      text-align: center;
+
+      font-size: 8px;
+      line-height: 1.45;
+    }
+
+    /* =========================================================
+       ORDERS
+       ========================================================= */
+
+    .orders-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 11px;
+    }
+
+    .orders-title {
+      margin: 0;
+
+      font-size: 14px;
+      font-weight: 900;
+    }
+
+    .orders-count {
+      min-width: 22px;
+
+      padding: 4px 7px;
+
+      border-radius: 999px;
+
+      background:
+        rgba(145,72,255,0.10);
+
+      border:
+        1px solid rgba(145,72,255,0.12);
+
+      color: #cda9ff;
+
+      text-align: center;
+
+      font-size: 8px;
+      font-weight: 900;
+    }
+
+    .empty {
+      padding: 17px 8px;
+
+      color: #6e6375;
+
+      text-align: center;
+
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
+    .order {
+      padding: 12px;
+
+      margin-bottom: 9px;
+
+      border-radius: 16px;
+
+      border:
+        1px solid rgba(255,255,255,0.06);
+
+      background:
+        rgba(7, 3, 12, 0.62);
+    }
+
+    .order:last-child {
+      margin-bottom: 0;
+    }
+
+    .order.processing {
+      border-color:
+        rgba(145,72,255,0.25);
+    }
+
+    .order.preview {
+      border-color:
+        rgba(255,193,77,0.23);
+    }
+
+    .order.completed {
+      border-color:
+        rgba(24,201,150,0.18);
+    }
+
+    .order-head {
+      display: flex;
+      align-items: center;
+
+      gap: 9px;
+    }
+
+    .order-icon {
+      width: 36px;
+      height: 36px;
+
+      flex: 0 0 36px;
+
+      border-radius: 12px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 15px;
+    }
+
+    .processing-icon {
+      background:
+        rgba(145,72,255,0.10);
+
+      border:
+        1px solid rgba(145,72,255,0.18);
+    }
+
+    .preview-icon {
+      background:
+        rgba(255,193,77,0.08);
+
+      border:
+        1px solid rgba(255,193,77,0.15);
+    }
+
+    .completed-icon {
+      background:
+        rgba(24,201,150,0.08);
+
+      border:
+        1px solid rgba(24,201,150,0.15);
+    }
+
+    .order-info {
+      min-width: 0;
+
+      flex: 1;
+    }
+
+    .order-name {
+      margin: 0;
+
+      color: #f5edf9;
+
+      font-size: 11px;
+      font-weight: 850;
+
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .order-meta {
+      margin: 3px 0 0;
+
+      color: #766a7d;
+
+      font-size: 8px;
+    }
+
+    .pill {
+      display: inline-flex;
+
+      margin-top: 9px;
+
+      padding: 4px 7px;
+
+      border-radius: 999px;
+
+      font-size: 8px;
+      font-weight: 900;
+    }
+
+    .pill-processing {
+      color: #d5b5ff;
+
+      background:
+        rgba(145,72,255,0.09);
+    }
+
+    .pill-preview {
+      color: #ffd37b;
+
+      background:
+        rgba(255,193,77,0.08);
+    }
+
+    .pill-completed {
+      color: #7be7c4;
+
+      background:
+        rgba(24,201,150,0.08);
+    }
+
+    /* =========================================================
+       GENERATION ANIMATION
+       ========================================================= */
+
+    .generation-line {
+      display: flex;
+      align-items: center;
+
+      gap: 7px;
+
+      margin-top: 10px;
+
+      color: #cda8ff;
+
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .generation-dot {
+      width: 7px;
+      height: 7px;
+
+      flex: 0 0 7px;
+
+      border-radius: 50%;
+
+      background: var(--purple-2);
+
+      animation:
+        pulse 1.2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: .25;
+        transform: scale(.82);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    /* =========================================================
+       VARIANTS
+       ========================================================= */
+
+    .variants {
+      margin-top: 10px;
+    }
+
+    .variant {
+      margin-top: 8px;
+
+      padding: 10px;
+
+      border-radius: 13px;
+
+      background:
+        rgba(255,255,255,0.025);
+
+      border:
+        1px solid rgba(255,255,255,0.05);
+    }
+
+    .variant:first-child {
+      margin-top: 0;
+    }
+
+    .variant-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 8px;
+
+      margin-bottom: 7px;
+    }
+
+    .variant-name {
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .demo {
+      padding: 4px 6px;
+
+      border-radius: 6px;
+
+      color: #ffd47c;
+
+      background:
+        rgba(255,193,77,0.07);
+
+      border:
+        1px solid rgba(255,193,77,0.13);
+
+      font-size: 7px;
+      font-weight: 900;
+    }
+
+    audio {
+      width: 100%;
+      height: 38px;
+
+      display: block;
+    }
+
+    .unlock {
+      width: 100%;
+
+      min-height: 39px;
+
+      margin-top: 8px;
+
+      border-radius: 11px;
+
+      background:
+        linear-gradient(
+          100deg,
+          var(--green-dark),
+          var(--green)
+        );
+
+      color: #ffffff;
+
+      font-size: 9px;
+      font-weight: 900;
+
+      cursor: pointer;
+
+      box-shadow:
+        0 7px 18px
+        rgba(24,201,150,0.10);
+    }
+
+    .unlock:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    /* =========================================================
+       COMPLETED
+       ========================================================= */
+
+    .completed-player {
+      margin-top: 10px;
+    }
+
+    .actions {
+      display: grid;
+
+      grid-template-columns:
+        1fr 1fr;
+
+      gap: 7px;
+
+      margin-top: 8px;
+    }
+
+    .action {
+      min-height: 38px;
+
+      border-radius: 10px;
+
+      border:
+        1px solid rgba(255,255,255,0.06);
+
+      background:
+        rgba(255,255,255,0.035);
+
+      color: #d8d0de;
+
+      font-size: 9px;
+      font-weight: 850;
+
+      cursor: pointer;
+    }
+
+    .action.primary {
+      color: #d9bcff;
+
+      border-color:
+        rgba(145,72,255,0.16);
+
+      background:
+        rgba(145,72,255,0.11);
+    }
+
+    /* =========================================================
+       MODAL
+       ========================================================= */
+
+    .modal {
+      position: fixed;
+
+      inset: 0;
+
+      z-index: 1000;
+
+      display: none;
+
+      align-items: flex-end;
+      justify-content: center;
+
+      padding:
+        12px
+        11px
+        max(12px, env(safe-area-inset-bottom));
+
+      background:
+        rgba(0,0,0,0.62);
+
+      backdrop-filter:
+        blur(10px);
+
+      -webkit-backdrop-filter:
+        blur(10px);
+    }
+
+    .modal.visible {
+      display: flex;
+    }
+
+    .modal-box {
+      width: 100%;
+
+      max-width: 560px;
+
+      padding: 17px;
+
+      border-radius:
+        24px
+        24px
+        19px
+        19px;
+
+      background:
+        linear-gradient(
+          180deg,
+          #241431,
+          #130b1d
+        );
+
+      border:
+        1px solid rgba(255,255,255,0.08);
+
+      box-shadow:
+        0 -15px 60px
+        rgba(0,0,0,0.45);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 13px;
+    }
+
+    .modal-title {
+      margin: 0;
+
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .modal-close {
+      width: 34px;
+      height: 34px;
+
+      border-radius: 50%;
+
+      background:
+        rgba(255,255,255,0.055);
+
+      color: #a99db0;
+
+      cursor: pointer;
+    }
+
+    .topup-description {
+      margin: 0 0 13px;
+
+      color: #8c8094;
+
+      font-size: 9px;
+      line-height: 1.5;
+    }
+
+    .amounts {
+      display: grid;
+
+      gap: 7px;
+    }
+
+    .amount {
+      width: 100%;
+
+      min-height: 52px;
+
+      padding: 10px 11px;
+
+      border-radius: 13px;
+
+      border:
+        1px solid rgba(255,255,255,0.06);
+
+      background:
+        rgba(255,255,255,0.025);
+
+      color: #ffffff;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 10px;
+
+      text-align: left;
+
+      cursor: pointer;
+    }
+
+    .amount.selected {
+      border-color:
+        rgba(145,72,255,0.35);
+
+      background:
+        rgba(145,72,255,0.09);
+    }
+
+    .amount-left strong {
+      display: block;
+
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .amount-left small {
+      display: block;
+
+      margin-top: 3px;
+
+      color: #7b7083;
+
+      font-size: 8px;
+    }
+
+    .amount-right {
+      color: #6ce4bb;
+
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+    .bonus {
+      display: inline-flex;
+
+      margin-left: 4px;
+
+      padding: 2px 5px;
+
+      border-radius: 5px;
+
+      color: #ffd577;
+
+      background:
+        rgba(255,193,77,0.08);
+
+      font-size: 7px;
+    }
+
+    .credit {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin:
+        12px 0;
+
+      padding: 11px 12px;
+
+      border-radius: 12px;
+
+      background:
+        rgba(4,2,8,0.34);
+
+      border:
+        1px solid rgba(255,255,255,0.05);
+    }
+
+    .credit-label {
+      color: #817587;
+
+      font-size: 9px;
+    }
+
+    .credit-value {
+      color: #6ce4bb;
+
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .test-topup {
+      width: 100%;
+
+      min-height: 47px;
+
+      border-radius: 13px;
+
+      background:
+        linear-gradient(
+          100deg,
+          #0c9975,
+          #19c796
+        );
+
+      color: #ffffff;
+
+      font-size: 10px;
+      font-weight: 900;
+
+      cursor: pointer;
+    }
+
+    .test-note {
+      margin: 8px 0 0;
+
+      text-align: center;
+
+      color: #685d6f;
+
+      font-size: 7px;
+      line-height: 1.4;
+    }
+
+    /* =========================================================
+       RESPONSIVE
+       ========================================================= */
+
+    @media (max-width: 410px) {
+      .genres {
+        grid-template-columns:
+          repeat(2, minmax(0, 1fr));
+      }
+
+      .hero-title {
+        font-size: 24px;
+      }
+
+      .actions {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <!-- =======================================================
+         STATUS
+    ======================================================== -->
+
+    <div
+      id="status"
+      class="status"
+    ></div>
+
+    <!-- =======================================================
+         HEADER
+    ======================================================== -->
+
+    <header class="header">
+
+      <div class="profile">
+
+        <div
+          id="avatar"
+          class="avatar"
+        >
+          M
+        </div>
+
+        <div class="profile-info">
+
+          <h2
+            id="user-name"
+            class="profile-name"
+          >
+            Загрузка...
+          </h2>
+
+          <p class="profile-subtitle">
+            MAX Music Studio
+          </p>
+
+        </div>
+
+      </div>
+
+      <button
+        id="balance-button"
+        class="balance"
+        type="button"
+      >
+
+        <span
+          id="balance-value"
+          class="balance-value"
+        >
+          0 ₽
+        </span>
+
+        <span class="balance-plus">
+          +
+        </span>
+
+      </button>
+
+    </header>
+
+    <!-- =======================================================
+         HERO
+    ======================================================== -->
+
+    <section class="hero">
+
+      <span class="badge">
+        AI MUSIC STUDIO
+      </span>
+
+      <h1 class="hero-title">
+        Создай свою
+        <span>песню</span>
+      </h1>
+
+      <p class="hero-text">
+        Выбери жанр и исполнение, расскажи, о чём
+        должна быть песня. Мы создадим два варианта,
+        чтобы ты мог выбрать лучший.
+      </p>
+
+    </section>
+
+    <!-- =======================================================
+         CREATE
+    ======================================================== -->
+
+    <section class="card">
+
+      <!-- GENRE -->
+
+      <div class="section">
+
+        <div class="section-label">
+
+          <span class="section-number">
+            1
+          </span>
+
+          <span>
+            Жанр музыки
+          </span>
+
+        </div>
+
+        <div
+          id="genres"
+          class="choices genres"
+        >
+
+          <button
+            class="choice selected"
+            data-genre="Поп"
+            type="button"
+          >
+            Поп
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Танцевальная"
+            type="button"
+          >
+            Танцевальная
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Народная"
+            type="button"
+          >
+            Народная
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Шансон"
+            type="button"
+          >
+            Шансон
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Рэп"
+            type="button"
+          >
+            Рэп
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Рок"
+            type="button"
+          >
+            Рок
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Акустика"
+            type="button"
+          >
+            Акустика
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Джаз"
+            type="button"
+          >
+            Джаз
+          </button>
+
+          <button
+            class="choice"
+            data-genre="Электроника"
+            type="button"
+          >
+            Электроника
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- VOCAL -->
+
+      <div class="section">
+
+        <div class="section-label">
+
+          <span class="section-number">
+            2
+          </span>
+
+          <span>
+            Исполнение
+          </span>
+
+        </div>
+
+        <div
+          id="vocals"
+          class="choices vocals"
+        >
+
+          <button
+            class="choice selected"
+            data-vocal="Мужской соло"
+            type="button"
+          >
+            Мужской соло
+          </button>
+
+          <button
+            class="choice"
+            data-vocal="Женский соло"
+            type="button"
+          >
+            Женский соло
+          </button>
+
+          <button
+            class="choice"
+            data-vocal="Дуэт"
+            type="button"
+          >
+            Дуэт
+          </button>
+
+          <button
+            class="choice"
+            data-vocal="Хор"
+            type="button"
+          >
+            Хор
+          </button>
+
+          <button
+            class="choice"
+            data-vocal="Детский голос"
+            type="button"
+          >
+            Детский голос
+          </button>
+
+        </div>
+
+      </div>
+
+      <!-- DESCRIPTION -->
+
+      <div class="section">
+
+        <div class="section-label">
+
+          <span class="section-number">
+            3
+          </span>
+
+          <span>
+            О чём должна быть песня
+          </span>
+
+        </div>
+
+        <div class="prompt-wrap">
+
+          <textarea
+            id="prompt"
+            class="prompt"
+            maxlength="2000"
+            placeholder="Например: песня для жены Анны на день рождения. Познакомились 10 лет назад, у нас есть дочь Маша. Хочу тёплую романтичную песню с сильным припевом про нашу семью..."
+          ></textarea>
+
+          <div
+            id="counter"
+            class="counter"
+          >
+            0 / 2000
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="price-line">
+
+        <span class="price-label">
+          Полная версия выбранного варианта
+        </span>
+
+        <span class="price-value">
+          200 ₽
+        </span>
+
+      </div>
+
+      <button
+        id="generate"
+        class="generate"
+        type="button"
+      >
+        ✨ Сгенерировать 2 варианта
+      </button>
+
+      <div class="generate-hint">
+        Генерация не списывает деньги.
+        Оплата происходит только при покупке полной версии.
+      </div>
+
+    </section>
+
+    <!-- =======================================================
+         ORDERS
+    ======================================================== -->
+
+    <section class="card">
+
+      <div class="orders-head">
+
+        <h2 class="orders-title">
+          🎧 Мои песни
+        </h2>
+
+        <span
+          id="orders-count"
+          class="orders-count"
+        >
+          0
+        </span>
+
+      </div>
+
+      <div id="orders-list">
+
+        <div class="empty">
+          Здесь появятся созданные тобой песни.
+        </div>
+
+      </div>
+
+    </section>
+
+  </div>
+
+  <!-- =========================================================
+       TOPUP MODAL
+  ========================================================== -->
+
+  <div
+    id="topup-modal"
+    class="modal"
+  >
+
+    <div class="modal-box">
+
+      <div class="modal-header">
+
+        <h3 class="modal-title">
+          Пополнение баланса
+        </h3>
+
+        <button
+          id="topup-close"
+          class="modal-close"
+          type="button"
+        >
+          ✕
+        </button>
+
+      </div>
+
+      <p class="topup-description">
+        Сейчас работает тестовое пополнение.
+        На следующем этапе сюда подключим реальный платёжный шлюз.
+      </p>
+
+      <div class="amounts">
+
+        <button
+          class="amount selected"
+          data-amount="200"
+          type="button"
+        >
+
+          <span class="amount-left">
+
+            <strong>
+              200 ₽
+            </strong>
+
+            <small>
+              1 полная песня
+            </small>
+
+          </span>
+
+          <span class="amount-right">
+            200 ₽
+          </span>
+
+        </button>
+
+        <button
+          class="amount"
+          data-amount="400"
+          type="button"
+        >
+
+          <span class="amount-left">
+
+            <strong>
+              400 ₽
+              <span class="bonus">
+                +10%
+              </span>
+            </strong>
+
+            <small>
+              Бонус +40 ₽
+            </small>
+
+          </span>
+
+          <span class="amount-right">
+            440 ₽
+          </span>
+
+        </button>
+
+        <button
+          class="amount"
+          data-amount="800"
+          type="button"
+        >
+
+          <span class="amount-left">
+
+            <strong>
+              800 ₽
+              <span class="bonus">
+                +20%
+              </span>
+            </strong>
+
+            <small>
+              Бонус +160 ₽
+            </small>
+
+          </span>
+
+          <span class="amount-right">
+            960 ₽
+          </span>
+
+        </button>
+
+      </div>
+
+      <div class="credit">
+
+        <span class="credit-label">
+          Будет зачислено
+        </span>
+
+        <span
+          id="credit-value"
+          class="credit-value"
+        >
+          200 ₽
+        </span>
+
+      </div>
+
+      <button
+        id="test-topup"
+        class="test-topup"
+        type="button"
+      >
+        Начислить тестовый баланс
+      </button>
+
+      <p class="test-note">
+        Деньги настоящего платёжного инструмента сейчас не списываются.
+      </p>
+
+    </div>
+
+  </div>
+
+  <script>
+    /* =========================================================
+       CONFIG
+    ========================================================= */
+
+    const SONG_PRICE = 200;
+
+    /*
+     * На GitHub Pages frontend должен обращаться
+     * к Render API.
+     *
+     * На Render frontend может работать через
+     * тот же origin.
+     */
+
+    const API_BASE =
+      location.hostname.endsWith('github.io')
+        ? 'https://max-song-app.onrender.com'
+        : '';
+
+    /* =========================================================
+       STATE
+    ========================================================= */
+
+    let selectedGenre = 'Поп';
+    let selectedVocal = 'Мужской соло';
+
+    let selectedTopupAmount = 200;
+
+    let currentBalance = 0;
+    let currentMaxId = '';
+    let currentUserName = '';
+    let maxInitData = '';
+
+    let pollTimer = null;
+    let phraseTimer = null;
+    let phraseIndex = 0;
+
+    let currentOrders = [];
+
+    const GENERATION_PHRASES = [
+      '✨ Пишем текст...',
+      '🎵 Создаём мелодии...',
+      '🎤 Записываем нейро-вокал...',
+      '🎧 Собираем два варианта...',
+      '🚀 Почти готово...'
+    ];
+
+    /* =========================================================
+       UI
+    ========================================================= */
+
+    function showStatus(
+      message,
+      type = 'warning'
+    ) {
+      const box =
+        document.getElementById(
+          'status'
+        );
+
+      box.textContent =
+        String(message || '');
+
+      box.classList.add(
+        'visible'
+      );
+
+      box.classList.toggle(
+        'error',
+        type === 'error'
+      );
+    }
+
+    function clearStatus() {
+      const box =
+        document.getElementById(
+          'status'
+        );
+
+      box.textContent = '';
+
+      box.classList.remove(
+        'visible'
+      );
+
+      box.classList.remove(
+        'error'
+      );
+    }
+
+    function setBalance(
+      value
+    ) {
+      currentBalance =
+        Number(value || 0);
+
+      document.getElementById(
+        'balance-value'
+      ).textContent =
+        `${currentBalance} ₽`;
+    }
+
+    function escapeHtml(
+      value
+    ) {
+      return String(
+        value ?? ''
+      )
+        .replaceAll(
+          '&',
+          '&amp;'
+        )
+        .replaceAll(
+          '<',
+          '&lt;'
+        )
+        .replaceAll(
+          '>',
+          '&gt;'
+        )
+        .replaceAll(
+          '"',
+          '&quot;'
+        )
+        .replaceAll(
+          "'",
+          '&#039;'
+        );
+    }
+
+    /* =========================================================
+       MAX
+    ========================================================= */
+
+    function getMaxWebApp() {
+      return window.WebApp || null;
+    }
+
+    function detectMaxUser() {
+      const webApp =
+        getMaxWebApp();
+
+      if (!webApp) {
+        throw new Error(
+          'MAX Bridge не загрузился. ' +
+          'Открой Mini App внутри MAX.'
+        );
+      }
+
+      webApp.ready?.();
+
+      maxInitData =
+        String(
+          webApp.initData || ''
+        ).trim();
+
+      const user =
+        webApp.initDataUnsafe?.user ||
+        null;
+
+      if (
+        !maxInitData
+      ) {
+        throw new Error(
+          'MAX не передал initData. ' +
+          'Запусти приложение через MAX.'
+        );
+      }
+
+      if (
+        !user?.id
+      ) {
+        throw new Error(
+          'MAX не передал пользователя.'
+        );
+      }
+
+      currentMaxId =
+        String(user.id);
+
+      currentUserName =
+        user.first_name ||
+        user.name ||
+        'Пользователь MAX';
+
+      document.getElementById(
+        'user-name'
+      ).textContent =
+        currentUserName;
+
+      document.getElementById(
+        'avatar'
+      ).textContent =
+        currentUserName
+          .charAt(0)
+          .toUpperCase();
+    }
+
+    /* =========================================================
+       API
+    ========================================================= */
+
+    async function apiFetch(
+      path,
+      options = {},
+      timeoutMs = 30000
+    ) {
+      const controller =
+        new AbortController();
+
+      const timeout =
+        setTimeout(
+          () =>
+            controller.abort(),
+          timeoutMs
+        );
+
+      try {
+
+        const headers =
+          new Headers(
+            options.headers || {}
+          );
+
+        headers.set(
+          'X-MAX-Init-Data',
+          maxInitData
+        );
+
+        /*
+         * JSON нужен только для методов,
+         * у которых реально есть body.
+         */
+
+        if (
+          options.body &&
+          !headers.has(
+            'Content-Type'
+          )
+        ) {
+          headers.set(
+            'Content-Type',
+            'application/json'
+          );
+        }
+
+        const response =
+          await fetch(
+            `${API_BASE}${path}`,
+            {
+              ...options,
+              headers,
+              signal:
+                controller.signal
+            }
+          );
+
+        const text =
+          await response.text();
+
+        let data = {};
+
+        try {
+
+          data =
+            text
+              ? JSON.parse(text)
+              : {};
+
+        } catch {
+
+          throw new Error(
+            `Сервер вернул не JSON ` +
+            `(${response.status})`
+          );
+        }
+
+        if (
+          !response.ok
+        ) {
+
+          throw new Error(
+            data.error ||
+            data.message ||
+            `Ошибка HTTP ${response.status}`
+          );
+        }
+
+        return data;
+
+      } catch (error) {
+
+        if (
+          error?.name ===
+          'AbortError'
+        ) {
+          throw new Error(
+            'Сервер слишком долго отвечает.'
+          );
+        }
+
+        throw error;
+
+      } finally {
+
+        clearTimeout(
+          timeout
+        );
+      }
+    }
+
+    /* =========================================================
+       USER
+    ========================================================= */
+
+    async function loadUser() {
+
+      detectMaxUser();
+
+      /*
+       * В текущем server.js:
+       * GET /api/user
+       * авторизация через X-MAX-Init-Data.
+       */
+
+      const data =
+        await apiFetch(
+          '/api/user',
+          {
+            method: 'GET'
+          },
+          20000
+        );
+
+      if (!data.ok) {
+        throw new Error(
+          data.error ||
+          'Не удалось загрузить пользователя.'
+        );
+      }
+
+      setBalance(
+        data.user?.balance || 0
+      );
+
+      await loadOrders();
+
+      clearStatus();
+    }
+
+    /* =========================================================
+       TOPUP
+    ========================================================= */
+
+    function openTopup() {
+
+      document
+        .getElementById(
+          'topup-modal'
+        )
+        .classList.add(
+          'visible'
+        );
+    }
+
+    function closeTopup() {
+
+      document
+        .getElementById(
+          'topup-modal'
+        )
+        .classList.remove(
+          'visible'
+        );
+    }
+
+    function selectTopup(
+      amount,
+      button
+    ) {
+
+      selectedTopupAmount =
+        Number(amount);
+
+      document
+        .querySelectorAll(
+          '.amount'
+        )
+        .forEach(
+          item =>
+            item.classList.remove(
+              'selected'
+            )
+        );
+
+      button?.classList.add(
+        'selected'
+      );
+
+      let credit =
+        selectedTopupAmount;
+
+      if (
+        selectedTopupAmount ===
+        400
+      ) {
+        credit = 440;
+      }
+
+      if (
+        selectedTopupAmount ===
+        800
+      ) {
+        credit = 960;
+      }
+
+      document.getElementById(
+        'credit-value'
+      ).textContent =
+        `${credit} ₽`;
+    }
+
+    async function processTestTopup() {
+
+      const button =
+        document.getElementById(
+          'test-topup'
+        );
+
+      button.disabled = true;
+
+      try {
+
+        const data =
+          await apiFetch(
+            '/api/topup',
+            {
+              method: 'POST',
+
+              body:
+                JSON.stringify({
+                  amount:
+                    selectedTopupAmount
+                })
+            },
+            20000
+          );
+
+        if (!data.ok) {
+          throw new Error(
+            data.error ||
+            'Ошибка пополнения.'
+          );
+        }
+
+        setBalance(
+          data.balance
+        );
+
+        closeTopup();
+
+        showStatus(
+          `Тестовый баланс пополнен на ${data.added} ₽.`,
+          'warning'
+        );
+
+        setTimeout(
+          clearStatus,
+          3500
+        );
+
+      } catch (error) {
+
+        console.error(
+          '[TOPUP]',
+          error
+        );
+
+        showStatus(
+          error.message ||
+          'Ошибка пополнения.',
+          'error'
+        );
+
+      } finally {
+
+        button.disabled = false;
+      }
+    }
+
+    /* =========================================================
+       GENERATION
+    ========================================================= */
+
+    function hasUnpaidActiveOrder() {
+
+      return currentOrders.some(
+        order =>
+          order.status ===
+            'processing' ||
+          order.status ===
+            'preview'
+      );
+    }
+
+    function updateGenerateAvailability() {
+
+      const button =
+        document.getElementById(
+          'generate'
+        );
+
+      if (
+        hasUnpaidActiveOrder()
+      ) {
+
+        button.disabled = true;
+
+        button.textContent =
+          '🎧 Сначала выбери готовую песню';
+
+        return;
+      }
+
+      if (
+        currentBalance <
+        SONG_PRICE
+      ) {
+
+        button.disabled = false;
+
+        button.textContent =
+          '✨ Сгенерировать 2 варианта';
+
+        return;
+      }
+
+      button.disabled = false;
+
+      button.textContent =
+        '✨ Сгенерировать 2 варианта';
+    }
+
+    async function generateSong() {
+
+      if (
+        hasUnpaidActiveOrder()
+      ) {
+
+        showStatus(
+          'У тебя уже есть незавершённая генерация. ' +
+          'Выбери один из вариантов и купи полную версию.',
+          'warning'
+        );
+
+        return;
+      }
+
+      if (
+        currentBalance <
+        SONG_PRICE
+      ) {
+
+        openTopup();
+
+        showStatus(
+          'Для новой генерации нужен баланс минимум 200 ₽.',
+          'warning'
+        );
+
+        return;
+      }
+
+      const prompt =
+        document
+          .getElementById(
+            'prompt'
+          )
+          .value
+          .trim();
+
+      if (!prompt) {
+
+        showStatus(
+          'Напиши, о чём должна быть песня.',
+          'warning'
+        );
+
+        return;
+      }
+
+      const button =
+        document.getElementById(
+          'generate'
+        );
+
+      button.disabled = true;
+
+      button.textContent =
+        'Создаём песню...';
+
+      try {
+
+        const data =
+          await apiFetch(
+            '/api/generate-song',
+            {
+              method: 'POST',
+
+              body:
+                JSON.stringify({
+                  genre:
+                    selectedGenre,
+
+                  vocal:
+                    selectedVocal,
+
+                  prompt
+                })
+            },
+            60000
+          );
+
+        if (!data.ok) {
+          throw new Error(
+            data.error ||
+            'Не удалось запустить генерацию.'
+          );
+        }
+
+        /*
+         * Удаляем текст после успешной
+         * постановки заказа.
+         */
+
+        document.getElementById(
+          'prompt'
+        ).value = '';
+
+        updateCounter();
+
+        await loadOrders();
+
+      } catch (error) {
+
+        console.error(
+          '[GENERATE]',
+          error
+        );
+
+        showStatus(
+          error.message ||
+          'Ошибка генерации.',
+          'error'
+        );
+
+      } finally {
+
+        updateGenerateAvailability();
+      }
+    }
+
+    /* =========================================================
+       ORDER POLLING
+    ========================================================= */
+
+    function startPhraseAnimation() {
+
+      if (phraseTimer) {
+        return;
+      }
+
+      phraseTimer =
+        setInterval(
+          () => {
+
+            phraseIndex =
+              (
+                phraseIndex + 1
+              ) %
+              GENERATION_PHRASES.length;
+
+            document
+              .querySelectorAll(
+                '.dynamic-phrase'
+              )
+              .forEach(
+                element => {
+
+                  element.textContent =
+                    GENERATION_PHRASES[
+                      phraseIndex
+                    ];
+                }
+              );
+
+          },
+          2600
+        );
+    }
+
+    function stopPhraseAnimation() {
+
+      if (!phraseTimer) {
+        return;
+      }
+
+      clearInterval(
+        phraseTimer
+      );
+
+      phraseTimer = null;
+    }
+
+    function schedulePoll() {
+
+      if (pollTimer) {
+
+        clearTimeout(
+          pollTimer
+        );
+      }
+
+      pollTimer =
+        setTimeout(
+          async () => {
+
+            pollTimer = null;
+
+            await loadOrders();
+
+          },
+          5000
+        );
+    }
+
+    async function loadOrders() {
+
+      try {
+
+        const data =
+          await apiFetch(
+            '/api/orders',
+            {
+              method: 'GET'
+            },
+            30000
+          );
+
+        if (!data.ok) {
+          throw new Error(
+            data.error ||
+            'Не удалось получить заказы.'
+          );
+        }
+
+        currentOrders =
+          Array.isArray(
+            data.orders
+          )
+            ? data.orders.filter(
+                order =>
+                  order.status !==
+                  'failed'
+              )
+            : [];
+
+        renderOrders(
+          currentOrders
+        );
+
+        const processing =
+          currentOrders.some(
+            order =>
+              order.status ===
+              'processing'
+          );
+
+        if (processing) {
+
+          startPhraseAnimation();
+
+          schedulePoll();
+
+        } else {
+
+          stopPhraseAnimation();
+        }
+
+        updateGenerateAvailability();
+
+      } catch (error) {
+
+        console.error(
+          '[ORDERS]',
+          error
+        );
+      }
+    }
+
+    /* =========================================================
+       AUDIO DEMO
+    ========================================================= */
+
+    function applyDemoLimit(
+      audio
+    ) {
+
+      audio.addEventListener(
+        'timeupdate',
+        () => {
+
+          if (
+            audio.currentTime >= 30
+          ) {
+
+            audio.pause();
+
+            audio.currentTime = 30;
+          }
+        }
+      );
+    }
+
+    /* =========================================================
+       UNLOCK
+    ========================================================= */
+
+    async function unlockSong(
+      orderId,
+      variant
+    ) {
+
+      if (
+        currentBalance <
+        SONG_PRICE
+      ) {
+
+        openTopup();
+
+        return;
+      }
+
+      const confirmed =
+        confirm(
+          'Скачать выбранную полную версию за 200 ₽?'
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      const buttons =
+        document.querySelectorAll(
+          `[data-unlock-order="${orderId}"]`
+        );
+
+      buttons.forEach(
+        button =>
+          button.disabled = true
+      );
+
+      try {
+
+        /*
+         * ВАЖНО:
+         *
+         * orderId + variant
+         * отправляются на backend.
+         *
+         * Backend сам определяет
+         * настоящий audio_url.
+         */
+
+        const data =
+          await apiFetch(
+            '/api/unlock-song',
+            {
+              method: 'POST',
+
+              body:
+                JSON.stringify({
+                  orderId:
+                    Number(orderId),
+
+                  variant:
+                    Number(variant)
+                })
+            },
+            30000
+          );
+
+        if (!data.ok) {
+
+          throw new Error(
+            data.error ||
+            'Не удалось купить песню.'
+          );
+        }
+
+        const newBalance =
+          data.user?.balance ??
+          data.balance;
+
+        setBalance(
+          newBalance
+        );
+
+        const audioUrl =
+          data.audioUrl;
+
+        const title =
+          data.title ||
+          'song';
+
+        /*
+         * Сначала покупка подтверждена
+         * backend-ом.
+         *
+         * Затем открываем скачивание
+         * внутри MAX.
+         */
+
+        downloadSong(
+          audioUrl,
+          title
+        );
+
+        await loadOrders();
+
+        showStatus(
+          '🎉 Полная версия разблокирована.',
+          'warning'
+        );
+
+        setTimeout(
+          clearStatus,
+          3000
+        );
+
+      } catch (error) {
+
+        console.error(
+          '[UNLOCK]',
+          error
+        );
+
+        showStatus(
+          error.message ||
+          'Ошибка покупки.',
+          'error'
+        );
+
+        await loadOrders();
+
+      } finally {
+
+        buttons.forEach(
+          button =>
+            button.disabled = false
+        );
+      }
+    }
+
+    /* =========================================================
+       DOWNLOAD
+    ========================================================= */
+
+    function downloadSong(
+      url,
+      title
+    ) {
+
+      if (
+        !url ||
+        !/^https:\/\//i.test(
+          url
+        )
+      ) {
+
+        showStatus(
+          'Некорректная ссылка на аудиофайл.',
+          'error'
+        );
+
+        return;
+      }
+
+      const safeName =
+        String(
+          title || 'song'
+        )
+          .replace(
+            /[\\/:*?"<>|]/g,
+            '_'
+          )
+          .slice(
+            0,
+            80
+          );
+
+      const webApp =
+        getMaxWebApp();
+
+      /*
+       * Основной путь:
+       * MAX Bridge.
+       */
+
+      if (
+        webApp?.downloadFile
+      ) {
+
+        try {
+
+          webApp.downloadFile(
+            url,
+            `${safeName}.mp3`
+          );
+
+          return;
+
+        } catch (error) {
+
+          console.warn(
+            '[MAX DOWNLOAD]',
+            error
+          );
+        }
+      }
+
+      /*
+       * Browser fallback.
+       */
+
+      const link =
+        document.createElement(
+          'a'
+        );
+
+      link.href = url;
+
+      link.download =
+        `${safeName}.mp3`;
+
+      link.target =
+        '_blank';
+
+      link.rel =
+        'noopener noreferrer';
+
+      document.body.appendChild(
+        link
+      );
+
+      link.click();
+
+      link.remove();
+    }
+
+    /* =========================================================
+       SHARE
+    ========================================================= */
+
+    async function shareSong(
+      url
+    ) {
+
+      try {
+
+        const webApp =
+          getMaxWebApp();
+
+        if (
+          webApp?.shareContent
+        ) {
+
+          await webApp.shareContent({
+            link: url,
+            text:
+              'Моя новая песня 🎵'
+          });
+
+          return;
+        }
+
+        if (
+          navigator.share
+        ) {
+
+          await navigator.share({
+            title:
+              'Моя песня',
+            url
+          });
+
+          return;
+        }
+
+        if (
+          navigator.clipboard
+        ) {
+
+          await navigator.clipboard
+            .writeText(url);
+
+          showStatus(
+            'Ссылка скопирована.',
+            'warning'
+          );
+
+          setTimeout(
+            clearStatus,
+            2500
+          );
+        }
+
+      } catch (error) {
+
+        console.warn(
+          '[SHARE]',
+          error
+        );
+      }
+    }
+
+    /* =========================================================
+       ORDER RENDER
+    ========================================================= */
+
+    function renderOrders(
+      orders
+    ) {
+
+      const list =
+        document.getElementById(
+          'orders-list'
+        );
+
+      document.getElementById(
+        'orders-count'
+      ).textContent =
+        String(
+          orders.length
+        );
+
+      if (
+        !orders.length
+      ) {
+
+        list.innerHTML = `
+          <div class="empty">
+            Здесь появятся созданные тобой песни.
+          </div>
+        `;
+
+        return;
+      }
+
+      list.innerHTML = '';
+
+      orders.forEach(
+        order => {
+
+          const card =
+            document.createElement(
+              'article'
+            );
+
+          /*
+           * =================================================
+           * PROCESSING
+           * =================================================
+           */
+
+          if (
+            order.status ===
+            'processing'
+          ) {
+
+            card.className =
+              'order processing';
+
+            card.innerHTML = `
+
+              <div class="order-head">
+
+                <div class="order-icon processing-icon">
+                  🎵
+                </div>
+
+                <div class="order-info">
+
+                  <p class="order-name">
+                    Создаём два варианта
+                  </p>
+
+                  <p class="order-meta">
+                    ${escapeHtml(
+                      order.genre
+                    )}
+                    ·
+                    ${escapeHtml(
+                      order.vocal
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div class="pill pill-processing">
+                Генерация
+              </div>
+
+              <div class="generation-line">
+
+                <span class="generation-dot"></span>
+
+                <span class="dynamic-phrase">
+                  ${GENERATION_PHRASES[
+                    phraseIndex
+                  ]}
+                </span>
+
+              </div>
+            `;
+          }
+
+          /*
+           * =================================================
+           * PREVIEW
+           * =================================================
+           */
+
+          else if (
+            order.status ===
+            'preview'
+          ) {
+
+            card.className =
+              'order preview';
+
+            const url1 =
+              order.audio_url ||
+              '';
+
+            const url2 =
+              order.audio_url_2 ||
+              '';
+
+            const title1 =
+              order.title ||
+              'Вариант 1';
+
+            const title2 =
+              order.title_2 ||
+              'Вариант 2';
+
+            let html = `
+
+              <div class="order-head">
+
+                <div class="order-icon preview-icon">
+                  🎧
+                </div>
+
+                <div class="order-info">
+
+                  <p class="order-name">
+                    Выбери понравившийся вариант
+                  </p>
+
+                  <p class="order-meta">
+                    ${escapeHtml(
+                      order.genre
+                    )}
+                    ·
+                    ${escapeHtml(
+                      order.vocal
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div class="pill pill-preview">
+                Готово · демо 30 сек
+              </div>
+
+              <div class="variants">
+            `;
+
+            if (url1) {
+
+              html += `
+
+                <div class="variant">
+
+                  <div class="variant-top">
+
+                    <span class="variant-name">
+                      ${escapeHtml(
+                        title1
+                      )}
+                    </span>
+
+                    <span class="demo">
+                      DEMO · 30 СЕК
+                    </span>
+
+                  </div>
+
+                  <audio
+                    controls
+                    preload="none"
+                    data-demo="true"
+                    src="${escapeHtml(
+                      url1
+                    )}"
+                  ></audio>
+
+                  <button
+                    class="unlock"
+                    type="button"
+                    data-unlock-order="${Number(
+                      order.id
+                    )}"
+                    data-variant="1"
+                  >
+                    Скачать полностью · 200 ₽
+                  </button>
+
+                </div>
+              `;
+            }
+
+            if (url2) {
+
+              html += `
+
+                <div class="variant">
+
+                  <div class="variant-top">
+
+                    <span class="variant-name">
+                      ${escapeHtml(
+                        title2
+                      )}
+                    </span>
+
+                    <span class="demo">
+                      DEMO · 30 СЕК
+                    </span>
+
+                  </div>
+
+                  <audio
+                    controls
+                    preload="none"
+                    data-demo="true"
+                    src="${escapeHtml(
+                      url2
+                    )}"
+                  ></audio>
+
+                  <button
+                    class="unlock"
+                    type="button"
+                    data-unlock-order="${Number(
+                      order.id
+                    )}"
+                    data-variant="2"
+                  >
+                    Скачать полностью · 200 ₽
+                  </button>
+
+                </div>
+              `;
+            }
+
+            html += `
+              </div>
+            `;
+
+            card.innerHTML =
+              html;
+          }
+
+          /*
+           * =================================================
+           * COMPLETED
+           * =================================================
+           */
+
+          else if (
+            order.status ===
+            'completed'
+          ) {
+
+            card.className =
+              'order completed';
+
+            const title =
+              order.title_selected ||
+              order.title ||
+              'Полная версия';
+
+            const audioUrl =
+              order.audio_url_selected ||
+              order.audio_url ||
+              '';
+
+            card.innerHTML = `
+
+              <div class="order-head">
+
+                <div class="order-icon completed-icon">
+                  ✅
+                </div>
+
+                <div class="order-info">
+
+                  <p class="order-name">
+                    ${escapeHtml(
+                      title
+                    )}
+                  </p>
+
+                  <p class="order-meta">
+                    ${escapeHtml(
+                      order.genre
+                    )}
+                    ·
+                    ${escapeHtml(
+                      order.vocal
+                    )}
+                  </p>
+
+                </div>
+
+              </div>
+
+              <div class="pill pill-completed">
+                Полная версия
+              </div>
+
+              <div class="completed-player">
+
+                <audio
+                  controls
+                  preload="none"
+                  src="${escapeHtml(
+                    audioUrl
+                  )}"
+                ></audio>
+
+              </div>
+
+              <div class="actions">
+
+                <button
+                  class="action primary"
+                  type="button"
+                  data-action="download"
+                  data-url="${escapeHtml(
+                    audioUrl
+                  )}"
+                  data-title="${escapeHtml(
+                    title
+                  )}"
+                >
+                  📥 Скачать MP3
+                </button>
+
+                <button
+                  class="action"
+                  type="button"
+                  data-action="share"
+                  data-url="${escapeHtml(
+                    audioUrl
+                  )}"
+                >
+                  📤 Поделиться
+                </button>
+
+              </div>
+            `;
+          }
+
+          list.appendChild(
+            card
+          );
+        }
+      );
+
+      list
+        .querySelectorAll(
+          'audio[data-demo="true"]'
+        )
+        .forEach(
+          applyDemoLimit
+        );
+    }
+
+    /* =========================================================
+       COUNTER
+    ========================================================= */
+
+    function updateCounter() {
+
+      const value =
+        document
+          .getElementById(
+            'prompt'
+          )
+          .value;
+
+      document.getElementById(
+        'counter'
+      ).textContent =
+        `${value.length} / 2000`;
+    }
+
+    /* =========================================================
+       EVENT BINDING
+    ========================================================= */
+
+    function setupEvents() {
+
+      /*
+       * GENRES
+       */
+
+      document
+        .querySelectorAll(
+          '[data-genre]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              'click',
+              () => {
+
+                selectedGenre =
+                  button.dataset.genre;
+
+                document
+                  .querySelectorAll(
+                    '[data-genre]'
+                  )
+                  .forEach(
+                    item =>
+                      item.classList.remove(
+                        'selected'
+                      )
+                  );
+
+                button.classList.add(
+                  'selected'
+                );
+
+              }
+            );
+          }
+        );
+
+      /*
+       * VOCALS
+       */
+
+      document
+        .querySelectorAll(
+          '[data-vocal]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              'click',
+              () => {
+
+                selectedVocal =
+                  button.dataset.vocal;
+
+                document
+                  .querySelectorAll(
+                    '[data-vocal]'
+                  )
+                  .forEach(
+                    item =>
+                      item.classList.remove(
+                        'selected'
+                      )
+                  );
+
+                button.classList.add(
+                  'selected'
+                );
+
+              }
+            );
+          }
+        );
+
+      /*
+       * PROMPT
+       */
+
+      document
+        .getElementById(
+          'prompt'
+        )
+        .addEventListener(
+          'input',
+          updateCounter
+        );
+
+      /*
+       * GENERATE
+       */
+
+      document
+        .getElementById(
+          'generate'
+        )
+        .addEventListener(
+          'click',
+          generateSong
+        );
+
+      /*
+       * BALANCE
+       */
+
+      document
+        .getElementById(
+          'balance-button'
+        )
+        .addEventListener(
+          'click',
+          openTopup
+        );
+
+      /*
+       * TOPUP CLOSE
+       */
+
+      document
+        .getElementById(
+          'topup-close'
+        )
+        .addEventListener(
+          'click',
+          closeTopup
+        );
+
+      /*
+       * TOPUP AMOUNTS
+       */
+
+      document
+        .querySelectorAll(
+          '[data-amount]'
+        )
+        .forEach(
+          button => {
+
+            button.addEventListener(
+              'click',
+              () => {
+
+                selectTopup(
+                  Number(
+                    button.dataset.amount
+                  ),
+                  button
+                );
+
+              }
+            );
+          }
+        );
+
+      /*
+       * TEST TOPUP
+       */
+
+      document
+        .getElementById(
+          'test-topup'
+        )
+        .addEventListener(
+          'click',
+          processTestTopup
+        );
+
+      /*
+       * ORDERS
+       */
+
+      document
+        .getElementById(
+          'orders-list'
+        )
+        .addEventListener(
+          'click',
+          async event => {
+
+            const button =
+              event.target.closest(
+                'button'
+              );
+
+            if (!button) {
+              return;
+            }
+
+            /*
+             * UNLOCK
+             */
+
+            if (
+              button.classList.contains(
+                'unlock'
+              )
+            ) {
+
+              const orderId =
+                Number(
+                  button.dataset
+                    .unlockOrder
+                );
+
+              const variant =
+                Number(
+                  button.dataset
+                    .variant
+                );
+
+              await unlockSong(
+                orderId,
+                variant
+              );
+
+              return;
+            }
+
+            /*
+             * DOWNLOAD
+             */
+
+            if (
+              button.dataset.action ===
+              'download'
+            ) {
+
+              downloadSong(
+                button.dataset.url,
+                button.dataset.title
+              );
+
+              return;
+            }
+
+            /*
+             * SHARE
+             */
+
+            if (
+              button.dataset.action ===
+              'share'
+            ) {
+
+              await shareSong(
+                button.dataset.url
+              );
+            }
+          }
+        );
+    }
+
+    /* =========================================================
+       INITIALIZATION
+    ========================================================= */
+
+    async function initApp() {
+
+      try {
+
+        /*
+         * Небольшая задержка нужна,
+         * потому что MAX Bridge подключён через defer.
+         */
+
+        if (
+          !window.WebApp
+        ) {
+
+          await new Promise(
+            resolve =>
+              setTimeout(
+                resolve,
+                250
+              )
+          );
+        }
+
+        await loadUser();
+
+      } catch (error) {
+
+        console.error(
+          '[INIT]',
+          error
+        );
+
+        showStatus(
+          error.message ||
+          'Не удалось запустить приложение.',
+          'error'
+        );
+      }
+    }
+
+    /* =========================================================
+       START
+    ========================================================= */
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      () => {
+
+        setupEvents();
+
+        updateCounter();
+
+        initApp();
+
+      }
+    );
+  </script>
+
+</body>
+</html>
