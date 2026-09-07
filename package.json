@@ -4,7 +4,7 @@
   "private": true,
   "main": "server.js",
   "scripts": {
-    "start": "node -r ./max-bootstrap.js server.js"
+    "start": "node -r ./schema-hotfix.js -r ./max-bootstrap.js server.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
