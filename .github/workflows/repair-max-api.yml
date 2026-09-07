@@ -27,19 +27,205 @@ jobs:
 
           index = Path('index.html')
           text = index.read_text(encoding='utf-8')
-          old = """const API_BASE =\n      location.hostname.endsWith('github.io')\n        ? 'https://max-song-app.onrender.com'\n        : '';"""
-          new = """const API_BASE =\n      'https://max-song-app.onrender.com';"""
+
+          old = """const API_BASE =
+      location.hostname.endsWith('github.io')
+        ? 'https://max-song-app.onrender.com'
+        : '';"""
+          new = """const API_BASE =
+      'https://max-song-app.onrender.com';"""
+          if old in text:
+              text = text.replace(old, new, 1)
+
+          old = """    async function apiFetch(
+      path,
+      options = {},
+      timeoutMs = 30000
+    ) {
+      const controller =
+        new AbortController();
+
+      const timeout =
+        setTimeout(
+          () =>
+            controller.abort(),
+          timeoutMs
+        );
+
+      try {
+
+        const headers =
+          new Headers(
+            options.headers || {}
+          );
+
+        headers.set(
+          'X-MAX-Init-Data',
+          maxInitData
+        );
+
+        /*
+         * JSON нужен только для методов,
+         * у которых реально есть body.
+         */
+
+        if (
+          options.body &&
+          !headers.has(
+            'Content-Type'
+          )
+        ) {
+          headers.set(
+            'Content-Type',
+            'application/json'
+          );
+        }
+
+        const response =
+          await fetch(
+            `${API_BASE}${path}`,
+            {
+              ...options,
+              headers,
+              signal:
+                controller.signal
+            }
+          );"""
+
+          new = """    async function apiFetch(
+      path,
+      options = {},
+      timeoutMs = 30000
+    ) {
+      const controller =
+        new AbortController();
+
+      const timeout =
+        setTimeout(
+          () =>
+            controller.abort(),
+          timeoutMs
+        );
+
+      try {
+
+        const headers =
+          new Headers(
+            options.headers || {}
+          );
+
+        headers.delete(
+          'X-MAX-Init-Data'
+        );
+
+        let requestUrl =
+          `${API_BASE}${path}`;
+
+        let requestBody =
+          options.body;
+
+        if (options.body) {
+          try {
+            const payload =
+              JSON.parse(options.body);
+
+            const form =
+              new URLSearchParams();
+
+            Object.entries(
+              payload || {}
+            ).forEach(
+              ([key, value]) => {
+                form.set(
+                  key,
+                  String(value ?? '')
+                );
+              }
+            );
+
+            form.set(
+              'initData',
+              maxInitData
+            );
+
+            requestBody = form;
+
+          } catch {
+            requestBody =
+              options.body;
+          }
+
+        } else {
+
+          requestUrl +=
+            `${requestUrl.includes('?') ? '&' : '?'}initData=${encodeURIComponent(maxInitData)}`;
+        }
+
+        const response =
+          await fetch(
+            requestUrl,
+            {
+              ...options,
+              body: requestBody,
+              headers,
+              signal:
+                controller.signal
+            }
+          );"""
+
           if old not in text:
-              raise SystemExit('Expected API_BASE block was not found in index.html')
-          index.write_text(text.replace(old, new, 1), encoding='utf-8')
+              raise SystemExit('Expected apiFetch block was not found')
+          text = text.replace(old, new, 1)
 
           server = Path('server.js')
-          text = server.read_text(encoding='utf-8')
-          old = """app.use(\n  cors({\n    origin: [\n      'https://cbklexa-bot.github.io',\n      'https://max-song-app.onrender.com'\n    ],\n    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],\n    allowedHeaders: ['Content-Type', 'X-MAX-Init-Data'],\n    credentials: false\n  })\n);"""
-          new = """app.use(\n  cors({\n    origin: true,\n    methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],\n    allowedHeaders: ['Content-Type', 'X-MAX-Init-Data'],\n    credentials: false\n  })\n);"""
-          if old not in text:
-              raise SystemExit('Expected CORS block was not found in server.js')
-          server.write_text(text.replace(old, new, 1), encoding='utf-8')
+          server_text = server.read_text(encoding='utf-8')
+
+          old = """app.use(
+  express.json({
+    limit: '1mb'
+  })
+);"""
+          new = """app.use(
+  express.json({
+    limit: '1mb'
+  })
+);
+
+app.use(
+  express.urlencoded({
+    extended: false,
+    limit: '1mb'
+  })
+);"""
+          if old in server_text:
+              server_text = server_text.replace(old, new, 1)
+
+          old = """function requireMaxUser(req) {
+  const initData = req.headers['x-max-init-data'];
+
+  if (!initData) {
+    throw new Error('X-MAX-Init-Data header is missing');
+  }
+
+  const result = validateMaxInitData(initData);"""
+          new = """function requireMaxUser(req) {
+  const initData =
+    req.headers['x-max-init-data'] ||
+    req.query.initData ||
+    req.body?.initData ||
+    '';
+
+  if (!initData) {
+    throw new Error('MAX initData is missing');
+  }
+
+  const result = validateMaxInitData(initData);"""
+          if old not in server_text:
+              raise SystemExit('Expected requireMaxUser block was not found')
+          server_text = server_text.replace(old, new, 1)
+
+          index.write_text(text, encoding='utf-8')
+          server.write_text(server_text, encoding='utf-8')
           PY
 
       - name: Commit patched files
@@ -49,5 +235,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add index.html server.js
           git diff --cached --quiet && exit 0
-          git commit -m 'Fix MAX API transport and CORS'
+          git commit -m 'Fix MAX transport without preflight'
           git push origin main
