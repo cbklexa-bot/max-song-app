@@ -100,8 +100,8 @@ app.post('/api/topup', async (req, res) => {
 
     await axios.patch(`${supabaseUrl}/rest/v1/users?max_id=eq.${encodeURIComponent(maxId)}`, { balance: newBalance }, { headers: dbHeaders });
     
-    // Исправлено: user_max_id заменен на max_id
-    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { max_id: maxId, amount: totalCredited, type: 'topup' }, { headers: dbHeaders });
+    // Используем правильное имя колонки user_max_id для таблицы transactions
+    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { user_max_id: maxId, amount: totalCredited, type: 'topup' }, { headers: dbHeaders });
 
     res.json({
       success: true,
@@ -178,8 +178,8 @@ app.post('/api/unlock-song', async (req, res) => {
       status: 'completed', audio_url: audioUrl, title: title || 'Именная песня'
     }, { headers: dbHeaders });
     
-    // Исправлено: user_max_id заменен на max_id
-    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { max_id: maxId, amount: -SONG_PRICE, type: 'song_unlock' }, { headers: dbHeaders });
+    // Используем правильное имя колонки user_max_id для таблицы transactions
+    await axios.post(`${supabaseUrl}/rest/v1/transactions`, { user_max_id: maxId, amount: -SONG_PRICE, type: 'song_unlock' }, { headers: dbHeaders });
 
     res.json({ success: true, message: 'Песня разблокирована!', newBalance });
   } catch (err) {
