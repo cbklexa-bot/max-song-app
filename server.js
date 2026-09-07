@@ -69,6 +69,14 @@ function createMaxSecretKey() {
     .digest();
 }
 
+function decodeInitDataValue(value) {
+  try {
+    return decodeURIComponent(value.replace(/\+/g, '%20'));
+  } catch (_) {
+    return value;
+  }
+}
+
 function validateMaxInitData(initData) {
   if (!MAX_BOT_TOKEN) {
     throw new Error('MAX_BOT_TOKEN is not configured');
@@ -93,23 +101,33 @@ function validateMaxInitData(initData) {
     params[key] = value;
   });
 
-  const receivedHash = params.hash;
-
-  if (!receivedHash) {
+  const receivedHashRaw = params.hash;
+  if (!receivedHashRaw) {
     throw new Error('MAX initData hash is missing');
   }
 
-  const dataCheckString = Object.keys(params)
-    .filter((key) => key !== 'hash')
+  const receivedHash = decodeInitDataValue(receivedHashRaw);
+
+  const decodedParams = {};
+
+  Object.keys(params).forEach((key) => {
+    if (key === 'hash') {
+      return;
+    }
+
+    decodedParams[key] = decodeInitDataValue(params[key]);
+  });
+
+  const dataCheckString = Object.keys(decodedParams)
     .sort()
-    .map((key) => key + '=' + params[key])
+    .map((key) => key + '=' + decodedParams[key])
     .join('\n');
 
   const secretKey = createMaxSecretKey();
 
   const calculatedHash = crypto
     .createHmac('sha256', secretKey)
-    .update(dataCheckString)
+    .update(dataCheckString, 'utf8')
     .digest('hex');
 
   const receivedBuffer = Buffer.from(receivedHash, 'hex');
@@ -122,8 +140,8 @@ function validateMaxInitData(initData) {
     throw new Error('Invalid MAX initData signature');
   }
 
-  if (params.auth_date) {
-    const authDate = Number(params.auth_date);
+  if (decodedParams.auth_date) {
+    const authDate = Number(decodedParams.auth_date);
 
     if (!Number.isNaN(authDate)) {
       const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
@@ -136,29 +154,29 @@ function validateMaxInitData(initData) {
 
   let user = null;
 
-  if (params.user) {
+  if (decodedParams.user) {
     try {
-      user = JSON.parse(decodeURIComponent(params.user));
-    } catch (error) {
-      try {
-        user = JSON.parse(params.user);
-      } catch (parseError) {
-        user = null;
-      }
+      user = JSON.parse(decodedParams.user);
+    } catch (_) {
+      user = null;
     }
   }
 
   return {
-    params,
+    params: decodedParams,
     user
   };
 }
 
 function requireMaxUser(req) {
-  const initData = req.headers['x-max-init-data'];
+  const initData =
+    req.headers['x-max-init-data'] ||
+    req.query.initData ||
+    req.body?.initData ||
+    '';
 
   if (!initData) {
-    throw new Error('X-MAX-Init-Data header is missing');
+    throw new Error('MAX initData is missing');
   }
 
   const result = validateMaxInitData(initData);
@@ -374,6 +392,59 @@ app.get('/api/health', (req, res) => {
     config: checkConfig(),
     time: new Date().toISOString()
   });
+});
+
+/* =========================================
+   MAX BOT TOKEN CHECK
+========================================= */
+
+app.get('/api/max-bot-check', async (req, res) => {
+  try {
+    if (!MAX_BOT_TOKEN) {
+      return res.status(500).json({
+        ok: false,
+        error: 'MAX_BOT_TOKEN is not configured'
+      });
+    }
+
+    const response = await axios.get(
+      'https://platform-api2.max.ru/users/@me',
+      {
+        headers: {
+          Authorization: 'Bearer ' + MAX_BOT_TOKEN
+        },
+        timeout: 15000
+      }
+    );
+
+    const bot = response.data || {};
+
+    res.json({
+      ok: true,
+      tokenAcceptedByMax: true,
+      bot: {
+        id: bot.user_id || bot.id || null,
+        name: bot.name || null,
+        username: bot.username || null
+      }
+    });
+  } catch (error) {
+    const status = error.response?.status || 500;
+    const data = error.response?.data || null;
+
+    console.error(
+      '[GET /api/max-bot-check]',
+      status,
+      data || error.message
+    );
+
+    res.status(status).json({
+      ok: false,
+      tokenAcceptedByMax: false,
+      status,
+      error: data?.message || data?.error || error.message || 'MAX API error'
+    });
+  }
 });
 
 /* =========================================
