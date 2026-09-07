@@ -17,7 +17,7 @@
     (async () => {
       try {
         const API_BASE = 'https://max-song-app.onrender.com';
-        const sourceUrl = 'index.html?max_transport=4&v=' + Date.now();
+        const sourceUrl = 'index.html?max_transport=5&v=' + Date.now();
         const response = await fetch(sourceUrl, { cache: 'no-store' });
         if (!response.ok) throw new Error('Не удалось загрузить приложение: HTTP ' + response.status);
 
@@ -39,14 +39,14 @@
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
       try {
-        const url = new URL(`${API_BASE}${path}`);
+        const url = new URL(\`${API_BASE}\${path}\`);
         const payload = options.body ? (() => {
           try { return JSON.parse(options.body); }
           catch { return {}; }
         })() : {};
 
-        // MAX initData is sent as a query parameter. This avoids the
-        // non-simple custom header that can trigger a CORS preflight.
+        // Передаём MAX initData в query-string, чтобы не вызывать
+        // CORS preflight из MAX WebView.
         url.searchParams.set('initData', maxInitData);
         Object.entries(payload || {}).forEach(([key, value]) => {
           url.searchParams.set(key, String(value ?? ''));
@@ -62,11 +62,11 @@
         try {
           data = text ? JSON.parse(text) : {};
         } catch {
-          throw new Error(`Сервер вернул не JSON (${response.status})`);
+          throw new Error(\`Сервер вернул не JSON (\${response.status})\`);
         }
 
         if (!response.ok) {
-          throw new Error(data.error || data.message || `Ошибка HTTP ${response.status}`);
+          throw new Error(data.error || data.message || \`Ошибка HTTP \${response.status}\`);
         }
 
         return data;
