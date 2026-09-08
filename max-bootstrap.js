@@ -147,8 +147,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true});
 })();</script>`;
 
-      // Use MAX's native downloadFile() with the real attachment endpoint,
-      // not the streaming /api/audio preview endpoint.
+      // Use MAX's native downloadFile() with the real attachment endpoint.
+      // MAX requires a fully qualified HTTPS URL, not a relative path.
       const downloadFix = `<script>(function(){
 function installDownloadFix(){
   try{
@@ -156,7 +156,8 @@ function installDownloadFix(){
     var original=window.downloadSong;
     function buildDownloadUrl(url,title){
       var safeName=String(title||'song').replace(/[\\\\/:*?"<>|]/g,'_').slice(0,80);
-      return '/api/download?url='+encodeURIComponent(String(url||''))+'&name='+encodeURIComponent(safeName);
+      var relative='/api/download?url='+encodeURIComponent(String(url||''))+'&name='+encodeURIComponent(safeName);
+      return new URL(relative,location.href).toString();
     }
     function fixedDownloadSong(url,title){
       var value=String(url||'').trim();
@@ -169,7 +170,7 @@ function installDownloadFix(){
       var webApp=window.WebApp||null;
       if(webApp&&typeof webApp.downloadFile==='function'){
         try{
-          webApp.downloadFile(downloadUrl,safeName+'.mp3');
+          webApp.downloadFile(downloadUrl,safeName+'.m4a');
           try{window.showStatus('📥 Загрузка файла запущена.');setTimeout(window.clearStatus,3500);}catch(e){}
           return;
         }catch(error){
@@ -179,7 +180,7 @@ function installDownloadFix(){
       try{
         var link=document.createElement('a');
         link.href=downloadUrl;
-        link.download=safeName+'.mp3';
+        link.download=safeName+'.m4a';
         link.rel='noopener';
         document.body.appendChild(link);
         link.click();
@@ -215,7 +216,7 @@ var timer=setInterval(function(){
       this.set('X-Max-Backend', 'primary');
       this.set('X-Max-Replay-Fix', 'v5');
       this.set('X-Max-Audio-Proxy-Fix', 'v1');
-      this.set('X-Max-Download-Fix', 'v1');
+      this.set('X-Max-Download-Fix', 'v2');
       this.type('html').send(patchedHtml);
       return this;
     }
