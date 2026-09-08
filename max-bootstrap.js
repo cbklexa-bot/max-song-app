@@ -10,73 +10,13 @@ const axios = require('axios');
 const originalUse = express.application.use;
 const originalGet = express.application.get;
 const AUDIO_CACHE_DIR = path.join('/tmp', 'max-song-audio-cache');
-const audioCachePromises = new Map();
-const audioQueue = [];
-let audioQueueRunning = false;
+const audioInflight = new Map();
 
 try { fs.mkdirSync(AUDIO_CACHE_DIR, { recursive: true }); } catch (_) {}
 
 function audioCachePath(url) {
   const key = crypto.createHash('sha256').update(url).digest('hex');
   return path.join(AUDIO_CACHE_DIR, key + '.m4a');
-}
-
-function enqueueAudioCache(url) {
-  if (!url || audioCachePromises.has(url)) return audioCachePromises.get(url) || null;
-
-  const promise = new Promise((resolve, reject) => {
-    audioQueue.push({ url, resolve, reject });
-    runAudioQueue();
-  });
-  audioCachePromises.set(url, promise);
-  return promise;
-}
-
-async function runAudioQueue() {
-  if (audioQueueRunning) return;
-  audioQueueRunning = true;
-
-  while (audioQueue.length) {
-    const job = audioQueue.shift();
-    try {
-      const file = audioCachePath(job.url);
-      if (!fs.existsSync(file)) {
-        const tmp = file + '.part';
-        try { fs.unlinkSync(tmp); } catch (_) {}
-
-        const response = await axios.get(job.url, {
-          responseType: 'stream',
-          timeout: 0,
-          maxRedirects: 5,
-          maxContentLength: Infinity,
-          maxBodyLength: Infinity,
-          headers: {
-            Accept: '*/*',
-            'User-Agent': 'Mozilla/5.0',
-            'Accept-Encoding': 'identity'
-          },
-          validateStatus: (status) => status >= 200 && status < 400
-        });
-
-        await new Promise((resolve, reject) => {
-          const output = fs.createWriteStream(tmp);
-          response.data.on('error', reject);
-          output.on('error', reject);
-          output.on('finish', resolve);
-          response.data.pipe(output);
-        });
-
-        fs.renameSync(tmp, file);
-      }
-      job.resolve(file);
-      console.log('[AUDIO CACHE] ready');
-    } catch (error) {
-      console.error('[AUDIO CACHE] error:', error.code || error.message);
-      job.reject(error);
-    }
-  }
-
-  audioQueueRunning = false;
 }
 
 async function serveCachedAudio(req, res, url) {
@@ -129,6 +69,154 @@ async function serveCachedAudio(req, res, url) {
   return true;
 }
 
+function startUpstreamDownload(url) {
+  if (audioInflight.has(url)) return audioInflight.get(url);
+
+  const file = audioCachePath(url);
+  const tmp = file + '.part';
+  const promise = (async () => {
+    try {
+      if (fs.existsSync(file)) return file;
+      try { fs.unlinkSync(tmp); } catch (_) {}
+
+      const response = await axios.get(url, {
+        responseType: 'stream',
+        timeout: 0,
+        maxRedirects: 5,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        headers: {
+          Accept: '*/*',
+          'User-Agent': 'Mozilla/5.0',
+          'Accept-Encoding': 'identity'
+        },
+        validateStatus: (status) => status >= 200 && status < 400
+      });
+
+      await new Promise((resolve, reject) => {
+        const output = fs.createWriteStream(tmp);
+        const fail = (error) => {
+          try { output.destroy(); } catch (_) {}
+          try { response.data.destroy(); } catch (_) {}
+          reject(error);
+        };
+        response.data.on('error', fail);
+        output.on('error', fail);
+        output.on('finish', resolve);
+        response.data.pipe(output);
+      });
+
+      fs.renameSync(tmp, file);
+      console.log('[AUDIO CACHE] ready');
+      return file;
+    } finally {
+      audioInflight.delete(url);
+    }
+  })();
+
+  audioInflight.set(url, promise);
+  promise.catch((error) => console.error('[AUDIO CACHE] error:', error.code || error.message));
+  return promise;
+}
+
+async function streamAndCache(url, req, res) {
+  const file = audioCachePath(url);
+  if (fs.existsSync(file)) return serveCachedAudio(req, res, url);
+
+  // Only one upstream request per URL. All requests that arrive before the
+  // cache exists share the same download promise instead of hitting the CDN again.
+  const existing = audioInflight.get(url);
+  let upstreamPromise = existing;
+
+  if (!upstreamPromise) {
+    const tmp = file + '.part';
+    try { fs.unlinkSync(tmp); } catch (_) {}
+
+    upstreamPromise = (async () => {
+      const response = await axios.get(url, {
+        responseType: 'stream',
+        timeout: 0,
+        maxRedirects: 5,
+        maxContentLength: Infinity,
+        maxBodyLength: Infinity,
+        headers: {
+          Accept: '*/*',
+          'User-Agent': 'Mozilla/5.0',
+          'Accept-Encoding': 'identity'
+        },
+        validateStatus: (status) => status >= 200 && status < 400
+      });
+
+      const upstreamHeaders = response.headers || {};
+      const output = fs.createWriteStream(tmp);
+      let cacheDone = false;
+
+      const finishCache = () => {
+        if (cacheDone) return;
+        cacheDone = true;
+        try {
+          fs.renameSync(tmp, file);
+          console.log('[AUDIO CACHE] ready');
+        } catch (error) {
+          console.error('[AUDIO CACHE RENAME]', error.message);
+        }
+      };
+
+      response.data.on('error', (error) => {
+        try { output.destroy(); } catch (_) {}
+        try { fs.unlinkSync(tmp); } catch (_) {}
+        if (error?.code !== 'ECONNRESET') console.error('[AUDIO UPSTREAM]', error.message);
+      });
+      output.on('finish', finishCache);
+      output.on('error', (error) => console.error('[AUDIO CACHE WRITE]', error.message));
+
+      const result = { response, upstreamHeaders };
+      response.data.pipe(output);
+      return result;
+    })();
+
+    audioInflight.set(url, upstreamPromise);
+    upstreamPromise.finally(() => {
+      if (audioInflight.get(url) === upstreamPromise) audioInflight.delete(url);
+    }).catch(() => {});
+  }
+
+  let upstream;
+  try {
+    ({ response: upstream, upstreamHeaders: upstreamHeaders } = await upstreamPromise);
+  } catch (error) {
+    console.error('[GET /api/audio] upstream error:', error.code || error.message);
+    if (!res.headersSent) res.status(502).send('Не удалось получить аудиофайл');
+    return true;
+  }
+
+  const headers = upstreamHeaders || upstream.headers || {};
+  // The initial request is served from the one shared upstream stream.
+  // We intentionally return the complete object (200), even when MAX asks
+  // for a byte range, because the full response is what gets cached.
+  res.status(200);
+  res.setHeader('Content-Type', 'audio/mp4');
+  if (headers['content-length']) res.setHeader('Content-Length', headers['content-length']);
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  const cleanup = () => {
+    // Do not destroy the shared upstream stream when one MAX request closes;
+    // the stream must finish writing the cache for subsequent requests.
+  };
+  req.on('aborted', cleanup);
+  res.on('close', cleanup);
+  upstream.data.on('error', (error) => {
+    if (error?.code !== 'ECONNRESET' && !res.destroyed) {
+      console.error('[AUDIO PROXY STREAM]', error.message);
+    }
+  });
+
+  upstream.data.pipe(res);
+  return true;
+}
+
 function installAudioProxy(app) {
   if (app.__audioProxyInstalled) return;
   app.__audioProxyInstalled = true;
@@ -152,55 +240,7 @@ function installAudioProxy(app) {
       console.error('[AUDIO CACHE SERVE]', error.message);
     }
 
-    enqueueAudioCache(target.toString()).catch(() => {});
-
-    const range = String(req.headers.range || '').trim();
-    const headers = {
-      Accept: '*/*',
-      'User-Agent': 'Mozilla/5.0',
-      'Accept-Encoding': 'identity'
-    };
-    if (range) headers.Range = range;
-
-    let upstream;
-    try {
-      upstream = await axios.get(target.toString(), {
-        responseType: 'stream',
-        headers,
-        timeout: 0,
-        maxRedirects: 5,
-        maxContentLength: Infinity,
-        maxBodyLength: Infinity,
-        validateStatus: (status) => status >= 200 && status < 400
-      });
-    } catch (error) {
-      console.error('[GET /api/audio] upstream error:', error.code || error.message);
-      if (!res.headersSent) res.status(502).send('Не удалось получить аудиофайл');
-      return;
-    }
-
-    const upstreamHeaders = upstream.headers || {};
-    const status = upstream.status === 206 ? 206 : 200;
-    res.status(status);
-    res.setHeader('Content-Type', 'audio/mp4');
-    if (upstreamHeaders['content-length']) res.setHeader('Content-Length', upstreamHeaders['content-length']);
-    if (upstreamHeaders['content-range']) res.setHeader('Content-Range', upstreamHeaders['content-range']);
-    res.setHeader('Accept-Ranges', upstreamHeaders['accept-ranges'] || 'bytes');
-    res.setHeader('Cache-Control', 'public, max-age=3600');
-    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-
-    const cleanup = () => {
-      try { upstream.data?.destroy(); } catch (_) {}
-    };
-    req.on('aborted', cleanup);
-    res.on('close', cleanup);
-    upstream.data.on('error', (error) => {
-      if (error?.code !== 'ECONNRESET' && !res.destroyed) {
-        console.error('[AUDIO PROXY STREAM]', error.message);
-      }
-    });
-
-    upstream.data.pipe(res);
+    await streamAndCache(target.toString(), req, res);
   });
 }
 
