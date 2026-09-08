@@ -28,7 +28,14 @@ function installAfterServerStarts(app) {
 
     app.route('/api/audio').get(async (req, res) => {
       try {
-        const url = allowedUrl(req.query.url);
+        console.log('[AUDIO MIME FIX] raw request', {
+          url: req.url || '',
+          originalUrl: req.originalUrl || '',
+          queryUrl: req.query?.url || '',
+          range: req.headers.range || ''
+        });
+
+        const url = allowedUrl(req.query?.url);
         const range = String(req.headers.range || '').trim();
         const headers = {
           Accept: '*/*',
@@ -37,7 +44,7 @@ function installAfterServerStarts(app) {
         };
         if (range) headers.Range = range;
 
-        console.log('[AUDIO MIME FIX] request', range || 'full', url);
+        console.log('[AUDIO MIME FIX] upstream request', range || 'full', url);
 
         const upstream = await axios.get(url, {
           responseType: 'stream',
@@ -55,6 +62,14 @@ function installAfterServerStarts(app) {
           ? 'audio/mpeg'
           : 'audio/mp4';
 
+        console.log('[AUDIO MIME FIX] upstream response', {
+          status: upstream.status,
+          contentType,
+          contentLength: upstreamHeaders['content-length'] || '',
+          acceptRanges: upstreamHeaders['accept-ranges'] || '',
+          contentRange: upstreamHeaders['content-range'] || ''
+        });
+
         res.status(upstream.status === 206 ? 206 : 200);
         res.setHeader('Content-Type', contentType.startsWith('audio/') ? contentType : fallbackType);
         res.setHeader('Accept-Ranges', upstreamHeaders['accept-ranges'] || 'bytes');
@@ -62,7 +77,7 @@ function installAfterServerStarts(app) {
         if (upstreamHeaders['content-range']) res.setHeader('Content-Range', upstreamHeaders['content-range']);
         res.setHeader('Cache-Control', 'no-store');
         res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-        res.setHeader('X-Max-Audio-Fix', 'mime-v2');
+        res.setHeader('X-Max-Audio-Fix', 'mime-v3');
 
         upstream.data.once('error', (error) => {
           console.error('[AUDIO MIME FIX STREAM]', error.message);
@@ -81,10 +96,6 @@ function installAfterServerStarts(app) {
     console.log('[AUDIO MIME FIX] route installed');
   };
 
-  // audio-final installs its route inside its own listen wrapper.
-  // We intentionally replace it after the native server starts.
-  const server = originalListen;
-  void server;
   setImmediate(replaceRoutes);
   app[ROUTE_FLAG] = true;
 }
