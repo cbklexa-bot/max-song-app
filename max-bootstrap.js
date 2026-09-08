@@ -1,6 +1,7 @@
 const express = require('express');
 const crypto = require('crypto');
 const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
 
 // Compatibility and media transport layer.
@@ -8,6 +9,125 @@ const axios = require('axios');
 
 const originalUse = express.application.use;
 const originalGet = express.application.get;
+const AUDIO_CACHE_DIR = path.join('/tmp', 'max-song-audio-cache');
+const audioCachePromises = new Map();
+const audioQueue = [];
+let audioQueueRunning = false;
+
+try { fs.mkdirSync(AUDIO_CACHE_DIR, { recursive: true }); } catch (_) {}
+
+function audioCachePath(url) {
+  const key = crypto.createHash('sha256').update(url).digest('hex');
+  return path.join(AUDIO_CACHE_DIR, key + '.m4a');
+}
+
+function enqueueAudioCache(url) {
+  if (!url || audioCachePromises.has(url)) return audioCachePromises.get(url) || null;
+
+  const promise = new Promise((resolve, reject) => {
+    audioQueue.push({ url, resolve, reject });
+    runAudioQueue();
+  });
+  audioCachePromises.set(url, promise);
+  return promise;
+}
+
+async function runAudioQueue() {
+  if (audioQueueRunning) return;
+  audioQueueRunning = true;
+
+  while (audioQueue.length) {
+    const job = audioQueue.shift();
+    try {
+      const file = audioCachePath(job.url);
+      if (!fs.existsSync(file)) {
+        const tmp = file + '.part';
+        try { fs.unlinkSync(tmp); } catch (_) {}
+
+        const response = await axios.get(job.url, {
+          responseType: 'stream',
+          timeout: 0,
+          maxRedirects: 5,
+          maxContentLength: Infinity,
+          maxBodyLength: Infinity,
+          headers: {
+            Accept: '*/*',
+            'User-Agent': 'Mozilla/5.0',
+            'Accept-Encoding': 'identity'
+          },
+          validateStatus: (status) => status >= 200 && status < 400
+        });
+
+        await new Promise((resolve, reject) => {
+          const output = fs.createWriteStream(tmp);
+          response.data.on('error', reject);
+          output.on('error', reject);
+          output.on('finish', resolve);
+          response.data.pipe(output);
+        });
+
+        fs.renameSync(tmp, file);
+      }
+      job.resolve(file);
+      console.log('[AUDIO CACHE] ready');
+    } catch (error) {
+      console.error('[AUDIO CACHE] error:', error.code || error.message);
+      job.reject(error);
+    }
+  }
+
+  audioQueueRunning = false;
+}
+
+async function serveCachedAudio(req, res, url) {
+  const file = audioCachePath(url);
+  if (!fs.existsSync(file)) return false;
+
+  const stat = await fs.promises.stat(file);
+  const size = stat.size;
+  const range = String(req.headers.range || '').trim();
+  let start = 0;
+  let end = size - 1;
+
+  if (range) {
+    const match = /^bytes=(\d*)-(\d*)$/i.exec(range);
+    if (!match) {
+      res.status(416).setHeader('Content-Range', `bytes */${size}`).end();
+      return true;
+    }
+
+    if (match[1] === '') {
+      const suffix = Number(match[2]);
+      if (!Number.isFinite(suffix) || suffix <= 0) {
+        res.status(416).setHeader('Content-Range', `bytes */${size}`).end();
+        return true;
+      }
+      start = Math.max(0, size - suffix);
+    } else {
+      start = Number(match[1]);
+      end = match[2] === '' ? size - 1 : Number(match[2]);
+    }
+
+    if (!Number.isFinite(start) || !Number.isFinite(end) || start < 0 || start >= size || end < start) {
+      res.status(416).setHeader('Content-Range', `bytes */${size}`).end();
+      return true;
+    }
+
+    end = Math.min(end, size - 1);
+    res.status(206);
+    res.setHeader('Content-Range', `bytes ${start}-${end}/${size}`);
+  } else {
+    res.status(200);
+  }
+
+  res.setHeader('Content-Type', 'audio/mp4');
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Content-Length', String(end - start + 1));
+  res.setHeader('Cache-Control', 'public, max-age=86400');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  fs.createReadStream(file, { start, end }).pipe(res);
+  return true;
+}
 
 function installAudioProxy(app) {
   if (app.__audioProxyInstalled) return;
@@ -26,12 +146,23 @@ function installAudioProxy(app) {
       return res.status(400).send('Invalid audio URL');
     }
 
+    try {
+      if (await serveCachedAudio(req, res, target.toString())) return;
+    } catch (error) {
+      console.error('[AUDIO CACHE SERVE]', error.message);
+    }
+
+    // Start a background full-file cache. It is queued so two songs do not
+    // simultaneously overload the external audio host.
+    enqueueAudioCache(target.toString()).catch(() => {});
+
     const range = String(req.headers.range || '').trim();
     const headers = {
-      'Accept': '*/*',
+      Accept: '*/*',
       'User-Agent': 'Mozilla/5.0',
-      ...(range ? { Range: range } : {})
+      'Accept-Encoding': 'identity'
     };
+    if (range) headers.Range = range;
 
     let upstream;
     try {
@@ -51,9 +182,9 @@ function installAudioProxy(app) {
     }
 
     const upstreamHeaders = upstream.headers || {};
-    const status = upstream.status === 206 || range ? upstream.status : 200;
+    const status = upstream.status === 206 ? 206 : 200;
     res.status(status);
-    res.setHeader('Content-Type', upstreamHeaders['content-type'] || 'audio/mp4');
+    res.setHeader('Content-Type', 'audio/mp4');
     if (upstreamHeaders['content-length']) res.setHeader('Content-Length', upstreamHeaders['content-length']);
     if (upstreamHeaders['content-range']) res.setHeader('Content-Range', upstreamHeaders['content-range']);
     res.setHeader('Accept-Ranges', upstreamHeaders['accept-ranges'] || 'bytes');
@@ -61,6 +192,7 @@ function installAudioProxy(app) {
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
     const cleanup = () => {
+      // The background cache intentionally continues independently.
       try { upstream.data?.destroy(); } catch (_) {}
     };
     req.on('aborted', cleanup);
@@ -75,11 +207,15 @@ function installAudioProxy(app) {
   });
 }
 
-express.application.get = function patchedGet(path, ...handlers) {
-  if (typeof path === 'string' && path === '/api/health') {
+express.application.get = function patchedGet(route, ...handlers) {
+  if (typeof route === 'string' && route === '/api/audio') {
+    installAudioProxy(this);
+    return this;
+  }
+  if (typeof route === 'string' && route === '/api/health') {
     installAudioProxy(this);
   }
-  return originalGet.call(this, path, ...handlers);
+  return originalGet.call(this, route, ...handlers);
 };
 
 express.application.use = function patchedUse(...args) {
