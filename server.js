@@ -10,7 +10,8 @@ app.disable('x-powered-by');
 app.use(cors({
   origin: true,
   methods: ['GET', 'POST', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'X-MAX-Init-Data'],
+  allowedHeaders: ['Content-Type', 'X-MAX-Init-Data', 'Range'],
+  exposedHeaders: ['Accept-Ranges', 'Content-Length', 'Content-Range', 'Content-Type'],
   credentials: false
 }));
 
@@ -34,6 +35,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const PIAPI_KEY = process.env.PIAPI_KEY || '';
 const SONG_PRICE = 200;
+const AUDIO_PROXY_HOSTS = new Set(['s.bmnmny.cn']);
 
 const dbHeaders = {
   apikey: SUPABASE_KEY,
@@ -162,8 +164,6 @@ async function supabasePatch(table, query, body) {
   return response.data;
 }
 
-// IMPORTANT: the real Supabase users table is exactly:
-// max_id, name, balance, created_at
 async function getUserByMaxId(maxUserId) {
   const rows = await supabaseGet('users', {
     max_id: 'eq.' + String(maxUserId),
@@ -273,6 +273,15 @@ function extractPiApiSongs(taskResponse) {
   })).filter((song) => Boolean(song.audioUrl));
 }
 
+function getAllowedAudioUrl(rawUrl) {
+  const url = new URL(String(rawUrl || '').trim());
+  if (url.protocol !== 'https:') throw new Error('Only HTTPS audio URLs are allowed');
+  if (!AUDIO_PROXY_HOSTS.has(url.hostname.toLowerCase())) {
+    throw new Error('Audio host is not allowed');
+  }
+  return url;
+}
+
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -334,8 +343,6 @@ app.get('/api/user', async (req, res) => {
   try {
     const auth = requireMaxUser(req);
     const user = await getOrCreateUser(auth.user);
-
-    // orders.user_id / transactions.user_id store the MAX ID from users.max_id.
     const orders = await supabaseGet('orders', {
       user_id: 'eq.' + String(user.max_id),
       select: '*',
@@ -607,7 +614,7 @@ app.post('/api/unlock-song', async (req, res) => {
 
       await supabasePatch('orders', {
         id: 'eq.' + String(order.id),
-        user_id: 'eq.' + String(user.max_id),
+        user_id: 'eq.' + String(user.maxUserId),
         status: 'eq.purchasing'
       }, { status: 'preview' });
 
@@ -642,19 +649,59 @@ app.post('/api/unlock-song', async (req, res) => {
   }
 });
 
+app.get('/api/audio', async (req, res) => {
+  try {
+    const url = getAllowedAudioUrl(req.query.url);
+    const range = String(req.headers.range || '').trim();
+
+    const headers = {
+      'Accept-Encoding': 'identity'
+    };
+    if (range) headers.Range = range;
+
+    const response = await axios.get(url.toString(), {
+      responseType: 'stream',
+      timeout: 60000,
+      headers,
+      validateStatus: (status) => status >= 200 && status < 400,
+      maxRedirects: 5
+    });
+
+    const contentType = response.headers['content-type'] || 'audio/mp4';
+    res.status(response.status === 206 ? 206 : 200);
+    res.setHeader('Content-Type', contentType.includes('audio/') ? contentType : 'audio/mp4');
+    res.setHeader('Accept-Ranges', response.headers['accept-ranges'] || 'bytes');
+    if (response.headers['content-length']) res.setHeader('Content-Length', response.headers['content-length']);
+    if (response.headers['content-range']) res.setHeader('Content-Range', response.headers['content-range']);
+    if (response.headers['cache-control']) res.setHeader('Cache-Control', response.headers['cache-control']);
+
+    response.data.on('error', (streamError) => {
+      console.error('[AUDIO PROXY STREAM]', streamError.message);
+      if (!res.headersSent) res.status(502).end();
+      else res.end();
+    });
+
+    response.data.pipe(res);
+  } catch (error) {
+    console.error('[GET /api/audio]', error.response?.status || '', error.message);
+    if (!res.headersSent) res.status(502).send('Не удалось получить аудиофайл');
+    else res.end();
+  }
+});
+
 app.get('/api/download', async (req, res) => {
   try {
-    const url = String(req.query.url || '').trim();
-    if (!url) return res.status(400).send('URL is required');
-    if (!url.startsWith('https://')) return res.status(400).send('Only HTTPS URLs are allowed');
+    const url = getAllowedAudioUrl(req.query.url).toString();
 
     const response = await axios.get(url, {
       responseType: 'stream',
-      timeout: 60000
+      timeout: 60000,
+      headers: { 'Accept-Encoding': 'identity' },
+      maxRedirects: 5
     });
 
-    res.setHeader('Content-Type', response.headers['content-type'] || 'audio/mpeg');
-    res.setHeader('Content-Disposition', 'attachment; filename="song.mp3"');
+    res.setHeader('Content-Type', response.headers['content-type'] || 'audio/mp4');
+    res.setHeader('Content-Disposition', 'attachment; filename="song.m4a"');
     response.data.pipe(res);
   } catch (error) {
     console.error('[GET /api/download]', error.response?.data || error.message);
