@@ -1,0 +1,77 @@
+name: MAX one-app cleanup
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.event_name == 'workflow_dispatch' || github.event.head_commit.message != 'MAX cleanup: single app'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Make Amvera the only API origin and remove obsolete pages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python - <<'PY'
+          from pathlib import Path
+
+          targets = [Path('index.html'), Path('public/index.html')]
+          old = """    /*\n     * На GitHub Pages frontend должен обращаться\n     * к Render API.\n     *\n     * На Render frontend может работать через\n     * тот же origin.\n     */\n\n    const API_BASE =\n      'https://max-song-app.onrender.com';\n"""
+          new = """    /* API работает на том же защищённом домене, что и Mini App. */\n    const API_BASE = '';\n"""
+
+          for path in targets:
+              text = path.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected API config block not found in {path}')
+              path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          for name in [
+              'max-app.html',
+              'max-diagnostic.html',
+              'max-launch.html',
+              'max-launch2.html',
+              'max-test.html',
+              'schema-hotfix.js',
+              'public/max.html',
+              'public/max-amvera-diagnostic.html',
+          ]:
+              p = Path(name)
+              if p.exists():
+                  p.unlink()
+
+          for name in [
+              '.github/workflows/final-fix-max-validation.yml',
+              '.github/workflows/fix-max-transport-v2.yml',
+              '.github/workflows/fix-signature-direct.yml',
+              '.github/workflows/repair-max-api.yml',
+              '.github/workflows/schema-fix.yml',
+          ]:
+              p = Path(name)
+              if p.exists():
+                  p.unlink()
+
+          # This is a one-time migration helper; remove it after successful cleanup.
+          p = Path('.github/workflows/max-cleanup.yml')
+          if p.exists():
+              p.unlink()
+          PY
+
+          if git diff --quiet; then
+            echo 'No changes required.'
+            exit 0
+          fi
+
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'MAX cleanup: single app'
+          git push
