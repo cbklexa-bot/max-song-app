@@ -68,6 +68,8 @@ function createDownloadState(url) {
           validateStatus: (status) => status >= 200 && status < 400
         });
 
+        response.data.pause();
+
         const state = {
           file,
           tmp,
@@ -75,38 +77,76 @@ function createDownloadState(url) {
           headers: response.headers || {},
           started: false,
           liveResponse: null,
-          cachePromise: null
+          output: null,
+          cachePromise: null,
+          resolveCache: null,
+          rejectCache: null,
+          cacheSettled: false
         };
 
-        response.data.pause();
+        state.start = (liveResponse) => {
+          if (state.started) return;
+          state.started = true;
+          state.liveResponse = liveResponse || null;
 
-        const output = fs.createWriteStream(tmp);
-        state.cachePromise = new Promise((resolve, reject) => {
-          let settled = false;
+          state.output = fs.createWriteStream(state.tmp);
+          state.cachePromise = new Promise((resolve, reject) => {
+            state.resolveCache = resolve;
+            state.rejectCache = reject;
+          });
 
           const fail = (error) => {
-            if (settled) return;
-            settled = true;
-            try { output.destroy(); } catch (_) {}
+            if (state.cacheSettled) return;
+            state.cacheSettled = true;
+            console.error('[AUDIO STREAM] failed', error.code || error.message);
+            try { state.output.destroy(); } catch (_) {}
             try { response.data.destroy(); } catch (_) {}
-            try { fs.unlinkSync(tmp); } catch (_) {}
-            reject(error);
+            try { fs.unlinkSync(state.tmp); } catch (_) {}
+            if (state.liveResponse && !state.liveResponse.writableEnded && !state.liveResponse.destroyed) {
+              state.liveResponse.end();
+            }
+            state.rejectCache(error);
           };
 
+          response.data.on('data', (chunk) => {
+            if (state.cacheSettled) return;
+
+            if (!state.output.write(chunk)) {
+              response.data.pause();
+              state.output.once('drain', () => response.data.resume());
+            }
+
+            if (state.liveResponse && !state.liveResponse.destroyed && !state.liveResponse.writableEnded) {
+              state.liveResponse.write(chunk);
+            }
+          });
+
           response.data.once('error', fail);
-          output.once('error', fail);
-          output.once('finish', () => {
-            if (settled) return;
+          state.output.once('error', fail);
+
+          response.data.once('end', () => {
+            if (state.cacheSettled) return;
+            state.output.end();
+            if (state.liveResponse && !state.liveResponse.destroyed && !state.liveResponse.writableEnded) {
+              state.liveResponse.end();
+            }
+          });
+
+          state.output.once('finish', () => {
+            if (state.cacheSettled) return;
             try {
-              fs.renameSync(tmp, file);
-              settled = true;
+              fs.renameSync(state.tmp, state.file);
+              state.cacheSettled = true;
               console.log('[AUDIO CACHE] ready', url);
-              resolve(file);
+              state.resolveCache(state.file);
+              if (inflight.get(url) === promise) inflight.delete(url);
             } catch (error) {
               fail(error);
             }
           });
-        });
+
+          response.data.resume();
+        };
 
         return state;
       } catch (error) {
@@ -181,48 +221,6 @@ async function serveFile(req, res, file, attachment) {
   stream.pipe(res);
 }
 
-async function serveLivePreview(req, res, state, url) {
-  const upstream = state.response;
-  if (!upstream?.data) throw new Error('Audio upstream unavailable');
-
-  if (state.started) {
-    await state.cachePromise;
-    if (inflight.get(url)) inflight.delete(url);
-    return serveFile(req, res, state.file, false);
-  }
-
-  state.started = true;
-  state.liveResponse = res;
-
-  const headers = state.headers || {};
-  res.status(200);
-  res.setHeader('Content-Type', 'audio/mp4');
-  if (headers['content-length']) {
-    res.setHeader('Content-Length', headers['content-length']);
-  }
-  res.setHeader('Accept-Ranges', 'bytes');
-  res.setHeader('Cache-Control', 'public, max-age=3600');
-  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
-
-  const output = fs.createWriteStream(state.tmp, { flags: 'w' });
-  const tee = upstream.data;
-
-  tee.once('end', () => {
-    if (!res.writableEnded && !res.destroyed) res.end();
-    if (inflight.get(url)) inflight.delete(url);
-  });
-
-  // Start both destinations only after the first MAX client is attached.
-  tee.pipe(output);
-  tee.pipe(res);
-  tee.resume();
-
-  res.once('close', () => {
-    // Never destroy the upstream stream here: the cache must finish even if MAX
-    // closes or replaces its media request while loading.
-  });
-}
-
 async function serveAudio(req, res, url) {
   const file = cachePath(url);
   if (fs.existsSync(file)) {
@@ -237,25 +235,38 @@ async function serveAudio(req, res, url) {
     return serveFile(req, res, file, false);
   }
 
-  // Range requests are served from the completed cache. The first request from
-  // MAX is normally non-range; this avoids trying to synthesize random access
-  // against a still-growing remote file.
   if (req.headers.range) {
+    state.start(null);
     await state.cachePromise;
-    if (inflight.get(url)) inflight.delete(url);
     return serveFile(req, res, file, false);
   }
 
-  return serveLivePreview(req, res, state, url);
+  const headers = state.headers || {};
+  res.status(200);
+  res.setHeader('Content-Type', 'audio/mp4');
+  if (headers['content-length']) {
+    res.setHeader('Content-Length', headers['content-length']);
+  }
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  state.start(res);
+  return state.cachePromise.catch((error) => {
+    if (!res.headersSent) res.status(502).end();
+    throw error;
+  });
 }
 
 async function downloadToCache(url) {
   const file = cachePath(url);
   if (fs.existsSync(file)) return file;
+
   const state = await createDownloadState(url);
   if (state.ready && fs.existsSync(file)) return file;
+
+  state.start(null);
   await state.cachePromise;
-  if (inflight.get(url)) inflight.delete(url);
   return file;
 }
 
@@ -269,7 +280,7 @@ function installFinalRoutes(app) {
       return routePath !== '/api/audio' && routePath !== '/api/download';
     });
     const removed = before - app._router.stack.length;
-    if (removed) console.log('[AUDIO FINAL] removed old audio routes:', removed);
+    console.log('[AUDIO FINAL] removed old audio routes:', removed);
   }
 
   app.route('/api/audio').get(async (req, res) => {
@@ -279,7 +290,7 @@ function installFinalRoutes(app) {
     } catch (error) {
       console.error('[GET /api/audio FINAL]', error.code || error.message);
       if (!res.headersSent) res.status(502).send('Не удалось загрузить аудиофайл');
-      else res.end();
+      else if (!res.writableEnded && !res.destroyed) res.end();
     }
   });
 
@@ -291,7 +302,7 @@ function installFinalRoutes(app) {
     } catch (error) {
       console.error('[GET /api/download FINAL]', error.code || error.message);
       if (!res.headersSent) res.status(500).send('Не удалось скачать файл');
-      else res.end();
+      else if (!res.writableEnded && !res.destroyed) res.end();
     }
   });
 
