@@ -5,7 +5,6 @@ const fs = require('fs');
 const path = require('path');
 
 const originalGet = express.application.get;
-const originalListen = express.application.listen;
 
 const CACHE_ROOT = fs.existsSync('/data') ? '/data' : '/tmp';
 const CACHE_DIR = path.join(CACHE_ROOT, 'max-song-audio-cache');
@@ -139,7 +138,7 @@ async function sendCached(req, res, url, attachment) {
   stream.pipe(res);
 }
 
-function wrapOrdersHandler(handler) {
+function warmOrdersHandler(handler) {
   return function wrappedOrders(req, res, next) {
     const originalJson = res.json.bind(res);
     res.json = (body) => {
@@ -147,10 +146,9 @@ function wrapOrdersHandler(handler) {
         const orders = Array.isArray(body?.orders) ? body.orders : [];
         for (const order of orders) {
           if (order?.status === 'preview') {
-            for (const url of [order.audio_url, order.audio_url_2]) {
-              if (url) {
-                try { downloadToCache(allowedUrl(url)).catch(() => {}); } catch (_) {}
-              }
+            for (const rawUrl of [order.audio_url, order.audio_url_2]) {
+              if (!rawUrl) continue;
+              try { downloadToCache(allowedUrl(rawUrl)).catch(() => {}); } catch (_) {}
             }
           }
         }
@@ -163,10 +161,9 @@ function wrapOrdersHandler(handler) {
 
 express.application.get = function finalGet(route, ...handlers) {
   if (route === '/api/audio') {
-    originalGet.call(this, '/api/audio', async (req, res) => {
+    this.route('/api/audio').get(async (req, res) => {
       try {
-        const url = allowedUrl(req.query.url);
-        await sendCached(req, res, url, false);
+        await sendCached(req, res, allowedUrl(req.query.url), false);
       } catch (error) {
         console.error('[GET /api/audio FINAL]', error.code || error.message);
         if (!res.headersSent) res.status(502).send('Не удалось загрузить аудиофайл');
@@ -177,10 +174,9 @@ express.application.get = function finalGet(route, ...handlers) {
   }
 
   if (route === '/api/download') {
-    originalGet.call(this, '/api/download', async (req, res) => {
+    this.route('/api/download').get(async (req, res) => {
       try {
-        const url = allowedUrl(req.query.url);
-        await sendCached(req, res, url, true);
+        await sendCached(req, res, allowedUrl(req.query.url), true);
       } catch (error) {
         console.error('[GET /api/download FINAL]', error.code || error.message);
         if (!res.headersSent) res.status(500).send('Не удалось скачать файл');
@@ -191,23 +187,8 @@ express.application.get = function finalGet(route, ...handlers) {
   }
 
   if (route === '/api/orders' && handlers.length) {
-    return originalGet.call(this, route, ...handlers.map((handler) => wrapOrdersHandler(handler)));
+    return originalGet.call(this, route, ...handlers.map((handler) => warmOrdersHandler(handler)));
   }
 
   return originalGet.call(this, route, ...handlers);
-};
-
-express.application.listen = function finalListen(...args) {
-  try {
-    if (this._router?.stack) {
-      this._router.stack = this._router.stack.filter((layer) => {
-        if (!layer.route) return true;
-        const pathValue = layer.route.path;
-        return pathValue !== '/api/audio' && pathValue !== '/api/download';
-      });
-    }
-  } catch (error) {
-    console.error('[AUDIO FINAL] route cleanup:', error.message);
-  }
-  return originalListen.apply(this, args);
 };
