@@ -14,53 +14,48 @@ express.application.use = function patchedUse(...args) {
     this.__maxDirectDownloadPatch = true;
 
     const patchScript = `<script>(function(){
-function install(){
+function patchButtons(){
   try{
-    if(typeof window.downloadSong!=='function'||window.downloadSong.__maxDirectDownload)return;
-    function fixedDownloadSong(url,title){
-      var value=String(url||'').trim();
-      if(!value){
-        try{window.showStatus('Некорректная ссылка на аудиофайл.','error');}catch(e){}
-        return;
-      }
-      var safeName=String(title||'song').replace(/[\\\\/:*?"<>|]/g,'_').slice(0,80)+'.m4a';
-      var webApp=window.WebApp||null;
-      if(webApp&&typeof webApp.downloadFile==='function'){
-        try{
-          webApp.downloadFile(value,safeName);
-          try{window.showStatus('📥 Скачивание файла запущено.');setTimeout(window.clearStatus,3500);}catch(e){}
-          return;
-        }catch(error){
-          console.warn('[MAX DIRECT DOWNLOAD]',error);
-        }
-      }
-      try{
-        if(webApp&&typeof webApp.openLink==='function'){
-          webApp.openLink(value);
-          try{window.showStatus('Открываем файл для скачивания.');setTimeout(window.clearStatus,3500);}catch(e){}
-          return;
-        }
-      }catch(error){
-        console.warn('[MAX OPEN LINK]',error);
-      }
-      try{window.open(value,'_blank','noopener');}catch(e){}
-    }
-    fixedDownloadSong.__maxDirectDownload=true;
-    window.downloadSong=fixedDownloadSong;
     document.querySelectorAll('.action').forEach(function(btn){
       if(/скачать\\s*mp3/i.test(btn.textContent||''))btn.textContent='Скачать';
     });
-    console.log('[MAX DIRECT DOWNLOAD] installed');
+  }catch(e){}
+}
+function install(){
+  try{
+    if(typeof window.downloadSong==='function'&&!window.downloadSong.__maxDirectDownload){
+      function fixedDownloadSong(url,title){
+        var value=String(url||'').trim();
+        if(!value){
+          try{window.showStatus('Некорректная ссылка на аудиофайл.','error');}catch(e){}
+          return;
+        }
+        var webApp=window.WebApp||null;
+        try{
+          if(webApp&&typeof webApp.openLink==='function'){
+            webApp.openLink(value);
+            try{window.showStatus('Открываем страницу песни для скачивания.');setTimeout(window.clearStatus,3500);}catch(e){}
+            return;
+          }
+        }catch(error){
+          console.warn('[MAX OPEN LINK]',error);
+        }
+        try{window.open(value,'_blank','noopener');}catch(e){}
+      }
+      fixedDownloadSong.__maxDirectDownload=true;
+      window.downloadSong=fixedDownloadSong;
+      console.log('[MAX DIRECT DOWNLOAD] installed');
+    }
+    patchButtons();
   }catch(error){
     console.warn('[MAX DIRECT DOWNLOAD] install failed',error);
   }
 }
-var tries=0;
-var timer=setInterval(function(){
-  tries++;
-  install();
-  if(window.downloadSong&&window.downloadSong.__maxDirectDownload||tries>80)clearInterval(timer);
-},100);
+var timer=setInterval(install,250);
+install();
+try{
+  new MutationObserver(function(){install();}).observe(document.documentElement,{subtree:true,childList:true});
+}catch(e){}
 })();</script>`;
 
     originalUse.call(this, (req,res,next)=>{
@@ -70,8 +65,11 @@ var timer=setInterval(function(){
           try{
             const fs=require('fs');
             const html=fs.readFileSync(filePath,'utf8');
-            if(/index\.html$/.test(String(filePath))){
+            if(/index\\.html$/.test(String(filePath))){
               const patched=html.replace(/<body[^>]*>/i,(tag)=>tag+patchScript);
+              res.set('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
+              res.set('Pragma','no-cache');
+              res.set('Expires','0');
               res.type('html').send(patched);
               return res;
             }
