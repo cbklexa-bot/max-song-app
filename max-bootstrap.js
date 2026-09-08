@@ -2,7 +2,7 @@ const express = require('express');
 const crypto = require('crypto');
 const fs = require('fs');
 
-// MAX compatibility layer. Audio delivery is handled by audio-final.js.
+// MAX compatibility layer. Audio delivery is handled by the audio gateway.
 const originalUse = express.application.use;
 const originalSendFile = express.response.sendFile;
 
@@ -72,13 +72,42 @@ express.response.sendFile = function patchedSendFile(filePath, ...args) {
     const isIndex = String(filePath || '').endsWith('/index.html') || String(filePath || '').endsWith('index.html');
 
     if (isIndex) {
-      // MAX WebView can leave the demo <audio> element parked at ~30s after
-      // our client-side demo limiter pauses playback. Reset to the beginning
-      // on the next Play so the same 30-second preview can be replayed.
-      const replayFix = `<script>(function(){function fix(){document.querySelectorAll('audio').forEach(function(a){if(a.dataset.maxReplayFix)return;a.dataset.maxReplayFix='1';a.addEventListener('play',function(){try{if(Number.isFinite(a.currentTime)&&a.currentTime>=29.5){a.currentTime=0;}}catch(e){}});a.addEventListener('ended',function(){try{a.currentTime=0;}catch(e){}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();})();</script>`;
+      // Preview audio must stop at 30s and then be reset to 00:00 so the
+      // next tap on Play immediately starts the same preview again.
+      const replayFix = `<script>(function(){
+function isPreview(a){
+  var v=a.closest&&a.closest('.variant');
+  return !!(v&&v.querySelector('.demo'));
+}
+function resetPreview(a){
+  try{a.pause();a.currentTime=0;}catch(e){}
+}
+function wire(a){
+  if(a.dataset.maxReplayFix)return;
+  if(!isPreview(a))return;
+  a.dataset.maxReplayFix='1';
+  a.addEventListener('timeupdate',function(){
+    try{
+      if(Number.isFinite(a.currentTime)&&a.currentTime>=29.8){
+        resetPreview(a);
+      }
+    }catch(e){}
+  });
+  a.addEventListener('ended',function(){resetPreview(a);});
+  a.addEventListener('play',function(){
+    try{
+      if(Number.isFinite(a.currentTime)&&a.currentTime>=29.8){a.currentTime=0;}
+    }catch(e){}
+  });
+}
+function fix(){document.querySelectorAll('audio').forEach(wire);}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();
+new MutationObserver(fix).observe(document.documentElement,{subtree:true,childList:true});
+})();</script>`;
+
       const patchedHtml = html
         .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
-        .replace(/<\\/body>/i, replayFix + '</body>');
+        .replace(/<\/body>/i, replayFix + '</body>');
 
       this.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       this.set('Pragma', 'no-cache');
