@@ -72,47 +72,55 @@ express.response.sendFile = function patchedSendFile(filePath, ...args) {
     const isIndex = String(filePath || '').endsWith('/index.html') || String(filePath || '').endsWith('index.html');
 
     if (isIndex) {
-      // Preview audio must stop at 30s and then be reset to 00:00 so the
-      // next tap on Play immediately starts the same preview again.
+      // MAX WebView may leave an <audio> element at the 30s demo limit.
+      // Force a reset to 0:00 so the next Play starts immediately.
       const replayFix = `<script>(function(){
-function isPreview(a){
-  var v=a.closest&&a.closest('.variant');
-  return !!(v&&v.querySelector('.demo'));
+function resetIfDemo(a){
+  try{
+    if(!a||a.dataset.maxReplayFix)return;
+    a.dataset.maxReplayFix='1';
+    var reached=false;
+    function reset(){
+      try{a.pause();}catch(e){}
+      try{a.currentTime=0;}catch(e){}
+    }
+    function check(){
+      try{
+        if(Number.isFinite(a.currentTime)&&a.currentTime>=29.5){
+          reached=true;
+          reset();
+        }
+      }catch(e){}
+    }
+    a.addEventListener('timeupdate',check);
+    a.addEventListener('ended',reset);
+    a.addEventListener('play',function(){
+      try{
+        if(reached||a.currentTime>=29.5){
+          reached=false;
+          a.currentTime=0;
+        }
+      }catch(e){}
+    });
+    setInterval(check,100);
+  }catch(e){}
 }
-function resetPreview(a){
-  try{a.pause();a.currentTime=0;}catch(e){}
-}
-function wire(a){
-  if(a.dataset.maxReplayFix)return;
-  if(!isPreview(a))return;
-  a.dataset.maxReplayFix='1';
-  a.addEventListener('timeupdate',function(){
-    try{
-      if(Number.isFinite(a.currentTime)&&a.currentTime>=29.8){
-        resetPreview(a);
-      }
-    }catch(e){}
-  });
-  a.addEventListener('ended',function(){resetPreview(a);});
-  a.addEventListener('play',function(){
-    try{
-      if(Number.isFinite(a.currentTime)&&a.currentTime>=29.8){a.currentTime=0;}
-    }catch(e){}
-  });
-}
-function fix(){document.querySelectorAll('audio').forEach(wire);}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();
-new MutationObserver(fix).observe(document.documentElement,{subtree:true,childList:true});
+function scan(){document.querySelectorAll('audio').forEach(resetIfDemo);}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scan);else scan();
+new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true});
 })();</script>`;
 
+      // Inject into <body> directly rather than relying on a closing-tag
+      // replacement, so the fix cannot be skipped by HTML formatting.
       const patchedHtml = html
         .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
-        .replace(/<\/body>/i, replayFix + '</body>');
+        .replace(/<body[^>]*>/i, (tag) => tag + replayFix);
 
       this.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       this.set('Pragma', 'no-cache');
       this.set('Expires', '0');
       this.set('X-Max-Backend', 'primary');
+      this.set('X-Max-Replay-Fix', 'v4');
       this.type('html').send(patchedHtml);
       return this;
     }
