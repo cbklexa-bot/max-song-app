@@ -5,6 +5,6 @@ meta:
     version: 18
 
 run:
-  command: node -r ./max-bootstrap.js server.js
+  command: node -r ./max-bootstrap.js -r ./download-direct.js server.js
   persistenceMount: /data
   containerPort: 10000
