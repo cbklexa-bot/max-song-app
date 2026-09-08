@@ -614,7 +614,7 @@ app.post('/api/unlock-song', async (req, res) => {
 
       await supabasePatch('orders', {
         id: 'eq.' + String(order.id),
-        user_id: 'eq.' + String(user.maxUserId),
+        user_id: 'eq.' + String(user.max_id),
         status: 'eq.purchasing'
       }, { status: 'preview' });
 
