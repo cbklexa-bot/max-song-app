@@ -110,17 +110,75 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true});
 })();</script>`;
 
+      // Use MAX's native downloadFile() with the real attachment endpoint,
+      // not the streaming /api/audio preview endpoint.
+      const downloadFix = `<script>(function(){
+function installDownloadFix(){
+  try{
+    if(typeof window.downloadSong!=='function'||window.downloadSong.__maxDownloadFix)return;
+    var original=window.downloadSong;
+    function buildDownloadUrl(url,title){
+      var safeName=String(title||'song').replace(/[\\\\/:*?"<>|]/g,'_').slice(0,80);
+      return '/api/download?url='+encodeURIComponent(String(url||''))+'&name='+encodeURIComponent(safeName);
+    }
+    function fixedDownloadSong(url,title){
+      var value=String(url||'').trim();
+      if(!value){
+        try{window.showStatus('Некорректная ссылка на аудиофайл.','error');}catch(e){}
+        return;
+      }
+      var safeName=String(title||'song').replace(/[\\\\/:*?"<>|]/g,'_').slice(0,80);
+      var downloadUrl=buildDownloadUrl(value,title);
+      var webApp=window.WebApp||null;
+      if(webApp&&typeof webApp.downloadFile==='function'){
+        try{
+          webApp.downloadFile(downloadUrl,safeName+'.mp3');
+          try{window.showStatus('📥 Загрузка файла запущена.');setTimeout(window.clearStatus,3500);}catch(e){}
+          return;
+        }catch(error){
+          console.warn('[MAX DOWNLOAD FIX]',error);
+        }
+      }
+      try{
+        var link=document.createElement('a');
+        link.href=downloadUrl;
+        link.download=safeName+'.mp3';
+        link.rel='noopener';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      }catch(error){
+        console.warn('[MAX DOWNLOAD FALLBACK]',error);
+        try{original(value,title);}catch(e){}
+      }
+    }
+    fixedDownloadSong.__maxDownloadFix=true;
+    window.downloadSong=fixedDownloadSong;
+    console.log('[MAX DOWNLOAD FIX] installed');
+  }catch(error){
+    console.warn('[MAX DOWNLOAD FIX] install failed',error);
+  }
+}
+var tries=0;
+var timer=setInterval(function(){
+  tries++;
+  installDownloadFix();
+  if(window.downloadSong&&window.downloadSong.__maxDownloadFix||tries>80)clearInterval(timer);
+},100);
+})();</script>`;
+
       // Inject into <body> directly rather than relying on a closing-tag
-      // replacement, so the fix cannot be skipped by HTML formatting.
+      // replacement, so the fixes cannot be skipped by HTML formatting.
       const patchedHtml = html
         .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
-        .replace(/<body[^>]*>/i, (tag) => tag + replayFix);
+        .replace(/<body[^>]*>/i, (tag) => tag + replayFix + downloadFix);
 
       this.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       this.set('Pragma', 'no-cache');
       this.set('Expires', '0');
       this.set('X-Max-Backend', 'primary');
       this.set('X-Max-Replay-Fix', 'v4');
+      this.set('X-Max-Download-Fix', 'v1');
       this.type('html').send(patchedHtml);
       return this;
     }
