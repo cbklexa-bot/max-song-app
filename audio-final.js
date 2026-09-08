@@ -34,7 +34,6 @@ function startSharedDownload(url) {
   if (inflight.has(url)) return inflight.get(url);
 
   const state = {
-    url,
     file,
     response: null,
     headers: null,
@@ -49,7 +48,7 @@ function startSharedDownload(url) {
     for (let attempt = 1; attempt <= 3; attempt += 1) {
       try {
         try { fs.unlinkSync(tmp); } catch (_) {}
-        console.log('[AUDIO CACHE] upstream', attempt, url);
+        console.log('[AUDIO UPSTREAM] request', attempt, url);
 
         const response = await axios.get(url, {
           responseType: 'stream',
@@ -88,7 +87,7 @@ function startSharedDownload(url) {
             try {
               fs.renameSync(tmp, file);
               settled = true;
-              console.log('[AUDIO CACHE] ready', file);
+              console.log('[AUDIO CACHE] ready', url);
               resolve(file);
             } catch (error) {
               fail(error);
@@ -96,14 +95,11 @@ function startSharedDownload(url) {
           });
         });
 
-        // Start writing the permanent copy immediately. The first MAX request
-        // can consume the same upstream stream without starting another CDN fetch.
         response.data.pipe(output);
-        response.data.resume();
         return state;
       } catch (error) {
         lastError = error;
-        console.error('[AUDIO CACHE] attempt failed:', error.code || error.message);
+        console.error('[AUDIO UPSTREAM] failed', attempt, error.code || error.message);
         try { fs.unlinkSync(tmp); } catch (_) {}
         if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, attempt * 1500));
       }
@@ -113,9 +109,7 @@ function startSharedDownload(url) {
   })();
 
   inflight.set(url, promise);
-  promise.catch(() => {}).finally(() => {
-    if (inflight.get(url) === promise && !state.cachePromise) inflight.delete(url);
-  });
+  promise.catch(() => {});
   return promise;
 }
 
@@ -173,7 +167,12 @@ async function serveAudio(req, res, url) {
     return serveFile(req, res, file, false);
   }
 
-  const state = await startSharedDownload(url);
+  let state = inflight.get(url);
+  if (!state) {
+    state = await startSharedDownload(url);
+  } else {
+    state = await state;
+  }
 
   if (state.ready && fs.existsSync(file)) {
     console.log('[AUDIO CACHE] hit-after-start', url);
@@ -183,9 +182,6 @@ async function serveAudio(req, res, url) {
   const upstream = state.response;
   if (!upstream?.data) throw new Error('Audio upstream unavailable');
 
-  // First request streams live from the CDN while the identical stream is
-  // simultaneously written to the persistent cache. Later requests wait for
-  // cache completion instead of attaching to the moving upstream stream.
   if (!state.liveAttached) {
     state.liveAttached = true;
     const headers = state.headers || {};
@@ -196,41 +192,23 @@ async function serveAudio(req, res, url) {
     res.setHeader('Cache-Control', 'public, max-age=3600');
     res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 
-    upstream.data.pipe(res);
+    // The stream is already being tee'd into the cache file. The first MAX
+    // request receives the same live bytes; closing MAX does not stop caching.
+    upstream.data.pipe(res, { end: false });
+    res.on('finish', () => {});
+    res.on('close', () => {});
     upstream.data.resume();
+    upstream.data.on('end', () => {
+      if (!res.writableEnded && !res.destroyed) res.end();
+      if (inflight.get(url)?.then) inflight.delete(url);
+    });
     return;
   }
 
+  // A second MAX request for the same URL never attaches to a moving upstream stream.
   await state.cachePromise;
   inflight.delete(url);
   return serveFile(req, res, file, false);
-}
-
-async function warmUrl(rawUrl) {
-  try {
-    await startSharedDownload(allowedUrl(rawUrl));
-  } catch (error) {
-    console.error('[AUDIO WARM]', error.code || error.message);
-  }
-}
-
-function warmOrdersHandler(handler) {
-  return function wrappedOrders(req, res, next) {
-    const originalJson = res.json.bind(res);
-    res.json = (body) => {
-      try {
-        const orders = Array.isArray(body?.orders) ? body.orders : [];
-        for (const order of orders) {
-          if (order?.status === 'preview') {
-            warmUrl(order.audio_url);
-            warmUrl(order.audio_url_2);
-          }
-        }
-      } catch (_) {}
-      return originalJson(body);
-    };
-    return handler(req, res, next);
-  };
 }
 
 express.application.get = function finalGet(route, ...handlers) {
@@ -261,10 +239,6 @@ express.application.get = function finalGet(route, ...handlers) {
       }
     });
     return this;
-  }
-
-  if (route === '/api/orders' && handlers.length) {
-    return originalGet.call(this, route, ...handlers.map((handler) => warmOrdersHandler(handler)));
   }
 
   return originalGet.call(this, route, ...handlers);
