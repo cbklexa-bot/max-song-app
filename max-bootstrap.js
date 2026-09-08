@@ -47,9 +47,9 @@ crypto.createHmac = function patchedCreateHmac(algorithm, key, ...rest) {
 
   const originalUpdate = hmac.update.bind(hmac);
   hmac.update = function patchedUpdate(data, inputEncoding) {
-    if (typeof data === 'string' && data.includes('=') && data.includes('\n')) {
+    if (typeof data === 'string' && data.includes('=') && data.includes('\\n')) {
       data = data
-        .split('\n')
+        .split('\\n')
         .map((line) => {
           const separator = line.indexOf('=');
           if (separator < 0) return line;
@@ -58,7 +58,7 @@ crypto.createHmac = function patchedCreateHmac(algorithm, key, ...rest) {
           try { return name + '=' + decodeURIComponent(value); }
           catch (_) { return line; }
         })
-        .join('\n');
+        .join('\\n');
     }
     return originalUpdate(data, inputEncoding);
   };
@@ -72,10 +72,13 @@ express.response.sendFile = function patchedSendFile(filePath, ...args) {
     const isIndex = String(filePath || '').endsWith('/index.html') || String(filePath || '').endsWith('index.html');
 
     if (isIndex) {
-      const patchedHtml = html.replace(
-        /const\s+API_BASE\s*=\s*['"][^'"]*['"];?/g,
-        "const API_BASE = '';"
-      );
+      // MAX WebView can leave the demo <audio> element parked at ~30s after
+      // our client-side demo limiter pauses playback. Reset to the beginning
+      // on the next Play so the same 30-second preview can be replayed.
+      const replayFix = `<script>(function(){function fix(){document.querySelectorAll('audio').forEach(function(a){if(a.dataset.maxReplayFix)return;a.dataset.maxReplayFix='1';a.addEventListener('play',function(){try{if(Number.isFinite(a.currentTime)&&a.currentTime>=29.5){a.currentTime=0;}}catch(e){}});a.addEventListener('ended',function(){try{a.currentTime=0;}catch(e){}});});}if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fix);else fix();})();</script>`;
+      const patchedHtml = html
+        .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
+        .replace(/<\\/body>/i, replayFix + '</body>');
 
       this.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       this.set('Pragma', 'no-cache');
