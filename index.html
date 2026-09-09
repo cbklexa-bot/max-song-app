@@ -68,6 +68,15 @@
         return;
       }
       const webApp = getMaxWebApp();
+      if (webApp?.downloadFile) {
+        try {
+          webApp.downloadFile(url, 'song.m4a');
+          showDownloadStatus();
+          return;
+        } catch (e) {
+          console.warn('[MAX DOWNLOAD FILE]', e);
+        }
+      }
       if (webApp?.openLink) {
         try {
           webApp.openLink(url);
@@ -86,7 +95,7 @@
       a.remove();
       showDownloadStatus();
     }
-    function showDownloadStatus() { const box = document.createElement('div'); box.id='download-status'; box.className='status visible'; box.textContent='📥 Открываем аудиофайл. Нажми ⋮ → Скачать в браузере.'; document.getElementById('orders-list').prepend(box); setTimeout(()=>box.remove(),7000); }
+    function showDownloadStatus() { const box = document.createElement('div'); box.id='download-status'; box.className='status visible'; box.textContent='📥 Запускаем загрузку файла…'; document.getElementById('orders-list').prepend(box); setTimeout(()=>box.remove(),5000); }
     function stopAllAudio() { document.querySelectorAll('audio').forEach(audio=>{try{audio.pause();audio.currentTime=0}catch(_) {}}); }
     window.addEventListener('pagehide', stopAllAudio);
     window.addEventListener('beforeunload', stopAllAudio);
