@@ -138,6 +138,15 @@ async function supabasePatch(table, query, body) {
   return response.data;
 }
 
+async function supabaseRpc(functionName, body) {
+  const response = await axios.post(
+    SUPABASE_URL + '/rest/v1/rpc/' + functionName,
+    body,
+    { headers: dbHeaders, timeout: 15000 }
+  );
+  return response.data;
+}
+
 async function getUserByMaxId(maxUserId) {
   const rows = await supabaseGet('users', {
     max_id: 'eq.' + String(maxUserId),
@@ -330,49 +339,14 @@ function installRoutes(app) {
         return res.status(400).send('Amount mismatch');
       }
 
-      if (String(payment.status).toLowerCase() === 'paid') {
-        return res.send('OK' + invoiceId);
-      }
+      const rpcResult = await supabaseRpc('process_robokassa_payment', {
+        p_idempotence_key: 'robokassa:' + invoiceId
+      });
 
-      if (!global.__robokassaLocks) global.__robokassaLocks = new Set();
-      if (global.__robokassaLocks.has(invoiceId)) {
-        return res.status(409).send('Retry');
-      }
-      global.__robokassaLocks.add(invoiceId);
-
-      try {
-        const user = await getUserByMaxId(payment.user_id);
-        if (!user) throw new Error('Payment user not found');
-
-        const currentBalance = Number(user.balance || 0);
-        const credit = Number(payment.credited_amount || payment.amount || 0);
-        const newBalance = currentBalance + credit;
-
-        await supabasePatch(
-          'users',
-          { max_id: 'eq.' + String(payment.user_id) },
-          { balance: newBalance }
-        );
-
-        await supabasePost('transactions', {
-          user_id: payment.user_id,
-          type: 'topup_robokassa',
-          amount: credit,
-          description: 'Пополнение Robokassa #' + invoiceId
-        });
-
-        const markedPaid = await supabasePatch(
-          'payments',
-          { idempotence_key: 'eq.robokassa:' + invoiceId, status: 'eq.pending' },
-          { status: 'paid', paid_at: new Date().toISOString() }
-        );
-
-        if (!markedPaid.length) {
-          throw new Error('Payment status was changed by another worker');
-        }
-      } finally {
-        global.__robokassaLocks.delete(invoiceId);
-      }
+      console.log('[ROBOKASSA RESULT] Payment processed', {
+        invoiceId,
+        result: rpcResult
+      });
 
       return res.send('OK' + invoiceId);
     } catch (error) {
