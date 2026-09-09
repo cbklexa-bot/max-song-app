@@ -213,7 +213,7 @@ async function createPaymentRecord(user, plan, invoiceId) {
     amount: plan.amount,
     bonus: plan.bonus,
     credited_amount: plan.credited,
-    purpose: 'Пополнение баланса через Robokassa',
+    purpose: 'balance_topup',
     status: 'pending',
     idempotence_key: 'robokassa:' + String(invoiceId),
     confirmation_url: null,
