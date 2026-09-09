@@ -10,11 +10,17 @@ function installRobokassaUiFix(){
     if(window.__robokassaUiFixInstalled)return true;
     if(typeof window.apiFetch!=='function')return false;
 
-    var payButton=document.querySelector('.test-topup, #test-topup');
-    if(!payButton)return false;
+    var originalButton=document.querySelector('#test-topup, .test-topup');
+    if(!originalButton)return false;
 
     var selected=document.querySelector('.amount.selected');
     if(!selected)return false;
+
+    // The page already attached processTestTopup() to the original button.
+    // Replacing the DOM node removes that old listener cleanly and keeps all
+    // existing classes, attributes and visual styling intact.
+    var payButton=originalButton.cloneNode(true);
+    originalButton.replaceWith(payButton);
 
     payButton.textContent='Перейти к оплате';
 
@@ -58,6 +64,7 @@ function installRobokassaUiFix(){
     // Support either function name used by the current/legacy markup.
     window.processTopup=handler;
     window.processTestTopup=handler;
+    payButton.addEventListener('click',handler);
 
     var description=document.querySelector('.topup-description');
     if(description)description.textContent='Выберите сумму пополнения. Бонус начисляется автоматически после успешной оплаты.';
