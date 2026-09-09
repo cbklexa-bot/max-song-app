@@ -1,8 +1,7 @@
 const express = require('express');
 
-// Fixes the payment button adapter for the current index.html markup.
-// The original Robokassa module looks for old test-topup selectors.
-// This small adapter uses the current processTopup() button instead.
+// Bridges the current top-up button to the Robokassa create-payment endpoint.
+// It is intentionally isolated from the main application files.
 
 function frontendFixScript() {
   return `<script>(function(){
@@ -10,29 +9,31 @@ function installRobokassaUiFix(){
   try{
     if(window.__robokassaUiFixInstalled)return true;
     if(typeof window.apiFetch!=='function')return false;
-    if(typeof window.processTopup!=='function')return false;
 
-    var payButton=document.querySelector('button[onclick="processTopup()"]');
+    var payButton=document.querySelector('.test-topup, #test-topup');
     if(!payButton)return false;
+
+    var selected=document.querySelector('.amount.selected');
+    if(!selected)return false;
 
     payButton.textContent='Перейти к оплате';
 
-    window.processTopup=async function(){
+    var handler=async function(){
       if(window.__robokassaTopupBusy)return;
       window.__robokassaTopupBusy=true;
       payButton.disabled=true;
 
       try{
-        var creditedText=document.getElementById('modal-credited-calc')?.textContent||'200';
-        var credited=Number(String(creditedText).replace(/[^0-9.]/g,''));
-        var amount=200;
-        if(credited===440)amount=400;
-        else if(credited===960)amount=800;
+        var current=document.querySelector('.amount.selected');
+        var amount=Number(current&&current.dataset?current.dataset.amount:0);
+        if(amount!==200&&amount!==400&&amount!==800){
+          throw new Error('Выберите сумму 200, 400 или 800 ₽.');
+        }
 
         var data=await window.apiFetch('/api/robokassa/create',{
           method:'POST',
           body:JSON.stringify({amount:amount})
-        });
+        },20000);
 
         if(!data.ok||!data.paymentUrl){
           throw new Error(data.error||'Не удалось создать платёж.');
@@ -46,12 +47,22 @@ function installRobokassaUiFix(){
         }
       }catch(error){
         console.error('[ROBOKASSA UI FIX]',error);
-        alert(error.message||'Ошибка оплаты.');
+        if(typeof window.showStatus==='function')window.showStatus(error.message||'Ошибка оплаты.','error');
+        else alert(error.message||'Ошибка оплаты.');
       }finally{
         window.__robokassaTopupBusy=false;
         payButton.disabled=false;
       }
     };
+
+    // Support either function name used by the current/legacy markup.
+    window.processTopup=handler;
+    window.processTestTopup=handler;
+
+    var description=document.querySelector('.topup-description');
+    if(description)description.textContent='Выберите сумму пополнения. Бонус начисляется автоматически после успешной оплаты.';
+    var note=document.querySelector('.test-note');
+    if(note)note.textContent='После оплаты баланс пополнится автоматически.';
 
     window.__robokassaUiFixInstalled=true;
     console.log('[ROBOKASSA UI FIX] installed');
@@ -62,13 +73,13 @@ function installRobokassaUiFix(){
   }
 }
 
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded',function(){
-    if(!installRobokassaUiFix())setTimeout(installRobokassaUiFix,500);
-  });
-}else{
-  if(!installRobokassaUiFix())setTimeout(installRobokassaUiFix,500);
+function boot(){
+  if(installRobokassaUiFix())return;
+  setTimeout(installRobokassaUiFix,300);
+  setTimeout(installRobokassaUiFix,1000);
 }
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();</script>`;
 }
 
@@ -77,7 +88,7 @@ express.response.send = function(body) {
   try {
     if (
       typeof body === 'string' &&
-      body.includes('onclick="processTopup()"') &&
+      body.includes('test-topup') &&
       body.includes('</body>') &&
       !body.includes('[ROBOKASSA UI FIX] installed')
     ) {
