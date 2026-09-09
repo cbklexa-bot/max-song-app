@@ -73,11 +73,11 @@ express.response.sendFile = function patchedSendFile(filePath, ...args) {
 
     if (isIndex) {
       // MAX WebView may leave an <audio> element at the 30s demo limit.
-      // Force a reset to 0:00 so the next Play starts immediately.
+      // Apply the reset only to demo players, never to purchased full tracks.
       const replayFix = `<script>(function(){
 function resetIfDemo(a){
   try{
-    if(!a||a.dataset.maxReplayFix)return;
+    if(!a||a.dataset.maxReplayFix||a.getAttribute('data-demo')!=='true')return;
     a.dataset.maxReplayFix='1';
     var reached=false;
     function reset(){
@@ -105,7 +105,7 @@ function resetIfDemo(a){
     setInterval(check,100);
   }catch(e){}
 }
-function scan(){document.querySelectorAll('audio').forEach(resetIfDemo);}
+function scan(){document.querySelectorAll('audio[data-demo="true"]').forEach(resetIfDemo);}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scan);else scan();
 new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true});
 })();</script>`;
@@ -178,7 +178,7 @@ var timer=setInterval(function(){
       this.set('Pragma', 'no-cache');
       this.set('Expires', '0');
       this.set('X-Max-Backend', 'primary');
-      this.set('X-Max-Replay-Fix', 'v5');
+      this.set('X-Max-Replay-Fix', 'v6-demo-only');
       this.set('X-Max-Audio-Proxy-Fix', 'disabled');
       this.set('X-Max-Download-Fix', 'v2');
       this.type('html').send(patchedHtml);
