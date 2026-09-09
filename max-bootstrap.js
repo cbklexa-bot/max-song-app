@@ -110,43 +110,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true});
 })();</script>`;
 
-      // Route all supported MAX audio sources through our same-origin gateway.
-      // The database keeps the real generated URL; MAX receives /api/audio?url=...
-      const audioProxyFix = `<script>(function(){
-function toProxy(url){
-  try{
-    var value=String(url||'').trim();
-    if(!value)return value;
-    if(value.indexOf('/api/audio?')===0)return value;
-    var parsed=new URL(value,location.href);
-    if(parsed.protocol==='https:'&&parsed.hostname.toLowerCase()==='s.bmnmny.cn'){
-      return '/api/audio?url='+encodeURIComponent(parsed.toString());
-    }
-    return value;
-  }catch(e){return url;}
-}
-function patchAudio(a){
-  try{
-    if(!a||a.dataset.maxAudioProxy==='1')return;
-    var raw=a.getAttribute('src')||'';
-    var proxied=toProxy(raw);
-    if(proxied&&proxied!==raw)a.setAttribute('src',proxied);
-    a.dataset.maxAudioProxy='1';
-    a.addEventListener('error',function(){
-      try{
-        var current=a.getAttribute('src')||'';
-        if(current.indexOf('/api/audio?')===0)return;
-        var fallback=toProxy(current);
-        if(fallback&&fallback!==current){a.setAttribute('src',fallback);a.load();}
-      }catch(e){}
-    });
-  }catch(e){}
-}
-function scan(){document.querySelectorAll('audio').forEach(patchAudio);}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',scan);else scan();
-new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true});
-})();</script>`;
-
       // Use MAX's native downloadFile() with the real attachment endpoint.
       // MAX requires a fully qualified HTTPS URL, not a relative path.
       const downloadFix = `<script>(function(){
@@ -205,17 +168,18 @@ var timer=setInterval(function(){
 },100);
 })();</script>`;
 
-      // Inject into <body> directly so the fixes cannot be skipped by HTML formatting.
+      // Inject only the safe MAX compatibility fixes. Do not rewrite audio URLs:
+      // direct generated .m4a URLs are already usable by MAX and by the native player.
       const patchedHtml = html
         .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
-        .replace(/<body[^>]*>/i, (tag) => tag + replayFix + audioProxyFix + downloadFix);
+        .replace(/<body[^>]*>/i, (tag) => tag + replayFix + downloadFix);
 
       this.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
       this.set('Pragma', 'no-cache');
       this.set('Expires', '0');
       this.set('X-Max-Backend', 'primary');
       this.set('X-Max-Replay-Fix', 'v5');
-      this.set('X-Max-Audio-Proxy-Fix', 'v1');
+      this.set('X-Max-Audio-Proxy-Fix', 'disabled');
       this.set('X-Max-Download-Fix', 'v2');
       this.type('html').send(patchedHtml);
       return this;
