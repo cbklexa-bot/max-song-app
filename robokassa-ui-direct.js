@@ -1,10 +1,11 @@
 const express = require('express');
 
 // Production SBP UI for MAX Mini App.
-// Uses Robokassa's official startOp and handles WebView variations.
+// MAX WebView does not reliably receive Robokassa startOp callback,
+// so use the official iFrame renderer with SBP as the only allowed method.
 function frontendFixScript() {
   return `<script>(function(){
-var SDK_URL='https://auth.robokassa.ru/merchant/bundle/robokassa-iframe-badge.js';
+var SDK_URL='https://auth.robokassa.ru/Merchant/bundle/robokassa_iframe.js';
 
 function getPending(){try{return localStorage.getItem('robokassa_pending_invoice')||''}catch(e){return ''}}
 function setPending(id){try{localStorage.setItem('robokassa_pending_invoice',String(id))}catch(e){}}
@@ -16,16 +17,16 @@ function show(msg,type){
 }
 
 function loadSdk(){
-  if(window.Robokassa&&window.Robokassa.pay&&typeof window.Robokassa.pay.startOp==='function')return Promise.resolve(window.Robokassa);
+  if(window.Robokassa&&typeof window.Robokassa.Render==='function')return Promise.resolve(window.Robokassa);
   return new Promise(function(resolve,reject){
     var existing=document.querySelector('script[data-robokassa-sbp-sdk="1"]');
     if(existing){
       var started=Date.now();
       var poll=setInterval(function(){
-        if(window.Robokassa&&window.Robokassa.pay&&typeof window.Robokassa.pay.startOp==='function'){
+        if(window.Robokassa&&typeof window.Robokassa.Render==='function'){
           clearInterval(poll);resolve(window.Robokassa);
         }else if(Date.now()-started>15000){
-          clearInterval(poll);reject(new Error('Не удалось загрузить модуль оплаты СБП Robokassa.'));
+          clearInterval(poll);reject(new Error('Не удалось загрузить модуль оплаты Robokassa.'));
         }
       },100);
       return;
@@ -35,7 +36,7 @@ function loadSdk(){
     script.async=true;
     script.dataset.robokassaSbpSdk='1';
     script.onload=function(){
-      if(window.Robokassa&&window.Robokassa.pay&&typeof window.Robokassa.pay.startOp==='function')resolve(window.Robokassa);
+      if(window.Robokassa&&typeof window.Robokassa.Render==='function')resolve(window.Robokassa);
       else reject(new Error('Модуль оплаты Robokassa загрузился некорректно.'));
     };
     script.onerror=function(){reject(new Error('Не удалось загрузить модуль оплаты Robokassa.'))};
@@ -43,58 +44,10 @@ function loadSdk(){
   });
 }
 
-function normalizePaymentLink(value){
-  if(typeof value==='string')return value;
-  if(value&&typeof value.url==='string')return value.url;
-  if(value&&typeof value.link==='string')return value.link;
-  if(value&&typeof value.paymentUrl==='string')return value.paymentUrl;
-  if(value&&typeof value.paymentLink==='string')return value.paymentLink;
-  if(value&&value.data)return normalizePaymentLink(value.data);
-  if(value&&value.detail)return normalizePaymentLink(value.detail);
-  return '';
-}
-
-function openSbpLink(url){
-  var value=String(url||'').trim();
-  if(!value)throw new Error('Robokassa не вернула ссылку СБП.');
-
-  var lower=value.toLowerCase();
-  var isSbpDeepLink=(
-    lower.indexOf('sberpay:')===0 ||
-    lower.indexOf('sbolpay:')===0 ||
-    lower.indexOf('intent:')===0 ||
-    lower.indexOf('ios-app-smartonline:')===0 ||
-    lower.indexOf('btripsexpenses:')===0 ||
-    lower.indexOf('budgetonline-ios:')===0 ||
-    lower.indexOf('https://qr.nspk.ru/')===0
-  );
-
-  if(isSbpDeepLink){
-    // Robokassa documents these as Android/iOS bank-app navigation schemes.
-    window.location.href=value;
-    return;
-  }
-
-  var webApp=window.WebApp||null;
-  if(webApp&&typeof webApp.openLink==='function')webApp.openLink(value);
-  else window.location.href=value;
-}
-
-function ensureQrHost(){
-  var id='robokassa-sbp-hidden-host';
-  var existing=document.getElementById(id);
-  if(existing)return existing;
-  var host=document.createElement('div');
-  host.id=id;
-  host.style.cssText='position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;overflow:hidden;visibility:hidden;pointer-events:none;';
-  document.body.appendChild(host);
-  return host;
-}
-
 async function checkPayment(){
   var id=getPending();
   if(!id||typeof window.apiFetch!=='function')return;
-  for(var i=0;i<8;i++){
+  for(var i=0;i<10;i++){
     try{
       var r=await window.apiFetch('/api/robokassa/status?invoiceId='+encodeURIComponent(id),{method:'GET'},20000);
       if(r&&((r.status==='paid')||(r.status==='succeeded'))){
@@ -103,42 +56,10 @@ async function checkPayment(){
         show('Баланс успешно пополнен.','success');
         return;
       }
-      if(r&&r.status==='expired'){clearPending();return;}
+      if(r&&r.status==='canceled'){clearPending();return;}
     }catch(e){console.warn('[ROBOKASSA STATUS]',e)}
     await new Promise(function(resolve){setTimeout(resolve,2000)});
   }
-}
-
-function startOpAndGetLink(Robokassa,options){
-  return new Promise(function(resolve,reject){
-    var settled=false;
-    var timer=setTimeout(function(){
-      if(!settled)reject(new Error('Robokassa не вернула ссылку СБП за отведённое время.'));
-    },20000);
-
-    function finish(raw){
-      if(settled)return;
-      var url=normalizePaymentLink(raw);
-      if(!url)return;
-      settled=true;
-      clearTimeout(timer);
-      console.log('[ROBOKASSA SBP LINK] received', url.indexOf('://')>0 ? url.split('?')[0] : '(non-url)');
-      resolve(url);
-    }
-
-    var sdkOptions=Object.assign({},options,{onpaymentlink:finish});
-    try{
-      var returned=Robokassa.pay.startOp(sdkOptions);
-      // Some WebViews do not propagate the callback but the SDK may return the
-      // generated link directly or as a Promise.
-      var immediate=normalizePaymentLink(returned);
-      if(immediate)finish(immediate);
-      else if(returned&&typeof returned.then==='function')returned.then(finish).catch(function(error){if(!settled){clearTimeout(timer);reject(error)}});
-    }catch(error){
-      clearTimeout(timer);
-      reject(error);
-    }
-  });
 }
 
 function install(){
@@ -148,7 +69,7 @@ function install(){
     var original=document.querySelector('#test-topup,.test-topup');
     if(!original)return false;
 
-    // Load the official SBP SDK while the app is idle, not after a click.
+    // Load the official iframe SDK while the app is idle, not after the click.
     loadSdk().catch(function(error){console.warn('[ROBOKASSA SBP SDK]',error.message)});
 
     var button=original.cloneNode(true);
@@ -168,7 +89,7 @@ function install(){
     }
 
     var note=document.querySelector('.test-note');
-    if(note)note.textContent='СБП без ввода данных карты. После подтверждения в банке баланс обновится автоматически.';
+    if(note)note.textContent='СБП без ввода данных карты. Откроется платёжное окно только со способом СБП.';
 
     button.addEventListener('click',async function(){
       if(window.__robokassaDirectBusy)return;
@@ -190,22 +111,23 @@ function install(){
         setPending(data.invoiceId);
 
         var Robokassa=window.Robokassa;
-        if(!Robokassa||!Robokassa.pay||typeof Robokassa.pay.startOp!=='function')Robokassa=await loadSdk();
+        if(!Robokassa||typeof Robokassa.Render!=='function')Robokassa=await loadSdk();
 
-        var qrHost=ensureQrHost();
-        var url=await startOpAndGetLink(Robokassa,{
-          paymentMethod:'SBP',
-          email:mail,
-          merchantLogin:data.merchantLogin,
-          outSum:Number(data.outSum),
-          invId:Number(data.invoiceId),
-          signature:data.signature,
-          qrContainerId:qrHost.id,
-          qrContainerSize:1
+        // Official Robokassa iframe flow. SBP is the ONLY allowed payment method.
+        // Mode=modal keeps the user inside the MAX WebView where technically possible.
+        Robokassa.Render({
+          MerchantLogin:data.merchantLogin,
+          OutSum:String(data.outSum),
+          InvId:Number(data.invoiceId),
+          Description:'Пополнение баланса MAX Song App',
+          Culture:'ru',
+          Encoding:'utf-8',
+          Settings:JSON.stringify({PaymentMethods:['SBP'],Mode:'modal'}),
+          SignatureValue:data.signature
         });
 
         show('Открываем оплату через СБП…','info');
-        openSbpLink(url);
+        setTimeout(checkPayment,1500);
       }catch(e){
         console.error('[ROBOKASSA SBP]',e);
         show(e.message||'Ошибка оплаты.','error');
