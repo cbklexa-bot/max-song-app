@@ -18,6 +18,7 @@ const PLANS = Object.freeze({
 
 const headers = { apikey: SUPAKEY, Authorization: 'Bearer ' + SUPAKEY, 'Content-Type': 'application/json', Prefer: 'return=representation' };
 function md5(value) { return crypto.createHash('md5').update(value, 'utf8').digest('hex'); }
+function hmac(value) { return crypto.createHmac('sha256', PASS1).update(value, 'utf8').digest('hex'); }
 function decode(value) { try { return decodeURIComponent(String(value).replace(/\+/g, '%20')); } catch (_) { return String(value); } }
 function validateMax(initData) {
   if (!MAXTOKEN) throw new Error('MAX_BOT_TOKEN is not configured');
@@ -48,11 +49,8 @@ function buildPaymentUrl(amount, invoiceId, email) {
   params.set('MerchantLogin', LOGIN);
   params.set('OutSum', outSum);
   params.set('InvId', String(invoiceId));
-  params.set('Description', 'Пополнение баланса «Песня на заказ»');
+  params.set('Description', 'Пополнение баланса Песня на заказ');
   params.set('SignatureValue', signature);
-  // Both parameters are intentional: PaymentMethods restricts the list,
-  // while IncCurrLabel explicitly fixes the selected payment method.
-  params.set('PaymentMethods', 'SBP');
   params.set('IncCurrLabel', 'SBP');
   params.set('Culture', 'ru');
   params.set('Email', email);
@@ -60,19 +58,82 @@ function buildPaymentUrl(amount, invoiceId, email) {
   return PAYMENT_URL + '?' + params.toString();
 }
 
-function buildAutoPostHtml(paymentUrl) {
-  const u = new URL(paymentUrl);
-  const fields = [];
-  for (const [name, value] of u.searchParams.entries()) {
-    const n = String(name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-    const v = String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-    fields.push('<input type="hidden" name="' + n + '" value="' + v + '">');
+function buildLaunchUrl(req, invoiceId) {
+  const host = req.get('host');
+  const proto = req.get('x-forwarded-proto') || req.protocol || 'https';
+  const token = hmac('sbp-launch:' + invoiceId);
+  return proto + '://' + host + '/api/robokassa/sbp-launch?invoiceId=' + encodeURIComponent(invoiceId) + '&token=' + token;
+}
+
+function renderLaunchPage(payment) {
+  const invoiceId = String(payment.invoice_id);
+  const amount = Number(payment.amount).toFixed(2);
+  const email = String(payment.metadata?.email || '');
+  const signature = md5(LOGIN + ':' + amount + ':' + invoiceId + ':' + PASS1);
+  const safeJson = JSON.stringify({
+    paymentMethod: 'SBP',
+    email,
+    merchantLogin: LOGIN,
+    outSum: Number(amount),
+    invId: Number(invoiceId),
+    signature
+  }).replace(/</g, '\\u003c');
+
+  return `<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Оплата через СБП</title>
+<style>body{font-family:Arial,sans-serif;text-align:center;padding:32px 18px;background:#fff;color:#222} .box{max-width:420px;margin:0 auto} .muted{color:#777;line-height:1.45}</style>
+</head>
+<body>
+<div class="box"><h2>Открываем СБП</h2><p class="muted" id="status">Подготавливаем переход в банковское приложение…</p><p class="muted" id="error" style="display:none;color:#b00020"></p></div>
+<script src="https://auth.robokassa.ru/merchant/bundle/robokassa-iframe-badge.js"></script>
+<script>
+(function(){
+  var p=${safeJson};
+  function showError(msg){document.getElementById('status').style.display='none';var e=document.getElementById('error');e.textContent=msg;e.style.display='block';}
+  function normalize(v){
+    if(typeof v==='string')return v;
+    if(v&&typeof v.url==='string')return v.url;
+    if(v&&typeof v.link==='string')return v.link;
+    if(v&&typeof v.paymentUrl==='string')return v.paymentUrl;
+    if(v&&typeof v.paymentLink==='string')return v.paymentLink;
+    if(v&&v.data)return normalize(v.data);
+    if(v&&v.detail)return normalize(v.detail);
+    return '';
   }
-  return '<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Переход к оплате СБП</title></head><body style="font-family:sans-serif;text-align:center;padding:40px">' +
-    '<p>Переходим к оплате через СБП…</p>' +
-    '<form id="pay" method="post" action="https://auth.robokassa.ru/Merchant/Index.aspx">' + fields.join('') +
-    '<noscript><button type="submit">Перейти к оплате</button></noscript></form>' +
-    '<script>document.getElementById("pay").submit();</script></body></html>';
+  function openLink(url){
+    var u=String(url||'').trim();
+    if(!u)return showError('Robokassa не вернула ссылку СБП.');
+    document.getElementById('status').textContent='Открываем банковское приложение…';
+    window.location.href=u;
+  }
+  function start(){
+    if(!window.Robokassa||!window.Robokassa.pay||typeof window.Robokassa.pay.startOp!=='function')return showError('Не удалось загрузить модуль оплаты Robokassa.');
+    var settled=false;
+    var timer=setTimeout(function(){if(!settled)showError('Robokassa не вернула ссылку СБП за отведённое время.')},20000);
+    function finish(raw){var u=normalize(raw);if(!u||settled)return;if(settled)return;settled=true;clearTimeout(timer);openLink(u);}
+    try{
+      var ret=window.Robokassa.pay.startOp({
+        paymentMethod:p.paymentMethod,
+        email:p.email,
+        merchantLogin:p.merchantLogin,
+        outSum:p.outSum,
+        invId:p.invId,
+        signature:p.signature,
+        onpaymentlink:finish
+      });
+      var immediate=normalize(ret);
+      if(immediate)finish(immediate);
+      else if(ret&&typeof ret.then==='function')ret.then(finish).catch(function(err){if(!settled){clearTimeout(timer);showError(err&&err.message?err.message:'Ошибка запуска СБП.')}});
+    }catch(err){clearTimeout(timer);showError(err&&err.message?err.message:'Ошибка запуска СБП.');}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start);else start();
+})();
+</script>
+</body></html>`;
 }
 
 function install(app) {
@@ -90,13 +151,14 @@ function install(app) {
       await dbGet('users', { select: 'max_id', limit: 1 });
       const invoiceId = String(Date.now()) + String(Math.floor(Math.random() * 100));
       const paymentUrl = buildPaymentUrl(plan.amount, invoiceId, email);
+      const launchUrl = buildLaunchUrl(req, invoiceId);
       await dbPost('payments', {
         user_id: String(user.id), amount: plan.amount, bonus: plan.bonus, credited_amount: plan.credited,
         purpose: 'balance_topup', status: 'pending', idempotence_key: 'robokassa:' + invoiceId,
         confirmation_url: paymentUrl, metadata: { provider: 'robokassa', payment_method: 'SBP', invoice_id: invoiceId, email }
       });
       console.log('[ROBOKASSA SBP REDIRECT]', { invoiceId, amount: plan.amount, user: String(user.id) });
-      return res.json({ ok: true, paymentUrl, invoiceId, amount: plan.amount, bonus: plan.bonus, creditedAmount: plan.credited });
+      return res.json({ ok: true, paymentUrl, launchUrl, invoiceId, amount: plan.amount, bonus: plan.bonus, creditedAmount: plan.credited });
     } catch (error) {
       console.error('[POST /api/robokassa/start-sbp]', error.response?.data || error.message);
       const status = error.response?.status === 401 || error.response?.status === 403 ? 503 : 400;
@@ -104,16 +166,20 @@ function install(app) {
     }
   });
 
-  app.get('/api/robokassa/pay-sbp', async (req, res) => {
+  app.get('/api/robokassa/sbp-launch', async (req, res) => {
     try {
-      const user = validateMax(req.headers['x-max-init-data'] || '');
       const invoiceId = String(req.query?.invoiceId || '').trim();
-      if (!/^\d{6,30}$/.test(invoiceId)) return res.status(400).send('Invalid invoiceId');
-      const rows = await dbGet('payments', { idempotence_key: 'eq.robokassa:' + invoiceId, user_id: 'eq.' + String(user.id), select: 'confirmation_url,status', limit: 1 });
-      if (!rows.length || rows[0].status !== 'pending' || !rows[0].confirmation_url) return res.status(404).send('Payment not found');
-      return res.type('html').send(buildAutoPostHtml(rows[0].confirmation_url));
+      const token = String(req.query?.token || '').trim().toLowerCase();
+      if (!/^\d{6,30}$/.test(invoiceId) || !/^[0-9a-f]{64}$/.test(token)) return res.status(400).send('Invalid payment link');
+      const expected = hmac('sbp-launch:' + invoiceId);
+      const a = Buffer.from(token, 'utf8');
+      const b = Buffer.from(expected, 'utf8');
+      if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return res.status(403).send('Forbidden');
+      const rows = await dbGet('payments', { idempotence_key: 'eq.robokassa:' + invoiceId, select: 'amount,status,metadata', limit: 1 });
+      if (!rows.length || rows[0].status !== 'pending') return res.status(404).send('Payment not found');
+      return res.type('html').send(renderLaunchPage({ ...rows[0], invoice_id: invoiceId }));
     } catch (error) {
-      console.error('[GET /api/robokassa/pay-sbp]', error.response?.data || error.message);
+      console.error('[GET /api/robokassa/sbp-launch]', error.response?.data || error.message);
       return res.status(400).send('Unable to open payment');
     }
   });
