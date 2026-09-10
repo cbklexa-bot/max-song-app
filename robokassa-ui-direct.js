@@ -53,7 +53,7 @@ function install(){
         if(![200,400,800].includes(amount))throw new Error('Выберите сумму 200, 400 или 800 ₽.');
         var mail=String(email.value||'').trim();
         if(!email.checkValidity()||!mail)throw new Error('Укажите корректный e-mail для оплаты.');
-        var data=await window.apiFetch('/api/robokassa/create-sbp',{method:'POST',body:JSON.stringify({amount:amount,email:mail})},20000);
+        var data=await window.apiFetch('/api/robokassa/live-sbp',{method:'POST',body:JSON.stringify({amount:amount,email:mail})},20000);
         if(!data||!data.ok||!data.paymentUrl)throw new Error(data&&data.error?data.error:'Не удалось создать оплату СБП.');
         setPending(data.invoiceId);
         var webApp=window.WebApp;
