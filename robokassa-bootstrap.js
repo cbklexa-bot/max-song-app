@@ -225,11 +225,16 @@ async function createPaymentRecord(user, plan, invoiceId) {
   return rows[0];
 }
 
-function buildPaymentUrl(plan, invoiceId) {
+function buildPaymentDetails(plan, invoiceId) {
   const outSum = plan.amount.toFixed(2);
   const signature = md5(
     ROBOKASSA_MERCHANT_LOGIN + ':' + outSum + ':' + String(invoiceId) + ':' + ROBOKASSA_PASSWORD1
   );
+  return { outSum, signature };
+}
+
+function buildPaymentUrl(plan, invoiceId) {
+  const { outSum, signature } = buildPaymentDetails(plan, invoiceId);
 
   const params = new URLSearchParams({
     MerchantLogin: ROBOKASSA_MERCHANT_LOGIN,
@@ -276,6 +281,7 @@ function installRoutes(app) {
       }
 
       const paymentUrl = buildPaymentUrl(plan, invoiceId);
+      const { outSum, signature } = buildPaymentDetails(plan, invoiceId);
 
       try {
         await supabasePatch(
@@ -292,6 +298,8 @@ function installRoutes(app) {
         paymentUrl,
         invoiceId,
         amount: plan.amount,
+        outSum,
+        signature,
         bonus: plan.bonus,
         creditedAmount: plan.credited
       });
@@ -414,7 +422,7 @@ express.application.listen = function(...args) {
   try {
     installRoutes(this);
   } catch (error) {
-    console.error('[ROBOKASSA ROUTES] install failed', error);
+    console.error('[ROBOKASSA ROUTES]', error.message);
   }
   return originalListen.apply(this, args);
 };
@@ -424,15 +432,14 @@ express.response.send = function(body) {
   try {
     if (
       typeof body === 'string' &&
-      body.includes('<html') &&
-      body.includes('id="test-topup"') &&
+      body.includes('test-topup') &&
       body.includes('</body>') &&
       !body.includes('[ROBOKASSA UI] installed')
     ) {
       body = body.replace('</body>', frontendAdapterScript() + '</body>');
     }
   } catch (error) {
-    console.error('[ROBOKASSA HTML INJECT]', error.message);
+    console.error('[ROBOKASSA UI INJECT]', error.message);
   }
   return originalSend.call(this, body);
 };
@@ -440,6 +447,5 @@ express.response.send = function(body) {
 console.log('[ROBOKASSA] integration module loaded', {
   merchantConfigured: Boolean(ROBOKASSA_MERCHANT_LOGIN),
   supabaseConfigured: Boolean(SUPABASE_URL && SUPABASE_KEY),
-  maxConfigured: Boolean(MAX_BOT_TOKEN),
-  siteUrl: SITE_URL
+  maxConfigured: Boolean(MAX_BOT_TOKEN)
 });
