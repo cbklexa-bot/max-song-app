@@ -1,2 +1,0 @@
-# Production startup configuration for Amvera:
-# node -r ./max-bootstrap.js -r ./robokassa-env-normalize.js -r ./robokassa-bootstrap.js -r ./robokassa-status.js -r ./robokassa-live-sbp.js server.js
