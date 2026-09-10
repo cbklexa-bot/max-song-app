@@ -168,10 +168,16 @@ var timer=setInterval(function(){
 },100);
 })();</script>`;
 
+      // Remove redundant explanatory notes from the balance top-up modal only.
+      const topupNotesFix = (value) => value
+        .replace(/<p class="topup-description">[\s\S]*?<\/p>/i, '')
+        .replace(/<p class="test-note">[\s\S]*?<\/p>/i, '');
+
       // Inject only the safe MAX compatibility fixes. Do not rewrite audio URLs:
       // direct generated .m4a URLs are already usable by MAX and by the native player.
-      const patchedHtml = html
+      const patchedHtml = topupNotesFix(html
         .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
+      )
         .replace(/<body[^>]*>/i, (tag) => tag + replayFix + downloadFix);
 
       this.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
