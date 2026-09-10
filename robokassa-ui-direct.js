@@ -1,8 +1,8 @@
 const express = require('express');
 
 // Production SBP UI for MAX Mini App.
-// Deliberately does not load any Robokassa JavaScript SDK inside MAX WebView.
-// The server returns a signed Robokassa URL with SBP-only payment settings.
+// MAX WebView only creates the payment and opens our one-time launch page.
+// The launch page itself runs Robokassa's official SBP SDK in a normal browser.
 function frontendFixScript() {
   return `<script>(function(){
 function getPending(){try{return localStorage.getItem('robokassa_pending_invoice')||''}catch(e){return ''}}
@@ -16,7 +16,7 @@ function show(msg,type){
 
 function openPaymentLink(url){
   var value=String(url||'').trim();
-  if(!value)throw new Error('Robokassa не вернула ссылку на оплату.');
+  if(!value)throw new Error('Не удалось получить ссылку для оплаты.');
   var webApp=window.WebApp||null;
   if(webApp&&typeof webApp.openLink==='function'){
     webApp.openLink(value);
@@ -67,7 +67,7 @@ function install(){
     }
 
     var note=document.querySelector('.test-note');
-    if(note)note.textContent='СБП без ввода данных карты. Откроется платёжная страница Robokassa только с доступным способом СБП.';
+    if(note)note.textContent='СБП без ввода данных карты. Откроется переход к банковскому приложению.';
 
     button.addEventListener('click',async function(){
       if(window.__robokassaDirectBusy)return;
@@ -84,11 +84,11 @@ function install(){
           method:'POST',
           body:JSON.stringify({amount:amount,email:mail})
         },20000);
-        if(!data||!data.ok||!data.invoiceId||!data.paymentUrl)throw new Error(data&&data.error?data.error:'Не удалось подготовить оплату СБП.');
+        if(!data||!data.ok||!data.invoiceId||!data.launchUrl)throw new Error(data&&data.error?data.error:'Не удалось подготовить оплату СБП.');
 
         setPending(data.invoiceId);
         show('Переходим к оплате через СБП…','info');
-        openPaymentLink(data.paymentUrl);
+        openPaymentLink(data.launchUrl);
       }catch(e){
         console.error('[ROBOKASSA SBP]',e);
         show(e.message||'Ошибка оплаты.','error');
@@ -98,8 +98,8 @@ function install(){
       }
     });
 
-    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(checkPayment,500)});
-    window.addEventListener('pageshow',function(){setTimeout(checkPayment,500)});
+    document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')setTimeout(checkPayment,700)});
+    window.addEventListener('pageshow',function(){setTimeout(checkPayment,700)});
     setTimeout(checkPayment,700);
 
     window.__robokassaDirectUiInstalled=true;
