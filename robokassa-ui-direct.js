@@ -1,8 +1,7 @@
 const express = require('express');
 
 // Production SBP UI for MAX Mini App.
-// Uses Robokassa's official startOp. MAX WebView compatibility is handled by
-// accepting every documented/observed return style: callback, direct value, or Promise.
+// Uses Robokassa's official startOp and handles WebView variations.
 function frontendFixScript() {
   return `<script>(function(){
 var SDK_URL='https://auth.robokassa.ru/merchant/bundle/robokassa-iframe-badge.js';
@@ -81,6 +80,17 @@ function openSbpLink(url){
   else window.location.href=value;
 }
 
+function ensureQrHost(){
+  var id='robokassa-sbp-hidden-host';
+  var existing=document.getElementById(id);
+  if(existing)return existing;
+  var host=document.createElement('div');
+  host.id=id;
+  host.style.cssText='position:fixed;left:-10000px;top:-10000px;width:1px;height:1px;overflow:hidden;visibility:hidden;pointer-events:none;';
+  document.body.appendChild(host);
+  return host;
+}
+
 async function checkPayment(){
   var id=getPending();
   if(!id||typeof window.apiFetch!=='function')return;
@@ -119,8 +129,8 @@ function startOpAndGetLink(Robokassa,options){
     var sdkOptions=Object.assign({},options,{onpaymentlink:finish});
     try{
       var returned=Robokassa.pay.startOp(sdkOptions);
-      // Some WebViews do not propagate the callback but the SDK still returns
-      // the generated link directly or as a Promise.
+      // Some WebViews do not propagate the callback but the SDK may return the
+      // generated link directly or as a Promise.
       var immediate=normalizePaymentLink(returned);
       if(immediate)finish(immediate);
       else if(returned&&typeof returned.then==='function')returned.then(finish).catch(function(error){if(!settled){clearTimeout(timer);reject(error)}});
@@ -182,13 +192,16 @@ function install(){
         var Robokassa=window.Robokassa;
         if(!Robokassa||!Robokassa.pay||typeof Robokassa.pay.startOp!=='function')Robokassa=await loadSdk();
 
+        var qrHost=ensureQrHost();
         var url=await startOpAndGetLink(Robokassa,{
           paymentMethod:'SBP',
           email:mail,
           merchantLogin:data.merchantLogin,
           outSum:Number(data.outSum),
           invId:Number(data.invoiceId),
-          signature:data.signature
+          signature:data.signature,
+          qrContainerId:qrHost.id,
+          qrContainerSize:1
         });
 
         show('Открываем оплату через СБП…','info');
