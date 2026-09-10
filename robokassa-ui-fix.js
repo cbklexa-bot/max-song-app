@@ -1,10 +1,66 @@
 const express = require('express');
 
-// Bridges the current top-up button to a Robokassa payment page with SBP as the selected method.
-// It is intentionally isolated from the main application files.
+// Production Robokassa UI adapter.
+// Uses Robokassa's documented SBP startOp flow and refreshes the MAX balance
+// after the user returns from the external payment/bank app.
 
 function frontendFixScript() {
   return `<script>(function(){
+function loadRobokassaSdk(){
+  return new Promise(function(resolve,reject){
+    if(window.Robokassa&&window.Robokassa.pay&&typeof window.Robokassa.pay.startOp==='function')return resolve(window.Robokassa);
+    var existing=document.querySelector('script[data-robokassa-sdk="1"]');
+    if(existing){
+      var started=Date.now();
+      var timer=setInterval(function(){
+        if(window.Robokassa&&window.Robokassa.pay&&typeof window.Robokassa.pay.startOp==='function'){
+          clearInterval(timer);resolve(window.Robokassa);
+        }else if(Date.now()-started>12000){
+          clearInterval(timer);reject(new Error('Не удалось загрузить платёжный модуль Robokassa.'));
+        }
+      },100);
+      return;
+    }
+    var script=document.createElement('script');
+    script.src='https://auth.robokassa.ru/merchant/bundle/robokassa-iframe-badge.js';
+    script.async=true;
+    script.dataset.robokassaSdk='1';
+    script.onload=function(){
+      if(window.Robokassa&&window.Robokassa.pay&&typeof window.Robokassa.pay.startOp==='function')resolve(window.Robokassa);
+      else reject(new Error('Платёжный модуль Robokassa загрузился некорректно.'));
+    };
+    script.onerror=function(){reject(new Error('Не удалось загрузить платёжный модуль Robokassa.'))};
+    document.head.appendChild(script);
+  });
+}
+
+function getInitData(){
+  var webApp=window.WebApp||null;
+  if(webApp&&typeof webApp.initData==='string'&&webApp.initData)return webApp.initData;
+  var match=location.search.match(/[?&]initData=([^&]+)/);
+  return match?decodeURIComponent(match[1]):'';
+}
+
+async function verifyPayment(invoiceId, attempts){
+  if(!invoiceId||typeof window.apiFetch!=='function')return null;
+  for(var i=0;i<attempts;i++){
+    try{
+      var result=await window.apiFetch('/api/robokassa/status?invoiceId='+encodeURIComponent(invoiceId),{method:'GET'},20000);
+      if(result&&result.ok&&result.status==='paid'){
+        if(typeof window.loadUser==='function')await window.loadUser();
+        if(typeof window.showStatus==='function')window.showStatus('Баланс успешно пополнен.','success');
+        try{localStorage.removeItem('robokassa_pending_invoice');}catch(_e){}
+        return result;
+      }
+      if(result&&result.status==='expired')return result;
+    }catch(error){
+      console.warn('[ROBOKASSA STATUS]',error);
+    }
+    await new Promise(function(resolve){setTimeout(resolve,2000);});
+  }
+  return null;
+}
+
 function installRobokassaUiFix(){
   try{
     if(window.__robokassaUiFixInstalled)return true;
@@ -12,12 +68,6 @@ function installRobokassaUiFix(){
 
     var originalButton=document.querySelector('#test-topup, .test-topup');
     if(!originalButton)return false;
-
-    var selected=document.querySelector('.amount.selected');
-    if(!selected)return false;
-
-    // The page already attached processTestTopup() to the original button.
-    // Replacing the DOM node removes that old listener cleanly.
     var payButton=originalButton.cloneNode(true);
     originalButton.replaceWith(payButton);
 
@@ -30,7 +80,7 @@ function installRobokassaUiFix(){
       emailInput.type='email';
       emailInput.autocomplete='email';
       emailInput.inputMode='email';
-      emailInput.placeholder='Ваш e-mail для оплаты';
+      emailInput.placeholder='E-mail для оплаты';
       emailInput.style.width='100%';
       emailInput.style.boxSizing='border-box';
       emailInput.style.marginBottom='10px';
@@ -44,21 +94,18 @@ function installRobokassaUiFix(){
     }
 
     var description=document.querySelector('.topup-description');
-    if(description)description.textContent='Выберите сумму и оплатите через СБП. Вы сможете выбрать банк для подтверждения платежа.';
+    if(description)description.textContent='Оплата через СБП — без ввода данных банковской карты.';
     var note=document.querySelector('.test-note');
-    if(note)note.textContent='СБП: без ввода номера карты.';
+    if(note)note.textContent='После подтверждения в приложении банка баланс обновится автоматически.';
 
-    var handler=async function(){
+    payButton.addEventListener('click',async function(){
       if(window.__robokassaTopupBusy)return;
       window.__robokassaTopupBusy=true;
       payButton.disabled=true;
-
       try{
         var current=document.querySelector('.amount.selected');
         var amount=Number(current&&current.dataset?current.dataset.amount:0);
-        if(amount!==200&&amount!==400&&amount!==800){
-          throw new Error('Выберите сумму 200, 400 или 800 ₽.');
-        }
+        if(amount!==200&&amount!==400&&amount!==800)throw new Error('Выберите сумму 200, 400 или 800 ₽.');
 
         var email=String(emailInput&&emailInput.value||'').trim();
         if(!email||!emailInput.checkValidity()){
@@ -70,24 +117,34 @@ function installRobokassaUiFix(){
           method:'POST',
           body:JSON.stringify({amount:amount})
         },20000);
+        if(!data.ok||!data.paymentUrl)throw new Error(data.error||'Не удалось создать платёж.');
 
-        if(!data.ok||!data.paymentUrl){
-          throw new Error(data.error||'Не удалось создать платёж.');
-        }
+        var Robokassa=await loadRobokassaSdk();
+        var paymentLink=null;
+        var linkPromise=new Promise(function(resolve,reject){
+          var timer=setTimeout(function(){reject(new Error('Robokassa не вернула ссылку на оплату.'));},15000);
+          try{
+            Robokassa.pay.startOp({
+              paymentMethod:'SBP',
+              email:email,
+              merchantLogin:data.merchantLogin||'maxsongapp',
+              outSum:Number(data.outSum||amount),
+              invId:Number(data.invoiceId),
+              signature:data.signature,
+              onpaymentlink:function(url){clearTimeout(timer);paymentLink=url;resolve(url);return url;}
+            });
+          }catch(error){clearTimeout(timer);reject(error);}
+        });
 
-        // Use the already validated server-side signature and simply add
-        // the optional email + preferred SBP method to the payment URL.
-        var paymentUrl=new URL(data.paymentUrl);
-        paymentUrl.searchParams.set('Email',email);
-        paymentUrl.searchParams.set('IncCurrLabel','SBP');
+        var url=await linkPromise;
+        if(!url)throw new Error('Не удалось получить SBP-ссылку.');
+        try{localStorage.setItem('robokassa_pending_invoice',String(data.invoiceId));}catch(_e){}
 
-        var finalUrl=paymentUrl.toString();
         var webApp=window.WebApp||null;
-        if(webApp&&typeof webApp.openLink==='function'){
-          webApp.openLink(finalUrl);
-        }else{
-          window.location.href=finalUrl;
-        }
+        if(webApp&&typeof webApp.openLink==='function')webApp.openLink(url);
+        else window.location.href=url;
+
+        if(typeof window.showStatus==='function')window.showStatus('Откройте приложение банка и подтвердите платёж через СБП.','info');
       }catch(error){
         console.error('[ROBOKASSA SBP UI]',error);
         if(typeof window.showStatus==='function')window.showStatus(error.message||'Ошибка оплаты.','error');
@@ -96,11 +153,20 @@ function installRobokassaUiFix(){
         window.__robokassaTopupBusy=false;
         payButton.disabled=false;
       }
-    };
+    });
 
-    window.processTopup=handler;
-    window.processTestTopup=handler;
-    payButton.addEventListener('click',handler);
+    function resumePendingPayment(){
+      var invoiceId=null;
+      try{invoiceId=localStorage.getItem('robokassa_pending_invoice');}catch(_e){}
+      if(!invoiceId)return;
+      verifyPayment(invoiceId,5).catch(function(){});
+    }
+
+    document.addEventListener('visibilitychange',function(){
+      if(document.visibilityState==='visible')setTimeout(resumePendingPayment,500);
+    });
+
+    window.addEventListener('pageshow',function(){setTimeout(resumePendingPayment,500);});
 
     window.__robokassaUiFixInstalled=true;
     console.log('[ROBOKASSA SBP UI] installed');
@@ -115,6 +181,7 @@ function boot(){
   if(installRobokassaUiFix())return;
   setTimeout(installRobokassaUiFix,300);
   setTimeout(installRobokassaUiFix,1000);
+  setTimeout(installRobokassaUiFix,2000);
 }
 
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
