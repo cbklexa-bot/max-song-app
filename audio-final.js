@@ -216,9 +216,55 @@ async function serveFile(req, res, file, attachment) {
   stream.once('error', (error) => {
     console.error('[AUDIO FILE STREAM]', error.message);
     if (!res.headersSent) res.status(500).end();
-    else res.destroy();
+    else if (!res.destroyed) res.destroy();
   });
   stream.pipe(res);
+}
+
+async function serveUpstreamRange(req, res, url) {
+  const range = String(req.headers.range || '').trim();
+  if (!range) return false;
+
+  console.log('[AUDIO RANGE] upstream', range, url);
+  const response = await axios.get(url, {
+    responseType: 'stream',
+    timeout: 180000,
+    maxRedirects: 5,
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
+    headers: {
+      Accept: '*/*',
+      Range: range,
+      'User-Agent': 'Mozilla/5.0',
+      'Accept-Encoding': 'identity',
+      Connection: 'keep-alive'
+    },
+    validateStatus: (status) => status >= 200 && status < 400
+  });
+
+  if (response.status !== 206) {
+    try { response.data.destroy(); } catch (_) {}
+    console.warn('[AUDIO RANGE] upstream ignored Range, falling back to cache');
+    return false;
+  }
+
+  res.status(206);
+  const contentRange = response.headers['content-range'];
+  const contentLength = response.headers['content-length'];
+  if (contentRange) res.setHeader('Content-Range', contentRange);
+  if (contentLength) res.setHeader('Content-Length', contentLength);
+  res.setHeader('Content-Type', 'audio/mp4');
+  res.setHeader('Accept-Ranges', 'bytes');
+  res.setHeader('Cache-Control', 'public, max-age=3600');
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+
+  response.data.once('error', (error) => {
+    console.error('[AUDIO RANGE STREAM]', error.code || error.message);
+    if (!res.headersSent) res.status(502).end();
+    else if (!res.destroyed) res.destroy();
+  });
+  response.data.pipe(res);
+  return true;
 }
 
 async function serveAudio(req, res, url) {
@@ -228,16 +274,19 @@ async function serveAudio(req, res, url) {
     return serveFile(req, res, file, false);
   }
 
+  if (req.headers.range) {
+    try {
+      const served = await serveUpstreamRange(req, res, url);
+      if (served) return;
+    } catch (error) {
+      console.warn('[AUDIO RANGE] direct failed', error.code || error.message);
+    }
+  }
+
   const state = await createDownloadState(url);
 
   if (state.ready && fs.existsSync(file)) {
     console.log('[AUDIO CACHE] hit-after-start', url);
-    return serveFile(req, res, file, false);
-  }
-
-  if (req.headers.range) {
-    state.start(null);
-    await state.cachePromise;
     return serveFile(req, res, file, false);
   }
 
