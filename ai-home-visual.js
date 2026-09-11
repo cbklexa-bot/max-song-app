@@ -66,7 +66,10 @@ const visualCss = `
 function inject(body){
   if(typeof body!=='string' || !body.includes('<body'))return body;
   if(body.includes('ai-home-visual-style'))return body;
-  return body.replace(/<\\/body>/i,visualCss+'\n</body>');
+  const marker='</body>';
+  const index=body.toLowerCase().lastIndexOf(marker);
+  if(index<0)return body;
+  return body.slice(0,index)+visualCss+'\n'+body.slice(index);
 }
 
 express.response.sendFile=function patchedSendFile(filePath,...args){
