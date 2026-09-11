@@ -72,8 +72,6 @@ express.response.sendFile = function patchedSendFile(filePath, ...args) {
     const isIndex = String(filePath || '').endsWith('/index.html') || String(filePath || '').endsWith('index.html');
 
     if (isIndex) {
-      // MAX WebView may leave an <audio> element at the 30s demo limit.
-      // Apply the reset only to demo players, never to purchased full tracks.
       const replayFix = `<script>(function(){
 function resetIfDemo(a){
   try{
@@ -110,7 +108,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 new MutationObserver(scan).observe(document.documentElement,{subtree:true,childList:true});
 })();</script>`;
 
-      // MAX requires a real https URL for native downloads.
       const downloadFix = `<script>(function(){
 function installDownloadFix(){
   try{
@@ -167,8 +164,6 @@ var timer=setInterval(function(){
 },100);
 })();</script>`;
 
-      // Inject MAX initData into every frontend API request and expose a native Back button.
-      // The backend already validates the signed data in X-MAX-Init-Data.
       const maxIdentityFix = `<script>(function(){
 var AI_GIFTS_URL='https://ai-podarki-tehnopark.amvera.io/';
 var ready=false;
@@ -197,15 +192,11 @@ function installMaxIdentity(){
       var NativeXHR=window.XMLHttpRequest;
       function MaxXHR(){
         var xhr=new NativeXHR();
-        var originalOpen=xhr.open;
         var originalSend=xhr.send;
         var originalSetRequestHeader=xhr.setRequestHeader;
-        xhr.open=function(){ return originalOpen.apply(xhr,arguments); };
         xhr.setRequestHeader=function(name,value){ return originalSetRequestHeader.call(xhr,name,value); };
         xhr.send=function(body){
-          try{
-            originalSetRequestHeader.call(xhr,'X-MAX-Init-Data',initData);
-          }catch(e){}
+          try{ originalSetRequestHeader.call(xhr,'X-MAX-Init-Data',initData); }catch(e){}
           return originalSend.call(xhr,body);
         };
         return xhr;
@@ -236,16 +227,20 @@ var tries=0;
 var timer=setInterval(function(){
   tries++;
   if(installMaxIdentity()||tries>100)clearInterval(timer);
-},100);
+},50);
+installMaxIdentity();
 })();</script>`;
 
-      // Remove redundant explanatory notes from the balance top-up modal only.
       const topupNotesFix = (value) => value
         .replace(/<p class="topup-description">[\s\S]*?<\/p>/i, '')
         .replace(/<p class="test-note">[\s\S]*?<\/p>/i, '');
 
-      // Inject only safe MAX compatibility fixes. Do not rewrite audio URLs.
-      const patchedHtml = topupNotesFix(html
+      const bridgeReadyHtml = html.replace(
+        /<script\s+defer\s+src="https:\/\/st\.max\.ru\/js\/max-web-app\.js"><\/script>/i,
+        '<script src="https://st.max.ru/js/max-web-app.js"></script>'
+      );
+
+      const patchedHtml = topupNotesFix(bridgeReadyHtml
         .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
       )
         .replace(/<body[^>]*>/i, (tag) => tag + replayFix + downloadFix + maxIdentityFix);
@@ -257,7 +252,7 @@ var timer=setInterval(function(){
       this.set('X-Max-Replay-Fix', 'v6-demo-only');
       this.set('X-Max-Audio-Proxy-Fix', 'disabled');
       this.set('X-Max-Download-Fix', 'v2');
-      this.set('X-Max-Identity-Fix', 'v1');
+      this.set('X-Max-Identity-Fix', 'v2');
       this.type('html').send(patchedHtml);
       return this;
     }
