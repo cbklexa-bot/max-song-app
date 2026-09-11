@@ -116,54 +116,6 @@ function installDownloadFix(){
 var tries=0;var timer=setInterval(function(){tries++;installDownloadFix();if(window.downloadSong&&window.downloadSong.__maxDownloadFix||tries>80)clearInterval(timer);},100);
 })();</script>`;
 
-      const maxIdentityFix = `<script>(function(){
-var AI_GIFTS_URL='https://ai-podarki-tehnopark.amvera.io/';
-var ready=false;
-function installMaxIdentity(){
-  try{
-    if(ready||!window.WebApp)return false;
-    var webApp=window.WebApp;
-    var initData=String(webApp.initData||'').trim();
-    if(!initData)return false;
-
-    if(!window.__maxOriginalFetch&&typeof window.fetch==='function'){
-      window.__maxOriginalFetch=window.fetch.bind(window);
-      window.fetch=function(input,init){
-        try{init=init||{};var headers=new Headers(init.headers||{});if(!headers.has('X-MAX-Init-Data'))headers.set('X-MAX-Init-Data',initData);init.headers=headers;}catch(e){}
-        return window.__maxOriginalFetch(input,init);
-      };
-    }
-
-    if(!window.__maxOriginalXHR&&window.XMLHttpRequest){
-      window.__maxOriginalXHR=window.XMLHttpRequest;
-      var NativeXHR=window.XMLHttpRequest;
-      function MaxXHR(){
-        var xhr=new NativeXHR();var originalSend=xhr.send;var originalSetRequestHeader=xhr.setRequestHeader;
-        xhr.setRequestHeader=function(name,value){return originalSetRequestHeader.call(xhr,name,value);};
-        xhr.send=function(body){try{originalSetRequestHeader.call(xhr,'X-MAX-Init-Data',initData);}catch(e){}return originalSend.call(xhr,body);};
-        return xhr;
-      }
-      MaxXHR.prototype=NativeXHR.prototype;window.XMLHttpRequest=MaxXHR;
-    }
-
-    if(webApp.BackButton&&typeof webApp.BackButton.show==='function'){
-      webApp.BackButton.show();
-      if(typeof webApp.BackButton.onClick==='function'){
-        webApp.BackButton.onClick(function(){
-          try{
-            if(window.history.length>1){window.history.back();return;}
-          }catch(e){}
-          try{window.WebApp.openMaxLink(AI_GIFTS_URL);}catch(e){try{window.location.assign(AI_GIFTS_URL);}catch(_){}}
-        });
-      }
-    }
-
-    window.__MAX_INIT_DATA_READY=true;ready=true;console.log('[MAX IDENTITY FIX] initData connected');return true;
-  }catch(error){console.warn('[MAX IDENTITY FIX] install failed',error);return false;}
-}
-var tries=0;var timer=setInterval(function(){tries++;if(installMaxIdentity()||tries>100)clearInterval(timer);},50);installMaxIdentity();
-})();</script>`;
-
       const topupNotesFix = (value) => value
         .replace(/<p class="topup-description">[\s\S]*?<\/p>/i, '')
         .replace(/<p class="test-note">[\s\S]*?<\/p>/i, '');
@@ -175,12 +127,12 @@ var tries=0;var timer=setInterval(function(){tries++;if(installMaxIdentity()||tr
 
       const patchedHtml = topupNotesFix(bridgeReadyHtml
         .replace(/const\s+API_BASE\s*=\s*['\"][^'\"]*['\"];?/g, "const API_BASE = '';")
-      ).replace(/<body[^>]*>/i,(tag)=>tag+replayFix+downloadFix+maxIdentityFix);
+      ).replace(/<body[^>]*>/i,(tag)=>tag+replayFix+downloadFix);
 
       this.set('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
       this.set('Pragma','no-cache');this.set('Expires','0');this.set('X-Max-Backend','primary');
       this.set('X-Max-Replay-Fix','v6-demo-only');this.set('X-Max-Audio-Proxy-Fix','disabled');
-      this.set('X-Max-Download-Fix','v2');this.set('X-Max-Identity-Fix','v3');
+      this.set('X-Max-Download-Fix','v2');
       this.type('html').send(patchedHtml);return this;
     }
   } catch (error) {console.error('[INDEX PATCH]',error.message);}
