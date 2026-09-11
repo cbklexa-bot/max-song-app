@@ -4,61 +4,25 @@ const originalSendFile = express.response.sendFile;
 
 const extraCss = `
 <style id="ai-home-account-style">
-  #ai-gifts-home .ai-home-account{
-    display:flex;
-    align-items:center;
-    justify-content:space-between;
-    gap:10px;
-    margin:-2px 0 12px;
-    padding:10px;
-    border-radius:18px;
-    border:1px solid rgba(255,255,255,.09);
-    background:linear-gradient(135deg,rgba(35,20,51,.94),rgba(17,10,27,.94));
-    box-shadow:0 12px 34px rgba(0,0,0,.22)
-  }
+  #ai-gifts-home .ai-home-account{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:-2px 0 12px;padding:10px;border-radius:18px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(135deg,rgba(35,20,51,.94),rgba(17,10,27,.94));box-shadow:0 12px 34px rgba(0,0,0,.22)}
   #ai-gifts-home .ai-home-account-profile{display:flex;align-items:center;gap:9px;min-width:0}
-  #ai-gifts-home .ai-home-account-avatar{
-    width:38px;height:38px;flex:0 0 38px;border-radius:12px;display:grid;place-items:center;
-    color:#fff;background:linear-gradient(135deg,#9148ff,#ef3d9a);font-size:14px;font-weight:900;
-    box-shadow:0 8px 24px rgba(145,72,255,.24)
-  }
+  #ai-gifts-home .ai-home-account-avatar{width:38px;height:38px;flex:0 0 38px;border-radius:12px;display:grid;place-items:center;color:#fff;background:linear-gradient(135deg,#9148ff,#ef3d9a);font-size:14px;font-weight:900;box-shadow:0 8px 24px rgba(145,72,255,.24)}
   #ai-gifts-home .ai-home-account-info{min-width:0}
-  #ai-gifts-home .ai-home-account-name{
-    margin:0;font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis
-  }
+  #ai-gifts-home .ai-home-account-name{margin:0;font-size:11px;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   #ai-gifts-home .ai-home-account-subtitle{margin:3px 0 0;color:rgba(255,255,255,.35);font-size:7px}
-  #ai-gifts-home .ai-home-account-balance{
-    appearance:none;display:flex;align-items:center;gap:7px;flex:0 0 auto;min-height:36px;
-    padding:6px 8px;border-radius:12px;background:rgba(8,4,14,.72);border:1px solid rgba(145,72,255,.28);
-    color:#fff;cursor:pointer
-  }
+  #ai-gifts-home .ai-home-account-balance{appearance:none;display:flex;align-items:center;gap:7px;flex:0 0 auto;min-height:36px;padding:6px 8px;border-radius:12px;background:rgba(8,4,14,.72);border:1px solid rgba(145,72,255,.28);color:#fff;cursor:pointer}
   #ai-gifts-home .ai-home-account-balance-value{color:#63e4bc;font-size:10px;font-weight:900}
-  #ai-gifts-home .ai-home-account-plus{
-    width:19px;height:19px;border-radius:50%;display:grid;place-items:center;background:#9148ff;color:#fff;font-size:14px;font-weight:900
-  }
+  #ai-gifts-home .ai-home-account-plus{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;background:#9148ff;color:#fff;font-size:14px;font-weight:900}
   #ai-gifts-home .ai-home-account-balance:active{transform:scale(.985)}
-
-  #ai-gifts-home .home-card{
-    border-width:1.5px;
-    box-shadow:0 16px 40px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.018)
-  }
-  #ai-gifts-home .home-card.ai-home-song-card{
-    border-color:rgba(194,131,255,.42);
-    background:linear-gradient(160deg,rgba(45,22,70,.96),rgba(20,12,31,.94));
-    box-shadow:0 18px 46px rgba(0,0,0,.30),0 0 30px rgba(166,97,255,.10),inset 0 1px 0 rgba(255,255,255,.05)
-  }
-  #ai-gifts-home .home-card.ai-home-video-card{
-    border-color:rgba(88,188,255,.36);
-    background:linear-gradient(160deg,rgba(21,39,72,.96),rgba(14,14,30,.94));
-    box-shadow:0 18px 46px rgba(0,0,0,.30),0 0 30px rgba(72,177,255,.09),inset 0 1px 0 rgba(255,255,255,.05)
-  }
+  #ai-gifts-home .home-card{border-width:1.5px;box-shadow:0 16px 40px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.018)}
+  #ai-gifts-home .home-card.ai-home-song-card{border-color:rgba(194,131,255,.42);background:linear-gradient(160deg,rgba(45,22,70,.96),rgba(20,12,31,.94));box-shadow:0 18px 46px rgba(0,0,0,.30),0 0 30px rgba(166,97,255,.10),inset 0 1px 0 rgba(255,255,255,.05)}
+  #ai-gifts-home .home-card.ai-home-video-card{border-color:rgba(88,188,255,.36);background:linear-gradient(160deg,rgba(21,39,72,.96),rgba(14,14,30,.94));box-shadow:0 18px 46px rgba(0,0,0,.30),0 0 30px rgba(72,177,255,.09),inset 0 1px 0 rgba(255,255,255,.05)}
   #ai-gifts-home .home-card.ai-home-song-card .home-art{box-shadow:inset 0 0 0 1px rgba(209,153,255,.10),inset 0 -20px 40px rgba(143,72,255,.08)}
   #ai-gifts-home .home-card.ai-home-video-card .home-art{box-shadow:inset 0 0 0 1px rgba(105,205,255,.10),inset 0 -20px 40px rgba(60,163,255,.08)}
   #ai-gifts-home .home-card.ai-home-song-card .home-link{color:#e0c4ff}
   #ai-gifts-home .home-card.ai-home-video-card .home-link{color:#9adfff}
   #ai-gifts-home .home-card.ai-home-song-card .home-arrow{background:rgba(180,123,255,.18);border-color:rgba(203,156,255,.24)}
   #ai-gifts-home .home-card.ai-home-video-card .home-arrow{background:rgba(86,195,255,.15);border-color:rgba(108,207,255,.22)}
-
   #ai-gifts-home .home-footer{padding-top:13px}
   .app .legal-footer{display:none !important}
 </style>
@@ -177,11 +141,11 @@ function inject(body){
   if(typeof body!=='string' || !body.includes('<body'))return body;
   if(body.includes('ai-home-account-script'))return body;
   const addition=extraCss+'\n'+extraScript;
-  return body.replace(/<\\/body>/i,addition+'\n</body>');
+  return body.replace(/<\/body>/i,addition+'\n</body>');
 }
 
 express.response.sendFile=function patchedSendFile(filePath,...args){
-  const isIndex=typeof filePath==='string' && /(?:^|[\\/])index\\.html$/i.test(filePath);
+  const isIndex=typeof filePath==='string' && /(?:^|[\\/])index\.html$/i.test(filePath);
   if(!isIndex)return originalSendFile.call(this,filePath,...args);
 
   const response=this;
