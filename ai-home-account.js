@@ -46,24 +46,13 @@ const extraScript = `
     footer.innerHTML='<strong>ИП Титаренко Алексей Викторович</strong><br>ИНН 384908759582 · <a href="/oferta.html" target="_blank" rel="noopener">Публичная оферта</a><br><a class="mail" href="mailto:cbklexa@gmail.com">cbklexa@gmail.com</a>';
   }
 
-  function moveTopupModal(){
-    const modal=document.getElementById('topup-modal');
-    if(modal && modal.parentElement!==document.body)document.body.appendChild(modal);
-    return modal;
-  }
-
   function bindTopup(){
     const button=document.getElementById('ai-home-balance-button');
     if(!button || button.dataset.bound==='1')return;
     button.dataset.bound='1';
     button.addEventListener('click',function(){
-      moveTopupModal();
-      if(typeof window.openTopup==='function'){
-        window.openTopup();
-      }else{
-        const fallback=document.getElementById('balance-button');
-        fallback?.click();
-      }
+      if(typeof window.openTopup==='function')window.openTopup();
+      else document.getElementById('balance-button')?.click();
     });
   }
 
@@ -119,16 +108,15 @@ const extraScript = `
   }
 
   function start(){
-    ensureHome();
-    moveTopupModal();
-    const observer=new MutationObserver(function(){
-      if(ensureHome())syncAccount();
-      moveTopupModal();
-    });
-    observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['style','class']});
-    setTimeout(ensureHome,250);
-    setTimeout(ensureHome,900);
-    setTimeout(syncAccount,1800);
+    if(!ensureHome()){
+      setTimeout(ensureHome,300);
+      setTimeout(ensureHome,1000);
+      setTimeout(ensureHome,2000);
+      return;
+    }
+    setTimeout(syncAccount,500);
+    setTimeout(syncAccount,1500);
+    setTimeout(ensureHome,1000);
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
