@@ -1,5 +1,7 @@
 const express = require('express');
 
+const originalSendFile = express.response.sendFile;
+
 const homeCss = `
 #ai-gifts-home{min-height:100vh;padding:7px 10px 14px;background:radial-gradient(430px 250px at 50% -40px,rgba(143,86,255,.22),transparent 70%),linear-gradient(180deg,#080611 0%,#10091a 100%);color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
 #ai-gifts-home .wrap{max-width:560px;margin:0 auto}
@@ -36,10 +38,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 `;
 
 express.response.sendFile = function patchedSendFile(filePath,...args){
-  const original=express.response.sendFile.__aiOriginal || null;
   const isIndex=String(filePath||'').endsWith('/index.html')||String(filePath||'').endsWith('index.html');
   if(!isIndex){
-    return (original || (()=>{throw new Error('AI HOME original sendFile unavailable');})).call(this,filePath,...args);
+    return originalSendFile.call(this,filePath,...args);
   }
 
   const response=this;
@@ -55,10 +56,8 @@ express.response.sendFile = function patchedSendFile(filePath,...args){
   };
 
   try{
-    return (original || (()=>{throw new Error('AI HOME original sendFile unavailable');})).call(this,filePath,...args);
+    return originalSendFile.call(this,filePath,...args);
   } finally {
     response.send=originalSend;
   }
 };
-
-express.response.sendFile.__aiOriginal = Object.getPrototypeOf(express.response).sendFile;
