@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 
 const originalSendFile = express.response.sendFile;
 
@@ -24,30 +25,28 @@ const homeCss = `
 
 const homeMarkup = `
 <style>${homeCss}</style>
-<div id="ai-gifts-home"><div class="wrap"><h1 class="home-title">AI-подарки</h1><section class="home-types" id="ai-home-types"><button class="home-card" id="ai-home-song" type="button"><div class="home-art home-song-art"><div class="home-orb">🎵</div><span class="home-chip">AI Music</span></div><div class="home-body"><div class="home-kicker">🎵 Песня в подарок</div><div class="home-desc">Персональная песня о человеке, чувствах и вашей истории.</div><div class="home-link">Создать песню →</div></div></button><button class="home-card" id="ai-home-video" type="button"><div class="home-art home-video-art"><div class="home-orb">🎬</div><span class="home-chip">AI Video</span></div><div class="home-body"><div class="home-kicker">🎬 Видео в подарок <span class="home-soon">СКОРО</span></div><div class="home-desc">Фото, поющее фото и AI-персонаж, который поздравляет лично.</div><div class="home-link">Скоро</div></div></button></section><section class="home-live"><div class="home-live-title"><span class="home-live-dot"></span> Уже создано</div><div class="home-marquee"><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div><div class="home-sample"><div class="home-sample-icon">💫</div><div class="home-sample-text"><span>Песня</span><strong>С днём рождения, Анна!</strong><small>Праздничное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">❤️</div><div class="home-sample-text"><span>Песня</span><strong>Наша история</strong><small>Подарок для двоих</small></div></div><div class="home-sample"><div class="home-sample-icon">🎭</div><div class="home-sample-text"><span>Видео</span><strong>Поздравление для мамы</strong><small>AI-персонаж в кадре</small></div></div><div class="home-sample"><div class="home-sample-icon">🎉</div><div class="home-sample-text"><span>Видео</span><strong>С днём рождения!</strong><small>Личное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div></div></section><footer class="home-legal"><strong>ИП Титаренко Алексей Викторович</strong><br>ИНН 384908759582 · <a href="/oferta.html">Публичная оферта</a><br><a class="mail" href="mailto:cbklexa@mail.com">cbklexa@mail.com</a></footer></div></div>
+<div id="ai-gifts-home"><div class="wrap"><h1 class="home-title">AI-подарки</h1><section class="home-types"><button class="home-card" id="ai-home-song" type="button"><div class="home-art home-song-art"><div class="home-orb">🎵</div><span class="home-chip">AI Music</span></div><div class="home-body"><div class="home-kicker">🎵 Песня в подарок</div><div class="home-desc">Персональная песня о человеке, чувствах и вашей истории.</div><div class="home-link">Создать песню →</div></div></button><button class="home-card" id="ai-home-video" type="button"><div class="home-art home-video-art"><div class="home-orb">🎬</div><span class="home-chip">AI Video</span></div><div class="home-body"><div class="home-kicker">🎬 Видео в подарок <span class="home-soon">СКОРО</span></div><div class="home-desc">Фото, поющее фото и AI-персонаж, который поздравляет лично.</div><div class="home-link">Скоро</div></div></button></section><section class="home-live"><div class="home-live-title"><span class="home-live-dot"></span> Уже создано</div><div class="home-marquee"><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div><div class="home-sample"><div class="home-sample-icon">💫</div><div class="home-sample-text"><span>Песня</span><strong>С днём рождения, Анна!</strong><small>Праздничное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">❤️</div><div class="home-sample-text"><span>Песня</span><strong>Наша история</strong><small>Подарок для двоих</small></div></div><div class="home-sample"><div class="home-sample-icon">🎭</div><div class="home-sample-text"><span>Видео</span><strong>Поздравление для мамы</strong><small>AI-персонаж в кадре</small></div></div><div class="home-sample"><div class="home-sample-icon">🎉</div><div class="home-sample-text"><span>Видео</span><strong>С днём рождения!</strong><small>Личное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div></div></section><footer class="home-legal"><strong>ИП Титаренко Алексей Викторович</strong><br>ИНН 384908759582 · <a href="/oferta.html">Публичная оферта</a><br><a class="mail" href="mailto:cbklexa@mail.com">cbklexa@mail.com</a></footer></div></div>
 <script>(function(){
-function getBack(){try{return window.WebApp&&window.WebApp.BackButton||null}catch(e){return null}}
-function patchBackButton(){try{var bb=getBack();if(!bb||typeof bb.show!=='function'||bb.__aiGiftPatched)return false;var originalShow=bb.show.bind(bb),originalHide=typeof bb.hide==='function'?bb.hide.bind(bb):function(){};bb.__aiGiftPatched=true;bb.__aiGiftOriginalShow=originalShow;bb.__aiGiftOriginalHide=originalHide;bb.show=function(){if(window.__AI_SONG_SCREEN__)return originalShow();return originalHide()};bb.hide=function(){return originalHide()};return true}catch(e){return false}}
-function hideHomeBack(){try{var bb=getBack();if(bb&&typeof bb.hide==='function')bb.hide()}catch(e){}}
-function userRefresh(){try{var n=document.getElementById('user-name');var b=document.getElementById('balance-value');var hn=document.getElementById('ai-home-user');if(hn&&n&&n.textContent&&n.textContent!=='Загрузка...')hn.textContent=n.textContent;if(b)document.getElementById('ai-home-balance')?.textContent==='')}catch(e){}}
-function showHome(){var app=document.querySelector('.app'),home=document.getElementById('ai-gifts-home');if(!app||!home)return;window.__AI_SONG_SCREEN__=false;home.style.display='block';app.style.display='none';patchBackButton();hideHomeBack();window.scrollTo(0,0)}
-function showSong(){var app=document.querySelector('.app'),home=document.getElementById('ai-gifts-home');if(!app||!home)return;window.__AI_SONG_SCREEN__=true;home.style.display='none';app.style.display='block';patchBackButton();try{var bb=getBack();bb&&bb.show&&bb.show()}catch(e){}window.scrollTo(0,0)}
-function init(){var app=document.querySelector('.app'),home=document.getElementById('ai-gifts-home');if(!app||!home)return;app.style.display='none';document.getElementById('ai-home-song')?.addEventListener('click',showSong);document.getElementById('ai-home-video')?.addEventListener('click',function(){try{window.showStatus&&window.showStatus('Видео в подарок — следующий этап ✨')}catch(e){}});showHome();var tries=0;var timer=setInterval(function(){tries++;patchBackButton();if(window.__AI_SONG_SCREEN__)return;if(tries>100){clearInterval(timer);hideHomeBack()}},100)}
+function backButton(){try{return window.WebApp&&window.WebApp.BackButton||null}catch(e){return null}}
+function homeBack(){window.__AI_SONG_SCREEN__=false;showHome()}
+function bindBack(){try{var bb=backButton();if(!bb||typeof bb.onClick!=='function'||bb.__aiHomeBound)return false;bb.__aiHomeBound=true;bb.onClick(homeBack);return true}catch(e){return false}}
+function hideBack(){try{var bb=backButton();if(bb&&typeof bb.hide==='function')bb.hide()}catch(e){}}
+function showHome(){var app=document.querySelector('.app'),home=document.getElementById('ai-gifts-home');if(!app||!home)return;window.__AI_SONG_SCREEN__=false;home.style.display='block';app.style.display='none';hideBack();window.scrollTo(0,0)}
+function showSong(){var app=document.querySelector('.app'),home=document.getElementById('ai-gifts-home');if(!app||!home)return;window.__AI_SONG_SCREEN__=true;home.style.display='none';app.style.display='block';try{var bb=backButton();if(bb&&typeof bb.show==='function')bb.show()}catch(e){}window.scrollTo(0,0)}
+function init(){var app=document.querySelector('.app'),home=document.getElementById('ai-gifts-home');if(!app||!home)return;app.style.display='none';document.getElementById('ai-home-song')?.addEventListener('click',showSong);document.getElementById('ai-home-video')?.addEventListener('click',function(){try{window.showStatus&&window.showStatus('Видео в подарок — следующий этап ✨')}catch(e){}});bindBack();showHome()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();</script>
 `;
 
-express.response.sendFile = function patchedSendFile(filePath, ...args) {
-  const original = originalSendFile.bind(this);
-  try {
-    const html = require('fs').readFileSync(filePath,'utf8');
-    const isIndex = String(filePath||'').endsWith('/index.html') || String(filePath||'').endsWith('index.html');
+express.response.sendFile = function patchedSendFile(filePath,...args){
+  const original=originalSendFile.bind(this);
+  try{
+    const html=fs.readFileSync(filePath,'utf8');
+    const isIndex=String(filePath||'').endsWith('/index.html')||String(filePath||'').endsWith('index.html');
     if(isIndex){
-      const injected = html.replace(/<body([^>]*)>/i,(tag)=>tag+homeMarkup);
+      const injected=html.replace(/<body([^>]*)>/i,(tag)=>tag+homeMarkup);
       return this.type('html').send(injected);
     }
-  } catch(error) {
-    console.error('[AI HOME UI]',error.message);
-  }
+  }catch(error){console.error('[AI HOME UI]',error.message)}
   return original(filePath,...args);
 };
