@@ -1,7 +1,4 @@
 const express = require('express');
-const fs = require('fs');
-
-const originalSendFile = express.response.sendFile;
 
 const homeCss = `
 #ai-gifts-home{min-height:100vh;padding:7px 10px 14px;background:radial-gradient(430px 250px at 50% -40px,rgba(143,86,255,.22),transparent 70%),linear-gradient(180deg,#080611 0%,#10091a 100%);color:#fff;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
@@ -25,7 +22,7 @@ const homeCss = `
 
 const homeMarkup = `
 <style>${homeCss}</style>
-<div id="ai-gifts-home"><div class="wrap"><h1 class="home-title">AI-подарки</h1><section class="home-types"><button class="home-card" id="ai-home-song" type="button"><div class="home-art home-song-art"><div class="home-orb">🎵</div><span class="home-chip">AI Music</span></div><div class="home-body"><div class="home-kicker">🎵 Песня в подарок</div><div class="home-desc">Персональная песня о человеке, чувствах и вашей истории.</div><div class="home-link">Создать песню →</div></div></button><button class="home-card" id="ai-home-video" type="button"><div class="home-art home-video-art"><div class="home-orb">🎬</div><span class="home-chip">AI Video</span></div><div class="home-body"><div class="home-kicker">🎬 Видео в подарок <span class="home-soon">СКОРО</span></div><div class="home-desc">Фото, поющее фото и AI-персонаж, который поздравляет лично.</div><div class="home-link">Скоро</div></div></button></section><section class="home-live"><div class="home-live-title"><span class="home-live-dot"></span> Уже создано</div><div class="home-marquee"><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div><div class="home-sample"><div class="home-sample-icon">💫</div><div class="home-sample-text"><span>Песня</span><strong>С днём рождения, Анна!</strong><small>Праздничное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">❤️</div><div class="home-sample-text"><span>Песня</span><strong>Наша история</strong><small>Подарок для двоих</small></div></div><div class="home-sample"><div class="home-sample-icon">🎭</div><div class="home-sample-text"><span>Видео</span><strong>Поздравление для мамы</strong><small>AI-персонаж в кадре</small></div></div><div class="home-sample"><div class="home-sample-icon">🎉</div><div class="home-sample-text"><span>Видео</span><strong>С днём рождения!</strong><small>Личное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div></div></section><footer class="home-legal"><strong>ИП Титаренко Алексей Викторович</strong><br>ИНН 384908759582 · <a href="/oferta.html">Публичная оферта</a><br><a class="mail" href="mailto:cbklexa@mail.com">cbklexa@mail.com</a></footer></div></div>
+<div id="ai-gifts-home"><div class="wrap"><h1 class="home-title">AI-подарки</h1><section class="home-types"><button class="home-card" id="ai-home-song" type="button"><div class="home-art home-song-art"><div class="home-orb">🎵</div><span class="home-chip">AI Music</span></div><div class="home-body"><div class="home-kicker">🎵 Песня в подарок</div><div class="home-desc">Персональная песня о человеке, чувствах и вашей истории.</div><div class="home-link">Создать песню →</div></div></button><button class="home-card" id="ai-home-video" type="button"><div class="home-art home-video-art"><div class="home-orb">🎬</div><span class="home-chip">AI Video</span></div><div class="home-body"><div class="home-kicker">🎬 Видео в подарок <span class="home-soon">СКОРО</span></div><div class="home-desc">Фото, поющее фото и AI-персонаж, который поздравляет лично.</div><div class="home-link">Скоро</div></div></button></section><section class="home-live"><div class="home-live-title"><span class="home-live-dot"></span> Уже создано</div><div class="home-marquee"><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div><div class="home-sample"><div class="home-sample-icon">💫</div><div class="home-sample-text"><span>Песня</span><strong>С днём рождения, Анна!</strong><small>Праздничное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">❤️</div><div class="home-sample-text"><span>Песня</span><strong>Наша история</strong><small>Подарок для двоих</small></div></div><div class="home-sample"><div class="home-sample-icon">🎭</div><div class="home-sample-text"><span>Видео</span><strong>Поздравление для мамы</strong><small>AI-персонаж в кадре</small></div></div><div class="home-sample"><div class="home-sample-icon">🎉</div><div class="home-sample-text"><span>Видео</span><strong>С днём рождения!</strong><small>Личное поздравление</small></div></div><div class="home-sample"><div class="home-sample-icon">🎙️</div><div class="home-sample-text"><span>Песня</span><strong>Спасибо, мама</strong><small>Очень личная история</small></div></div></div></section><footer class="home-legal"><strong>ИП Титаренко Алексей Викторович</strong><br>ИНН 384908759582 · <a href="https://max-song-app-v3-tehnopark.amvera.io/oferta.html">Публичная оферта</a><br><a class="mail" href="mailto:cbklexa@mail.ru">cbklexa@mail.ru</a></footer></div></div>
 <script>(function(){
 function backButton(){try{return window.WebApp&&window.WebApp.BackButton||null}catch(e){return null}}
 function homeBack(){window.__AI_SONG_SCREEN__=false;showHome()}
@@ -39,14 +36,29 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 `;
 
 express.response.sendFile = function patchedSendFile(filePath,...args){
-  const original=originalSendFile.bind(this);
+  const original=express.response.sendFile.__aiOriginal || null;
+  const isIndex=String(filePath||'').endsWith('/index.html')||String(filePath||'').endsWith('index.html');
+  if(!isIndex){
+    return (original || (()=>{throw new Error('AI HOME original sendFile unavailable');})).call(this,filePath,...args);
+  }
+
+  const response=this;
+  const originalSend=response.send;
+  response.send=function aiHomeSend(body){
+    try{
+      if(typeof body==='string' && body.includes('<body')){
+        const injected=body.replace(/<body([^>]*)>/i,(tag)=>tag+homeMarkup);
+        return originalSend.call(this,injected);
+      }
+    }catch(error){console.error('[AI HOME UI]',error.message)}
+    return originalSend.call(this,body);
+  };
+
   try{
-    const html=fs.readFileSync(filePath,'utf8');
-    const isIndex=String(filePath||'').endsWith('/index.html')||String(filePath||'').endsWith('index.html');
-    if(isIndex){
-      const injected=html.replace(/<body([^>]*)>/i,(tag)=>tag+homeMarkup);
-      return this.type('html').send(injected);
-    }
-  }catch(error){console.error('[AI HOME UI]',error.message)}
-  return original(filePath,...args);
+    return (original || (()=>{throw new Error('AI HOME original sendFile unavailable');})).call(this,filePath,...args);
+  } finally {
+    response.send=originalSend;
+  }
 };
+
+express.response.sendFile.__aiOriginal = Object.getPrototypeOf(express.response).sendFile;
