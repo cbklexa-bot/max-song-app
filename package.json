@@ -1,10 +1,10 @@
 {
   "name": "max-song-app-backend",
-  "version": "2.0.4",
+  "version": "2.0.5",
   "private": true,
   "main": "server.js",
   "scripts": {
-    "start": "node -r ./max-bootstrap.js -r ./audio-final.js server.js"
+    "start": "node -r ./max-bootstrap.js -r ./audio-final.js -r ./ai-home-ui.js server.js"
   },
   "dependencies": {
     "axios": "^1.6.0",
