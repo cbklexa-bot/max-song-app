@@ -63,7 +63,7 @@ const script = `<script id="ai-video-client-recovery-v1">
 express.response.send = function patchedSend(body){
   try{
     if(typeof body==='string'&&body.includes('<body')&&!body.includes('ai-video-client-recovery-v1')){
-      body=body.replace(/<\\/body>/i,script+'\\n</body>');
+      body=body.replace('</body>',script+'\n</body>');
     }
   }catch(error){console.error('[AI VIDEO CLIENT RECOVERY V1 INJECT]',error.message)}
   return originalSend.call(this,body);
