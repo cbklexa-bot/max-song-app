@@ -41,6 +41,7 @@ const script = `<script id="ai-video-character-form-v1-script">
       'Речь: естественная русская разговорная речь, чёткая артикуляция, синхронный звук.'
     ].join(' ');
 
+    if(output.textContent===scenario && prompt.value===scenario)return;
     output.textContent=scenario;
     prompt.value=scenario;
   }
@@ -50,10 +51,7 @@ const script = `<script id="ai-video-character-form-v1-script">
     if(!sheet || sheet.dataset.type!=='character')return;
     var form=sheet.querySelector('.form');
     if(!form)return;
-    if(form.dataset.characterFormV1==='1'){
-      buildScenario(form);
-      return;
-    }
+    if(form.dataset.characterFormV1==='1')return;
 
     form.innerHTML=''
       +'<div class="field"><span class="label">Кого поздравить?</span><input id="vf-recipient" type="text" maxlength="120" placeholder="Например: Серёга"></div>'
