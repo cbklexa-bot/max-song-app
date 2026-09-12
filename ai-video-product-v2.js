@@ -1,8 +1,7 @@
 const express = require('express');
 
-// Product layer: only two video products are exposed in the existing MAX Mini App.
-// 1) Singing photo
-// 2) Character congratulations — one fixed comedic street character.
+// Product layer: only one video product is exposed in the existing MAX Mini App.
+// Character congratulations is the single entry point for video gifts.
 
 const originalPost = express.application.post;
 
@@ -10,10 +9,10 @@ express.application.post = function patchedPost(pathname, ...handlers) {
   if (pathname === '/api/video/generate' && handlers.length) {
     const handler = handlers.pop();
     const wrapped = function productVideoGenerate(req, res, next) {
-      if (req.body && req.body.type === 'photos') {
+      if (req.body && (req.body.type === 'photos' || req.body.type === 'singing')) {
         return res.status(400).json({
           ok: false,
-          error: 'Видео из фотографий больше не доступно. Доступны: «Поющее фото» и «Поздравление от персонажа».'
+          error: 'Этот формат видео больше не доступен. Доступно: «Поздравление от персонажа».'
         });
       }
       return handler(req, res, next);
@@ -26,10 +25,11 @@ express.application.post = function patchedPost(pathname, ...handlers) {
 const originalSend = express.response.send;
 
 const style = `<style id="ai-video-product-v2-style">
-/* Убираем неудачный формат «Видео из фотографий». */
-#ai-video-gift-page .tool[data-type="photos"]{display:none !important}
+/* В разделе «Видео в подарок» остаётся только «Поздравление от персонажа». */
+#ai-video-gift-page .tool[data-type="photos"],
+#ai-video-gift-page .tool[data-type="singing"]{display:none !important}
 
-/* Делаем «Поздравление от персонажа» отдельным узнаваемым продуктом. */
+/* Делаем «Поздравление от персонажа» единственной узнаваемой карточкой продукта. */
 #ai-video-gift-page .tool[data-type="character"] .art.character{
   background-image:linear-gradient(180deg,rgba(0,0,0,.10),rgba(0,0,0,.42)),url("/assets/video-gifts/поздоавление%20от%20персанажа.jpg");
   background-size:cover;
@@ -38,13 +38,6 @@ const style = `<style id="ai-video-product-v2-style">
 #ai-video-gift-page .tool[data-type="character"] .orb{display:none}
 #ai-video-gift-page .tool[data-type="character"] .status{color:#ffd2dd;background:rgba(255,119,159,.10);border-color:rgba(255,119,159,.18)}
 #ai-video-gift-page .tool[data-type="character"] .link{color:#ffc3d5}
-
-/* Только один персонаж — шуточный уличный поздравитель. */
-#ai-video-flow-sheet .chars .char:not([data-char="homeless"]){display:none !important}
-#ai-video-flow-sheet .chars .char[data-char="homeless"]{
-  grid-column:1 / -1;
-  min-height:120px;
-}
 </style>`;
 
 const script = `<script id="ai-video-product-v2-script">
@@ -59,37 +52,8 @@ const script = `<script id="ai-video-product-v2-script">
     var desc=card.querySelector('.desc');
     var link=card.querySelector('.link');
     if(name)name.textContent='Поздравление от персонажа';
-    if(desc)desc.textContent='Шуточное поздравление от бездомного героя на улице — дерзко, смешно и по-доброму.';
+    if(desc)desc.textContent='Персональное поздравление от выбранного персонажа — с вашим именем, поводом и пожеланиями.';
     if(link)link.firstChild && (link.firstChild.textContent='Создать поздравление');
-  }
-
-  function simplifyCharacterSheet(){
-    var sheet=document.getElementById('ai-video-flow-sheet');
-    if(!sheet || sheet.dataset.type!=='character')return;
-
-    var chars=sheet.querySelector('.chars');
-    if(chars){
-      chars.querySelectorAll('.char').forEach(function(item){
-        if(item.dataset.char!=='homeless')item.remove();
-      });
-      var hero=chars.querySelector('.char[data-char="homeless"]');
-      if(hero){
-        var title=hero.querySelector('b');
-        var text=hero.querySelector('span');
-        if(title)title.textContent='Бомж-поздравитель';
-        if(text)text.textContent='Шуточный уличный герой: немного ободранный, харизматичный и максимально нелепый.';
-        hero.classList.add('active');
-      }
-    }
-
-    var lead=sheet.querySelector('.lead');
-    if(lead)lead.textContent='Здесь один персонаж: шуточный бездомный поздравитель на улице. Укажите имя друга, повод и пожелания — AI построит короткую комедийную сценку.';
-
-    var prompt=sheet.querySelector('#vf-prompt');
-    if(prompt)prompt.placeholder='Например: поздравить Серёгу с 30-летием. Два бездомных героя во дворе шумно поздравляют его, шутят, кричат «А, брат, с днюхой!», желают денег, здоровья и удачи. Без оскорблений и без жёсткой брани.';
-
-    var summary=sheet.querySelector('.summary');
-    if(summary)summary.textContent='15 секунд · 720p · шуточный «бомж-поздравитель» · естественная русская речь';
   }
 
   function bind(){
@@ -102,14 +66,10 @@ const script = `<script id="ai-video-product-v2-script">
       var tool=event.target.closest('.tool');
       if(!tool)return;
       var type=tool.dataset.type;
-      if(type==='photos'){
+      if(type==='photos' || type==='singing'){
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
-      }
-      if(type==='character'){
-        setTimeout(simplifyCharacterSheet,0);
-        setTimeout(simplifyCharacterSheet,50);
       }
     },false);
   }
@@ -135,4 +95,4 @@ express.response.send = function patchedSend(body){
   return originalSend.call(this, inject(body));
 };
 
-console.log('[AI VIDEO PRODUCT V2] only singing + character products enabled');
+console.log('[AI VIDEO PRODUCT V2] only character congratulations product enabled');
