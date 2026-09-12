@@ -1,8 +1,7 @@
 const express = require('express');
 
-// Client-side safety net for an existing video generation request.
-// If the POST response is HTML/non-JSON after the order has already been created,
-// recover the latest processing order instead of showing "Unexpected token".
+// Client-side safety net for the existing video generation flow.
+// Also renders video history after the gifts page is created dynamically.
 
 const originalSend = express.response.send;
 
@@ -11,17 +10,28 @@ const script = `<script id="ai-video-client-recovery-v1">
   if(window.__AI_VIDEO_CLIENT_RECOVERY_V1__)return;
   window.__AI_VIDEO_CLIENT_RECOVERY_V1__=true;
 
-  function initData(){try{return window.WebApp&&window.WebApp.initData||window.MAX_WEB_APP&&window.MAX_WEB_APP.initData||''}catch(e){return ''}}
+  function initData(){
+    try{
+      return (window.WebApp&&window.WebApp.initData)||
+             (window.MAX_WEB_APP&&window.MAX_WEB_APP.initData)||'';
+    }catch(e){return ''}
+  }
+
   function isGenerate(input,init){
     try{
       var url=typeof input==='string'?input:(input&&input.url)||'';
-      return /\\/api\\/video\\/generate(?:$|\\?)/.test(url) && String((init&&init.method)||'GET').toUpperCase()==='POST';
+      return /\\/api\\/video\\/generate(?:$|\\?)/.test(url) &&
+        String((init&&init.method)||'GET').toUpperCase()==='POST';
     }catch(e){return false}
   }
+
+  function nativeFetch(){
+    return window.__aiVideoRecoveryNativeFetch||window.fetch;
+  }
+
   async function recoverOrder(){
     try{
-      var h={'X-MAX-Init-Data':initData()};
-      var r=await window.__aiVideoRecoveryNativeFetch('/api/video/orders',{headers:h});
+      var r=await nativeFetch()('/api/video/orders',{headers:{'X-MAX-Init-Data':initData()}});
       var text=await r.text();
       var data;try{data=JSON.parse(text)}catch(e){return null}
       if(!data||!Array.isArray(data.orders))return null;
@@ -33,26 +43,18 @@ const script = `<script id="ai-video-client-recovery-v1">
   window.fetch=async function(input,init){
     var response=await window.__aiVideoRecoveryNativeFetch(input,init);
     if(!isGenerate(input,init))return response;
-
     try{
       var clone=response.clone();
       var text=await clone.text();
       try{JSON.parse(text);return response}catch(jsonError){}
-
       var order=await recoverOrder();
       if(order){
         return new Response(JSON.stringify({
-          ok:true,
-          recovered:true,
-          order:order,
-          task_id:order.task_id||null,
-          provider:'Wan 2.6',
-          duration:15
+          ok:true,recovered:true,order:order,
+          task_id:order.task_id||null,provider:'Wan 2.6',duration:15
         }),{status:200,headers:{'Content-Type':'application/json'}});
       }
-    }catch(e){
-      console.warn('[AI VIDEO CLIENT RECOVERY V1]',e.message);
-    }
+    }catch(e){console.warn('[AI VIDEO CLIENT RECOVERY V1]',e.message)}
     return response;
   };
 
@@ -62,8 +64,8 @@ const script = `<script id="ai-video-client-recovery-v1">
         if(el.children&&el.children.length)return;
         var t=el.textContent||'';
         var n=t.replace(/Поздравление от персонажа/g,'Поздравления от персонажа')
-               .replace(/Поздравление персонажа/g,'Поздравления от персонажа')
-               .replace(/Поздравления персонажа/g,'Поздравления от персонажа');
+          .replace(/Поздравление персонажа/g,'Поздравления от персонажа')
+          .replace(/Поздравления персонажа/g,'Поздравления от персонажа');
         if(n!==t)el.textContent=n;
       });
     }catch(e){}
@@ -86,10 +88,6 @@ const script = `<script id="ai-video-client-recovery-v1">
     return section;
   }
 
-  function videoTitle(order){
-    return order&&order.type==='character'?'Поздравления от персонажа':'Видео в подарок';
-  }
-
   function renderVideoHistory(orders){
     var section=ensureVideoHistory();
     if(!section)return;
@@ -101,7 +99,8 @@ const script = `<script id="ai-video-client-recovery-v1">
       return;
     }
 
-    list.innerHTML=orders.map(function(order){
+    list.innerHTML='';
+    orders.forEach(function(order){
       var item=document.createElement('div');
       item.style.cssText='padding:11px;margin-top:8px;border-radius:15px;border:1px solid rgba(255,255,255,.06);background:rgba(5,3,10,.50);text-align:left';
 
@@ -109,7 +108,7 @@ const script = `<script id="ai-video-client-recovery-v1">
       head.style.cssText='display:flex;justify-content:space-between;gap:10px;align-items:flex-start';
       var title=document.createElement('div');
       title.style.cssText='font-size:10px;font-weight:900;color:#f2ebf7';
-      title.textContent=videoTitle(order);
+      title.textContent=order.type==='character'?'Поздравления от персонажа':'Видео в подарок';
       var state=document.createElement('div');
       state.style.cssText='font-size:8px;font-weight:900;color:'+(order.status==='completed'?'#7be7c4':order.status==='failed'?'#ffb4bc':'#d9bdff');
       state.textContent=order.status==='completed'?'Готово':order.status==='failed'?'Ошибка':'Готовится';
@@ -128,7 +127,8 @@ const script = `<script id="ai-video-client-recovery-v1">
         item.appendChild(video);
 
         var link=document.createElement('a');
-        link.href=order.video_url;link.target='_blank';link.rel='noopener';link.textContent='Открыть / скачать видео';
+        link.href=order.video_url;link.target='_blank';link.rel='noopener';
+        link.textContent='Открыть / скачать видео';
         link.style.cssText='display:inline-flex;margin-top:9px;padding:8px 11px;border-radius:10px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.08);color:#fff;text-decoration:none;font-size:8px;font-weight:900';
         item.appendChild(link);
       }else if(order.status==='failed'){
@@ -144,37 +144,54 @@ const script = `<script id="ai-video-client-recovery-v1">
       }
 
       list.appendChild(item);
-      return '';
-    }).join('');
+    });
   }
 
   async function loadVideoHistory(){
-    var page=document.getElementById('ai-video-gift-page');
-    if(!page)return;
+    if(!document.getElementById('ai-video-gift-page'))return false;
     try{
       ensureVideoHistory();
-      var response=await window.__aiVideoRecoveryNativeFetch('/api/video/orders',{headers:{'X-MAX-Init-Data':initData()}});
+      var response=await nativeFetch()('/api/video/orders',{headers:{'X-MAX-Init-Data':initData()}});
       var text=await response.text();
-      var data;try{data=JSON.parse(text)}catch(e){return}
-      if(!data||!data.ok||!Array.isArray(data.orders))return;
+      var data;try{data=JSON.parse(text)}catch(e){return true}
+      if(!data||!data.ok||!Array.isArray(data.orders))return true;
       renderVideoHistory(data.orders);
     }catch(error){
       console.warn('[AI VIDEO HISTORY CLIENT V1]',error.message);
     }
+    return true;
+  }
+
+  var historyTimer=null;
+  var historyObserver=null;
+
+  function tryStartVideoHistory(){
+    renameVideoLabels();
+    if(document.getElementById('ai-video-gift-page')){
+      ensureVideoHistory();
+      loadVideoHistory();
+      if(!historyTimer){
+        historyTimer=setInterval(function(){
+          renameVideoLabels();
+          loadVideoHistory();
+        },5000);
+      }
+      return true;
+    }
+    return false;
   }
 
   function startVideoHistory(){
-    renameVideoLabels();
-    ensureVideoHistory();
-    loadVideoHistory();
-    setInterval(loadVideoHistory,5000);
-    setInterval(renameVideoLabels,1200);
+    tryStartVideoHistory();
+    if(historyObserver)return;
+    historyObserver=new MutationObserver(function(){tryStartVideoHistory()});
+    historyObserver.observe(document.body,{subtree:true,childList:true});
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',startVideoHistory,{once:true});
   else startVideoHistory();
 
-  console.log('[AI VIDEO CLIENT RECOVERY V1] history UI enabled');
+  console.log('[AI VIDEO CLIENT RECOVERY V1] history UI enabled: dynamic page observer');
 })();
 </script>`;
 
