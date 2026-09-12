@@ -1,5 +1,6 @@
 const express = require('express');
-const originalSendFile = express.response.sendFile;
+
+const originalSend = express.response.send;
 
 const injection = `
 <style id="ai-gifts-layout-final-style">
@@ -161,16 +162,13 @@ function inject(body){
   return body.slice(0,index)+injection+'\n'+body.slice(index);
 }
 
-express.response.sendFile=function patchedSendFile(filePath,...args){
-  var isIndex=typeof filePath==='string'&&/(?:^|[\\/])index\\.html$/i.test(filePath);
-  if(!isIndex)return originalSendFile.call(this,filePath,...args);
-  var response=this;
-  var originalSend=response.send;
-  response.send=function patchedHomeSend(body){
-    try{body=inject(body)}catch(error){console.error('[AI GIFTS FINAL LAYOUT]',error.message)}
-    return originalSend.call(this,body);
-  };
-  try{return originalSendFile.call(this,filePath,...args)}finally{response.send=originalSend}
+express.response.send=function aiGiftsLayoutSend(body){
+  try{
+    if(typeof body==='string'&&body.includes('id="ai-gifts-home"'))body=inject(body);
+  }catch(error){
+    console.error('[AI GIFTS FINAL LAYOUT]',error.message);
+  }
+  return originalSend.call(this,body);
 };
 
 console.log('[AI GIFTS FINAL LAYOUT] module loaded');
