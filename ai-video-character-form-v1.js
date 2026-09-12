@@ -83,10 +83,15 @@ const script = `<script id="ai-video-character-form-v1-script">
   }
 
   function start(){
-    var observer=new MutationObserver(function(){patch()});
-    observer.observe(document.body,{subtree:true,childList:true});
     patch();
+    document.addEventListener('click',function(event){
+      var target=event.target && event.target.closest ? event.target.closest('#ai-video-flow-sheet') : null;
+      var characterTool=event.target && event.target.closest ? event.target.closest('#ai-video-gift-page .tool[data-type="character"]') : null;
+      if(!target && !characterTool)return;
+      requestAnimationFrame(patch);
+    },true);
   }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
 })();
 </script>`;
