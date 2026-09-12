@@ -42,7 +42,16 @@ const script = `<script id="ai-video-wan-ui-script">
       if(box)box.insertBefore(meta,submit||null);
     }
   }
-  function start(){patch();new MutationObserver(patch).observe(document.body,{subtree:true,childList:true,attributes:true,attributeFilter:['class']})}
+
+  function start(){
+    patch();
+    document.addEventListener('click',function(event){
+      var target=event.target && event.target.closest ? event.target.closest('#ai-video-flow-sheet') : null;
+      if(!target)return;
+      requestAnimationFrame(patch);
+    },true);
+  }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>`;
