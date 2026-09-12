@@ -5,6 +5,6 @@ meta:
     version: 18
 
 run:
-  command: node -r ./max-bootstrap.js -r ./robokassa-env-normalize.js -r ./robokassa-sbp-op.js -r ./robokassa-ui-direct.js -r ./ai-topup-ui-v2.js -r ./ai-home-ui.js -r ./ai-home-account.js -r ./ai-home-visual.js -r ./ai-song-visual.js -r ./ai-song-modern-ui.js -r ./ai-navigation-v2.js -r ./ai-video-price-v2.js -r ./ai-gifts-v3.js -r ./ai-home-video-copy.js -r ./ai-gifts-final-visual.js -r ./ai-video-recovery-v3.js -r ./ai-video-wan-ui.js -r ./ai-gifts-layout-polish.js -r ./ai-gifts-card-highlight.js -r ./ai-home-bottom-polish.js -r ./ai-video-character-profiles.js -r ./ai-video-speech-order.js -r ./ai-video-wan-runtime.js -r ./ai-video-client-recovery-v1.js -r ./ai-video-product-v2.js server.js
+  command: node -r ./max-bootstrap.js -r ./robokassa-env-normalize.js -r ./robokassa-sbp-op.js -r ./robokassa-ui-direct.js -r ./ai-topup-ui-v2.js -r ./ai-home-ui.js -r ./ai-home-account.js -r ./ai-home-visual.js -r ./ai-song-visual.js -r ./ai-song-modern-ui.js -r ./ai-navigation-v2.js -r ./ai-video-price-v2.js -r ./ai-gifts-v3.js -r ./ai-home-video-copy.js -r ./ai-gifts-final-visual.js -r ./ai-video-wan-ui.js -r ./ai-gifts-layout-polish.js -r ./ai-gifts-card-highlight.js -r ./ai-home-bottom-polish.js -r ./ai-video-character-profiles.js -r ./ai-video-speech-order.js -r ./ai-video-wan-runtime.js -r ./ai-video-client-recovery-v1.js -r ./ai-video-product-v2.js -r ./ai-video-recovery-v3.js server.js
   persistenceMount: /data
   containerPort: 10000
