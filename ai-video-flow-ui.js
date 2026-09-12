@@ -109,7 +109,7 @@ const script = `<script id="ai-video-flow-ui-script">
     page.dataset.aiFlowBound='1';
     page.addEventListener('click',function(e){
       var b=e.target.closest('.tool'); if(!b)return;
-      var type=b.dataset.type; if(type)render(type);
+      var type=b.dataset.type; if(type){e.preventDefault();e.stopImmediatePropagation();render(type);}
     },true);
   }
 
