@@ -1,5 +1,4 @@
 const express = require('express');
-
 const originalSendFile = express.response.sendFile;
 
 const style = `<style id="ai-video-character-ui-v2-style">
@@ -45,6 +44,11 @@ const script = `<script id="ai-video-character-ui-v2-script">
     {id:'host',title:'Эстрадный ведущий',description:'Энергичный, харизматичный ведущий яркого шоу.',image:encodeURI('/assets/video-gifts/characters/ведущий поздравитель.jpg')}
   ];
 
+  function removeLegacySheet(){
+    var old=document.getElementById('ai-video-sheet');
+    if(old)old.remove();
+  }
+
   function sheet(){
     var el=document.getElementById('ai-video-flow-sheet');
     if(el)return el;
@@ -57,7 +61,26 @@ const script = `<script id="ai-video-character-ui-v2-script">
     return el;
   }
 
+  function syncPrompt(form){
+    var character=((form.querySelector('#vf-character')||{}).value||'homeless');
+    var recipient=((form.querySelector('#vf-recipient')||{}).value||'').trim();
+    var occasion=((form.querySelector('#vf-occasion')||{}).value||'').trim();
+    var wishes=((form.querySelector('#vf-wishes')||{}).value||'').trim();
+    var characterName=(characters.find(function(c){return c.id===character})||characters[0]).title;
+    var prompt=form.querySelector('#vf-prompt');
+    if(!prompt)return;
+    if(!recipient || !occasion){prompt.value='';return;}
+    prompt.value=[
+      'Персонаж: '+characterName+'.',
+      'Персональное поздравление для '+recipient+'.',
+      'Повод: '+occasion+'.',
+      'Пожелания: '+(wishes||'здоровья, счастья, удачи и отличного настроения')+'.',
+      'Персонаж сохраняет свой фиксированный мир, внешний вид, характер и индивидуальную манеру общения.'
+    ].join(' ');
+  }
+
   function render(){
+    removeLegacySheet();
     var s=sheet();
     var form=s.querySelector('.form');
     form.innerHTML=''
@@ -94,38 +117,25 @@ const script = `<script id="ai-video-character-ui-v2-script">
     s.classList.add('open');
   }
 
-  function syncPrompt(form){
-    var character=((form.querySelector('#vf-character')||{}).value||'homeless');
-    var recipient=((form.querySelector('#vf-recipient')||{}).value||'').trim();
-    var occasion=((form.querySelector('#vf-occasion')||{}).value||'').trim();
-    var wishes=((form.querySelector('#vf-wishes')||{}).value||'').trim();
-    var characterName=(characters.find(function(c){return c.id===character})||characters[0]).title;
-    var prompt=form.querySelector('#vf-prompt');
-    if(!prompt)return;
-    if(!recipient || !occasion){prompt.value='';return;}
-    prompt.value=[
-      'Персонаж: '+characterName+'.',
-      'Персональное поздравление для '+recipient+'.',
-      'Повод: '+occasion+'.',
-      'Пожелания: '+(wishes||'здоровья, счастья, удачи и отличного настроения')+'.',
-      'Персонаж сохраняет свой фиксированный мир, внешний вид, характер и индивидуальную манеру общения.'
-    ].join(' ');
+  function handleCharacterClick(e){
+    var tool=e.target&&e.target.closest?e.target.closest('#ai-video-gift-page .tool[data-type="character"]'):null;
+    if(!tool)return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    removeLegacySheet();
+    render();
   }
 
   function bind(){
-    var page=document.getElementById('ai-video-gift-page');
-    if(!page || page.dataset.aiCharacterUiV2Bound==='1')return;
-    page.dataset.aiCharacterUiV2Bound='1';
-    page.addEventListener('click',function(e){
-      var tool=e.target.closest && e.target.closest('.tool[data-type="character"]');
-      if(!tool)return;
-      e.preventDefault();
-      e.stopImmediatePropagation();
-      render();
-    },true);
+    if(document.documentElement.dataset.aiCharacterV2DocumentBound==='1')return;
+    document.documentElement.dataset.aiCharacterV2DocumentBound='1';
+    document.addEventListener('click',handleCharacterClick,true);
   }
 
-  function start(){bind();}
+  function start(){
+    bind();
+  }
+
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>`;
