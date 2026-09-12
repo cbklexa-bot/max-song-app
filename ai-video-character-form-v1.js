@@ -1,0 +1,99 @@
+const express = require('express');
+
+const originalSend = express.response.send;
+
+const style = `<style id="ai-video-character-form-v1-style">
+#ai-video-flow-sheet .character-form-note{margin-top:8px;color:rgba(255,255,255,.36);font-size:7.5px;line-height:1.45}
+#ai-video-flow-sheet .character-scenario{margin-top:12px;padding:12px;border-radius:15px;background:linear-gradient(180deg,rgba(145,72,255,.10),rgba(239,61,154,.05));border:1px solid rgba(190,126,255,.16);color:rgba(255,255,255,.70);font-size:8.5px;line-height:1.55}
+#ai-video-flow-sheet .character-scenario-title{display:block;margin-bottom:7px;color:#f6eefe;font-size:9px;font-weight:950}
+#ai-video-flow-sheet .character-scenario-text{display:block}
+#ai-video-flow-sheet .character-fixed{padding:11px 12px;border-radius:14px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.07);color:#fff;font-size:9px;line-height:1.45}
+#ai-video-flow-sheet .character-fixed strong{display:block;font-size:10px}
+#ai-video-flow-sheet .character-fixed span{display:block;margin-top:4px;color:rgba(255,255,255,.42);font-size:7.5px}
+</style>`;
+
+const script = `<script id="ai-video-character-form-v1-script">
+(function(){
+  if(window.__AI_VIDEO_CHARACTER_FORM_V1__)return;
+  window.__AI_VIDEO_CHARACTER_FORM_V1__=true;
+
+  function buildScenario(form){
+    var recipient=((form.querySelector('#vf-recipient')||{}).value||'').trim();
+    var occasion=((form.querySelector('#vf-occasion')||{}).value||'').trim();
+    var wishes=((form.querySelector('#vf-wishes')||{}).value||'').trim();
+    var prompt=form.querySelector('#vf-prompt');
+    var output=form.querySelector('.character-scenario-text');
+    if(!prompt||!output)return;
+
+    if(!recipient || !occasion){
+      output.textContent='Заполните имя друга и повод — готовый смешной сценарий появится автоматически.';
+      prompt.value='';
+      return;
+    }
+
+    var wishLine=wishes || 'здоровья, денег, удачи, хорошего настроения и чтобы проблем было меньше, чем денег';
+    var scenario=[
+      'Короткая комедийная сценка на городской улице.',
+      'Один харизматичный бездомный поздравитель обращается прямо в камеру и говорит: «А, брат, '+recipient+'! С '+occasion+' тебя!»',
+      'Герой делает смешную паузу, шутливо осматривается и продолжает: «Я человек, конечно, простой, но пожелание у меня серьёзное: '+wishLine+'.»',
+      'После этого он улыбается, поднимает бутылку как тост и говорит: «Живи красиво, брат! С праздником!»',
+      'Подача: дружеская, абсурдная, смешная, но добрая; без унижения, оскорблений и жёсткой брани.',
+      'Речь: естественная русская разговорная речь, чёткая артикуляция, синхронный звук.'
+    ].join(' ');
+
+    output.textContent=scenario;
+    prompt.value=scenario;
+  }
+
+  function patch(){
+    var sheet=document.getElementById('ai-video-flow-sheet');
+    if(!sheet || sheet.dataset.type!=='character')return;
+    var form=sheet.querySelector('.form');
+    if(!form)return;
+    if(form.dataset.characterFormV1==='1'){
+      buildScenario(form);
+      return;
+    }
+
+    form.innerHTML=''
+      +'<div class="field"><span class="label">Кого поздравить?</span><input id="vf-recipient" type="text" maxlength="120" placeholder="Например: Серёга"></div>'
+      +'<div class="field"><span class="label">Повод</span><input id="vf-occasion" type="text" maxlength="160" placeholder="Например: день рождения, 30 лет"></div>'
+      +'<div class="field"><span class="label">Что пожелать?</span><textarea id="vf-wishes" maxlength="900" placeholder="Например: здоровья, денег, удачи, кайфа от жизни и чтобы работа не доставала."></textarea></div>'
+      +'<div class="character-fixed"><strong>Бомж-поздравитель</strong><span>Один фиксированный персонаж: забавный уличный герой с бутылками. Локация и стиль сцены подбираются автоматически.</span></div>'
+      +'<div class="character-scenario"><span class="character-scenario-title">Автоматический смешной сценарий</span><span class="character-scenario-text">Заполните имя друга и повод — готовый смешной сценарий появится автоматически.</span></div>'
+      +'<p class="character-form-note">Ваши три ответа превращаются в готовый текст для Wan 2.6. Ничего дополнительно придумывать не нужно.</p>'
+      +'<input id="vf-prompt" type="hidden">'
+      +'<input id="vf-character" type="hidden" value="homeless">'
+      +'<input id="vf-location" type="hidden" value="street">';
+
+    form.dataset.characterFormV1='1';
+    ['#vf-recipient','#vf-occasion','#vf-wishes'].forEach(function(selector){
+      var field=form.querySelector(selector);
+      field.addEventListener('input',function(){buildScenario(form)});
+      field.addEventListener('change',function(){buildScenario(form)});
+    });
+    buildScenario(form);
+  }
+
+  function start(){
+    var observer=new MutationObserver(function(){patch()});
+    observer.observe(document.body,{subtree:true,childList:true});
+    patch();
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});
+  else start();
+})();
+</script>`;
+
+function inject(body){
+  if(typeof body!=='string'||!body.includes('<body'))return body;
+  if(body.includes('ai-video-character-form-v1-script'))return body;
+  return body.replace(/<\/body>/i,style+'\n'+script+'\n</body>');
+}
+
+express.response.send=function patchedSend(body){
+  return originalSend.call(this,inject(body));
+};
+
+console.log('[AI VIDEO CHARACTER FORM V1] loaded');
