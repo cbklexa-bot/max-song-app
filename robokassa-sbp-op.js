@@ -11,9 +11,11 @@ const MAXTOKEN = String(process.env.MAX_BOT_TOKEN || '').trim();
 const PAYMENT_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
 const PLANS = Object.freeze({
+  100: { amount: 100, bonus: 0, credited: 100 },
   200: { amount: 200, bonus: 0, credited: 200 },
+  300: { amount: 300, bonus: 15, credited: 315 },
   400: { amount: 400, bonus: 40, credited: 440 },
-  800: { amount: 800, bonus: 160, credited: 960 }
+  500: { amount: 500, bonus: 75, credited: 575 }
 });
 
 const dbHeaders = {
@@ -137,9 +139,8 @@ function install(app) {
       const user = validateMax(req.headers['x-max-init-data'] || '');
       const plan = PLANS[Number(req.body?.amount)];
       const email = String(req.body?.email || '').trim();
-      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 200, 400 или 800 ₽' });
+      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 100, 200, 300, 400 или 500 ₽' });
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
-      await dbGet('users', { select:'max_id', limit:1 });
       const invoiceId = String(Date.now()) + String(Math.floor(Math.random() * 100));
       const paymentUrl = buildPaymentUrl(plan.amount, invoiceId, email);
       await dbPost('payments', {
@@ -148,7 +149,7 @@ function install(app) {
         confirmation_url:paymentUrl,
         metadata:{ provider:'robokassa', payment_method:'BankCard/SBP', invoice_id:invoiceId, email }
       });
-      console.log('[ROBOKASSA PAYMENT REDIRECT]', { invoiceId, amount:plan.amount, user:String(user.id) });
+      console.log('[ROBOKASSA PAYMENT REDIRECT]', { invoiceId, amount:plan.amount, bonus:plan.bonus, credited:plan.credited, user:String(user.id) });
       return res.json({ ok:true, paymentUrl, invoiceId, amount:plan.amount, bonus:plan.bonus, creditedAmount:plan.credited });
     } catch (error) {
       console.error('[POST /api/robokassa/start-sbp]', error.response?.data || error.message);
