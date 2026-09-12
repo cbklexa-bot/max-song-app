@@ -25,12 +25,12 @@ const script = `<script id="ai-video-character-form-v1-script">
   window.__AI_VIDEO_CHARACTER_FORM_V1__=true;
 
   var characters=[
-    {id:'homeless',title:'Бомж-поздравитель',description:'Уличный, дерзкий и добрый юмор.',image:'/assets/video-gifts/поздоавление%20от%20персанажа.jpg'},
-    {id:'girl',title:'Молодая девушка',description:'Тёплая, современная и обаятельная.',image:'/assets/video-gifts/characters/girl.jpg'},
-    {id:'boss',title:'Строгий начальник',description:'Серьёзная подача с комедийным эффектом.',image:'/assets/video-gifts/characters/boss.jpg'},
-    {id:'rapper',title:'Дерзкий рэпер',description:'Энергично, ритмично и с характером.',image:'/assets/video-gifts/characters/rapper.jpg'},
-    {id:'santa',title:'Дед Мороз',description:'Празднично, сказочно и по-доброму.',image:'/assets/video-gifts/characters/santa.jpg'},
-    {id:'grandpa',title:'Добрый дедушка',description:'Тёплое, душевное и семейное поздравление.',image:'/assets/video-gifts/characters/grandpa.jpg'}
+    {id:'homeless',title:'Бомж-поздравитель',description:'Харизматичный, смешной, уличный и по-доброму дерзкий.',image:'/assets/video-gifts/characters/бомж поздравитель.jpg'},
+    {id:'baby-boss',title:'Босс-малокосос',description:'Серьёзный маленький начальник в большом кресле.',image:'/assets/video-gifts/characters/босс малокосос поздравитель.jpg'},
+    {id:'girl',title:'Молодая девушка',description:'Очень привлекательная, современная, обаятельная и игривая.',image:'/assets/video-gifts/characters/девушка поздравитель.jpg'},
+    {id:'grandpa',title:'Старенький дедушка',description:'Тёплый, мудрый, добрый и немного юморной.',image:'/assets/video-gifts/characters/дедушка поздравитель.jpg'},
+    {id:'agent',title:'Тайный агент',description:'Серьёзный спецагент с сухим юмором и спокойной подачей.',image:'/assets/video-gifts/characters/агент поздравитель.jpg'},
+    {id:'host',title:'Эстрадный ведущий',description:'Энергичный, харизматичный ведущий яркого шоу.',image:'/assets/video-gifts/characters/ведущий поздравитель.jpg'}
   ];
 
   function normalizeOccasion(value){
