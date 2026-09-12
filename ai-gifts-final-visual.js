@@ -51,8 +51,8 @@ const patchScript = `<script id="ai-gifts-final-visual">
   function patchHome(){
     var song=document.getElementById('ai-home-song');
     var video=document.getElementById('ai-home-video');
-    patchHomeCard(song,'Песня в подарок','Песня в подарок','Персональная песня о человеке, ваших чувствах и вашей истории.','Создать песню');
-    patchHomeCard(video,'Видео в подарок','Видео в подарок','Видео из фото, поющее фото и персональное приветствие персонажа.','Создать видео');
+    patchHomeCard(song,'песня в подарок','Песня в подарок','Персональная песня о человеке, ваших чувствах и вашей истории.','Создать песню');
+    patchHomeCard(video,'видео в подарок','Видео в подарок','Видео из фото, поющее фото и персональное приветствие персонажа.','Создать видео');
   }
 
   function patchVideoPage(){
@@ -64,9 +64,9 @@ const patchScript = `<script id="ai-gifts-final-visual">
     if(buttons.length!==3)return;
     tools.dataset.aiFinalVisual='1';
     var defs=[
-      ['Видео из фото','Видео из фото'],
-      ['Поющее фото','Поющее фото'],
-      ['Поздравление персонажа','Поздравление персонажа']
+      ['видео из фото','Видео из фото'],
+      ['поющие фото','Поющее фото'],
+      ['поздоавление от персанажа','Поздравление персонажа']
     ];
     buttons.forEach(function(button,index){
       var d=defs[index];
