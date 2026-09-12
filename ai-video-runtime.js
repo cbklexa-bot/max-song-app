@@ -23,7 +23,7 @@ fs.mkdirSync(RESULT_ROOT, { recursive: true });
 
 const originalExpressJson = express.json;
 express.json = function patchedExpressJson(options = {}) {
-  return originalExpressJson.call(express, { limit: MAX_VIDEO_JSON_LIMIT, ...options });
+  return originalExpressJson.call(express, { ...options, limit: MAX_VIDEO_JSON_LIMIT });
 };
 
 const originalGet = express.application.get;
@@ -768,7 +768,7 @@ const script = `<script id="ai-video-runtime-script">
     throw new Error('Время ожидания генерации истекло. Проверьте раздел позже.');
   }
 
-  async function submit(sheet){
+  async function bindSubmit(sheet){
     var button=sheet.querySelector('.submit');
     if(!button||button.dataset.videoRuntimeBound==='1')return;
     button.dataset.videoRuntimeBound='1';
@@ -797,7 +797,7 @@ const script = `<script id="ai-video-runtime-script">
     var sheet=document.getElementById('ai-video-flow-sheet');
     if(!sheet)return;
     var button=sheet.querySelector('.submit');
-    if(button&&!button.dataset.videoRuntimeBound)submit(sheet);
+    if(button&&!button.dataset.videoRuntimeBound)bindSubmit(sheet);
   }
 
   function start(){
