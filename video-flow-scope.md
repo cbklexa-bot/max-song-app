@@ -1,1 +1,0 @@
-UI-only video flow scope. External API integration remains intentionally separate until provider limits, cost, supported inputs, and request schema are verified.
