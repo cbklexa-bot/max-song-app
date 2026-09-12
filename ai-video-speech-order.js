@@ -1,8 +1,9 @@
 const axios = require('axios');
 
-// Forces a clear speech sequence for character congratulations:
-// initial silence -> recipient name -> short pause -> congratulations.
-// The total spoken script is kept short enough for a 15-second video.
+// Character congratulations speech control.
+// Required sequence: initial silence -> full recipient name -> short pause -> congratulations.
+// The spoken text is deliberately short enough for a 15-second Wan 2.6 video.
+
 const originalPost = axios.post.bind(axios);
 
 function isCharacterPiApiWanTask(url, data) {
@@ -11,33 +12,51 @@ function isCharacterPiApiWanTask(url, data) {
     || (data.task_type === 'wan26-img2video' && String(data.input.prompt || '').includes('Personalized recipient request'));
 }
 
+function extractRecipient(prompt) {
+  const text = String(prompt || '');
+  const english = text.match(/Recipient:\s*([^\.\n]+)/i)?.[1]?.trim();
+  if (english) return english;
+
+  const russian = text.match(/(?:Персональное поздравление для|Поздравить)\s+([^\.\n]+?)(?:\.|\s+с\s+(?:дн|юб|праз|днём)|\s+Повод:|\s+Пожелания:)/i)?.[1]?.trim();
+  return russian || '';
+}
+
 axios.post = async function patchedSpeechOrderPost(url, data, config) {
   if (isCharacterPiApiWanTask(url, data)) {
     const prompt = String(data.input.prompt || '');
-    const recipient = prompt.match(/Recipient:\s*([^\.\n]+)/i)?.[1]?.trim() || '';
-    const speechOrder = [
-      'MANDATORY FINAL SPEECH TIMING FOR THIS 15-SECOND VIDEO:',
-      'Keep the total spoken congratulations to a maximum of 30 words including the recipient name, so the speech fits comfortably inside 15 seconds.',
-      'The first 0.4 to 0.6 seconds of the video must be completely silent before any speech starts.',
-      recipient ? `After that initial silence, the first spoken utterance must be exactly the full recipient name "${recipient}".` : 'After that initial silence, the first spoken utterance must be the full recipient name.',
-      'Pronounce the entire name clearly, completely and slowly enough to be fully intelligible as a standalone utterance.',
-      'Then make a natural pause of approximately 0.7 to 1.0 seconds.',
-      'Only after that pause begin the congratulations and wishes.',
-      'Never merge, overlap, clip, swallow, shorten or rush any part of the recipient name into the following phrase.',
-      'The name must finish completely before any congratulation words begin.',
-      'Do not add extra introductory words, greetings, filler words or repeated name variants.'
+    const recipient = extractRecipient(prompt);
+
+    const characterSpeechRules = [
+      'CHARACTER SPEECH SCRIPT RULES FOR THIS 15-SECOND CONGRATULATION VIDEO:',
+      'The very beginning of the video contains approximately 0.5 seconds of complete silence and no speech.',
+      recipient
+        ? `After this initial silence, the character MUST clearly and fully pronounce the recipient name "${recipient}" as the FIRST spoken phrase.`
+        : 'After this initial silence, the character MUST clearly and fully pronounce the recipient name as the FIRST spoken phrase.',
+      'The recipient name is not an introduction to another sentence; it is a separate standalone spoken utterance.',
+      'Do not start speaking before the first 0.5 seconds.',
+      'Do not cut, clip, swallow, shorten, merge or overlap any syllable or letter of the recipient name.',
+      'The entire recipient name must be audible from the very first letter/syllable to the final letter/syllable.',
+      'After the complete name, leave a clearly audible natural pause of approximately 0.7 seconds.',
+      'Only then begin the actual congratulation and wishes.',
+      'The congratulations must begin AFTER the name and AFTER the pause, never during the name.',
+      'Keep the whole spoken script to a maximum of 28 words including the recipient name, so it comfortably fits the 15-second duration.',
+      'Do not add filler words, greetings, repeated names, improvisational introductions or extra sentences.',
+      'Prioritize intelligibility of the recipient name over any additional wishes if the available speaking time becomes limited.',
+      'This speech-order instruction is mandatory and has higher priority than stylistic improvisation.'
     ].join(' ');
 
     data = {
       ...data,
       input: {
         ...data.input,
-        prompt: [prompt, speechOrder].join(' ')
+        prompt: [prompt, characterSpeechRules].join(' ')
       }
     };
+
+    console.log('[AI VIDEO SPEECH ORDER] character:', recipient || 'unknown', '-> silence -> full name -> pause -> congratulations');
   }
 
   return originalPost(url, data, config);
 };
 
-console.log('[AI VIDEO SPEECH ORDER] loaded: initial silence -> name -> pause -> congratulations, max 30 spoken words');
+console.log('[AI VIDEO SPEECH ORDER] loaded: 0.5s silence -> full recipient name -> pause -> congratulations, max 28 words');
