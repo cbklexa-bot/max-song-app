@@ -17,6 +17,46 @@ const script = `<script id="ai-video-character-form-v1-script">
   if(window.__AI_VIDEO_CHARACTER_FORM_V1__)return;
   window.__AI_VIDEO_CHARACTER_FORM_V1__=true;
 
+  function normalizeOccasion(value){
+    var text=String(value||'').trim().replace(/^[,.:;\-–—]+|[,.:;\-–—]+$/g,'').replace(/\s+/g,' ');
+    var lower=text.toLowerCase();
+    if(!text)return '';
+
+    var exact={
+      'день рождения':'днём рождения',
+      'день варенья':'днём варенья',
+      'юбилей':'юбилеем',
+      'свадьба':'свадьбой',
+      'годовщина':'годовщиной',
+      'новоселье':'новосельем',
+      'рождение ребёнка':'рождением ребёнка',
+      'рождение ребенка':'рождением ребёнка',
+      'защита диплома':'защитой диплома',
+      'выпускной':'выпускным',
+      'новый год':'Новым годом',
+      '23 февраля':'23 Февраля',
+      '8 марта':'8 Марта'
+    };
+    if(exact[lower])return exact[lower];
+
+    var m=lower.match(/^(\d+)(?:-?летие)$/i);
+    if(m)return m[1]+'-летием';
+    m=lower.match(/^(\d+)\s*лет$/i);
+    if(m)return m[1]+' годами';
+    m=lower.match(/^(\d+)\s*летия$/i);
+    if(m)return m[1]+'-летием';
+
+    if(/ния$/.test(lower))return text.slice(0,-2)+'нем';
+    if(/тие$/.test(lower))return text.slice(0,-2)+'тием';
+    if(/ье$/.test(lower))return text.slice(0,-2)+'ьем';
+    if(/а$/.test(lower))return text.slice(0,-1)+'ой';
+    if(/я$/.test(lower))return text.slice(0,-1)+'ей';
+    if(/о$/.test(lower))return text.slice(0,-1)+'ом';
+    if(/й$/.test(lower))return text.slice(0,-1)+'ем';
+    if(/ь$/.test(lower))return text+'ю';
+    return text;
+  }
+
   function buildScenario(form){
     var recipient=((form.querySelector('#vf-recipient')||{}).value||'').trim();
     var occasion=((form.querySelector('#vf-occasion')||{}).value||'').trim();
@@ -31,10 +71,11 @@ const script = `<script id="ai-video-character-form-v1-script">
       return;
     }
 
+    var occasionPhrase=normalizeOccasion(occasion);
     var wishLine=wishes || 'здоровья, денег, удачи, хорошего настроения и чтобы проблем было меньше, чем денег';
     var scenario=[
       'Короткая комедийная сценка на городской улице.',
-      'Один харизматичный бездомный поздравитель обращается прямо в камеру и говорит: «А, брат, '+recipient+'! С '+occasion+' тебя!»',
+      'Один харизматичный бездомный поздравитель обращается прямо в камеру и говорит: «А, брат, '+recipient+'! С '+occasionPhrase+' тебя!»',
       'Герой делает смешную паузу, шутливо осматривается и продолжает: «Я человек, конечно, простой, но пожелание у меня серьёзное: '+wishLine+'.»',
       'После этого он улыбается, поднимает бутылку как тост и говорит: «Живи красиво, брат! С праздником!»',
       'Подача: дружеская, абсурдная, смешная, но добрая; без унижения, оскорблений и жёсткой брани.',
