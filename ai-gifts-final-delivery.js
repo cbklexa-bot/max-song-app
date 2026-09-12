@@ -55,20 +55,36 @@ const injection = `
     if(wrap&&account&&wrap.firstElementChild!==account) wrap.insertBefore(account,wrap.firstElementChild);
     var heads=home.querySelectorAll('.home-section-head');
     if(heads[0]) heads[0].style.display='none';
-    [
+    var cards=[
       ['ai-home-song','песня в подарок.jpg','Песня в подарок','Создать песню'],
       ['ai-home-video','видео в подарок.jpg','Видео в подарок','Создать видео']
-    ].forEach(function(def){
+    ];
+    cards.forEach(function(def){
       var card=document.getElementById(def[0]); if(!card) return;
       if(card.dataset.deliveryFinal==='1') return;
-      card.dataset.deliveryFinal='1'; card.classList.add('ai-gift-delivery-final'); card.innerHTML='';
-      var img=document.createElement('img'); img.className='ai-gift-delivery-image'; img.src=root+def[1]; img.alt=def[2]; card.appendChild(img);
-      var overlay=document.createElement('div'); overlay.className='ai-gift-delivery-overlay';
-      var title=document.createElement('div'); title.className='ai-gift-delivery-title'; title.textContent=def[2];
-      var cta=document.createElement('div'); cta.className='ai-gift-delivery-cta';
-      var label=document.createElement('span'); label.textContent=def[3];
-      var arrow=document.createElement('b'); arrow.className='ai-gift-delivery-arrow'; arrow.textContent='→';
-      cta.appendChild(label); cta.appendChild(arrow); overlay.appendChild(title); overlay.appendChild(cta); card.appendChild(overlay);
+      card.dataset.deliveryFinal='1';
+      card.classList.add('ai-gift-delivery-final');
+      card.innerHTML='';
+      var img=document.createElement('img');
+      img.className='ai-gift-delivery-image';
+      img.src=root+encodeURIComponent(def[1]);
+      img.alt=def[2];
+      card.appendChild(img);
+      var overlay=document.createElement('div');
+      overlay.className='ai-gift-delivery-overlay';
+      var title=document.createElement('div');
+      title.className='ai-gift-delivery-title';
+      title.textContent=def[2];
+      var cta=document.createElement('div');
+      cta.className='ai-gift-delivery-cta';
+      var label=document.createElement('span');
+      label.textContent=def[3];
+      var arrow=document.createElement('b');
+      arrow.className='ai-gift-delivery-arrow';
+      arrow.textContent='→';
+      cta.appendChild(label); cta.appendChild(arrow);
+      overlay.appendChild(title); overlay.appendChild(cta);
+      card.appendChild(overlay);
     });
   }
   function patchCharacters(){
@@ -78,21 +94,24 @@ const injection = `
     for(var i=0;i<fields.length;i++){
       var label=fields[i].querySelector('.label');
       if(!label || !/выберите персонажа/i.test(label.textContent||'')) continue;
-      var field=fields[i]; if(field.dataset.deliveryCharacter==='1') return;
-      var old=field.querySelector('.chars'); var oldButtons=field.querySelectorAll('.char');
+      var field=fields[i];
+      if(field.dataset.deliveryCharacter==='1') return;
+      var old=field.querySelector('.chars');
+      var oldButtons=field.querySelectorAll('.char');
       if(!old && !oldButtons.length) return;
-      field.dataset.deliveryCharacter='1'; if(old) old.remove(); else oldButtons.forEach(function(b){b.remove()});
+      field.dataset.deliveryCharacter='1';
+      if(old) old.remove(); else oldButtons.forEach(function(b){b.remove()});
       var box=document.createElement('div'); box.className='ai-character-delivery';
       var select=document.createElement('select'); select.id='vf-character-delivery'; select.setAttribute('aria-label','Выберите персонажа');
-      chars.forEach(function(item,index){var o=document.createElement('option'); o.value=String(index); o.textContent=item[0]; if(index===0)o.selected=true; select.appendChild(o)});
+      chars.forEach(function(item,index){var o=document.createElement('option');o.value=String(index);o.textContent=item[0];if(index===0)o.selected=true;select.appendChild(o)});
       var desc=document.createElement('div'); desc.className='ai-character-delivery-desc'; desc.textContent=chars[0][1];
-      select.addEventListener('change',function(){desc.textContent=chars[Number(select.value)]?.[1]||''});
+      select.addEventListener('change',function(){var item=chars[Number(select.value)];desc.textContent=item?item[1]:''});
       box.appendChild(select); box.appendChild(desc); field.appendChild(box); return;
     }
   }
-  function patch(){try{patchHome();patchCharacters()}catch(e){console.warn('[AI GIFTS FINAL DELIVERY]',e)}}
-  function start(){patch(); new MutationObserver(patch).observe(document.body,{subtree:true,childList:true});}
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',start,{once:true}); else start();
+  function patch(){try{patchHome();patchCharacters()}catch(e){console.warn('[AI GIFTS FINAL DELIVERY]',e.message)}}
+  function start(){patch();new MutationObserver(patch).observe(document.body,{subtree:true,childList:true});}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
 })();
 </script>`;
 
@@ -106,16 +125,33 @@ function inject(body){
 express.response.sendFile=function finalDeliverySendFile(filePath,...args){
   var isIndex=typeof filePath==='string' && /(?:^|[\\/])index\\.html$/i.test(filePath);
   if(!isIndex) return originalSendFile.call(this,filePath,...args);
+
   var res=this;
-  var currentSend=res.send;
   res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma','no-cache');
   res.setHeader('Expires','0');
-  res.send=function finalDeliverySend(body){
-    try{body=inject(body)}catch(e){console.error('[AI GIFTS FINAL DELIVERY]',e.message)}
-    return currentSend.call(this,body);
+
+  var originalWrite=res.write;
+  var originalEnd=res.end;
+  var chunks=[];
+  var restored=false;
+  var restore=function(){if(restored)return;restored=true;res.write=originalWrite;res.end=originalEnd};
+
+  res.write=function(chunk,encoding,callback){
+    if(chunk) chunks.push(Buffer.isBuffer(chunk)?chunk:Buffer.from(String(chunk),encoding));
+    if(typeof callback==='function') callback();
+    return true;
   };
-  return originalSendFile.call(this,filePath,...args);
+
+  res.end=function(chunk,encoding,callback){
+    if(chunk) chunks.push(Buffer.isBuffer(chunk)?chunk:Buffer.from(String(chunk),encoding));
+    var body=Buffer.concat(chunks).toString('utf8');
+    var patched=inject(body);
+    restore();
+    return originalEnd.call(res,patched,'utf8',typeof callback==='function'?callback:undefined);
+  };
+
+  try{return originalSendFile.call(res,filePath,...args)}catch(error){restore();throw error}
 };
 
 console.log('[AI GIFTS FINAL DELIVERY] module loaded');
