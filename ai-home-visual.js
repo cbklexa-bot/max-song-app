@@ -28,7 +28,7 @@ const visualCss = `
 #ai-gifts-home .home-sample-text span,#ai-gifts-home .home-sample-text small{display:none!important}
 #ai-gifts-home .home-sample-art{width:38px;height:38px;margin-bottom:5px;font-size:14px;box-shadow:0 0 22px color-mix(in srgb,var(--orb) 24%,transparent),inset 0 0 16px rgba(255,255,255,.06);animation:aiOrbCore 4.4s ease-in-out infinite}
 #ai-gifts-home .home-sample-text strong{font-size:11px;margin-top:0;text-shadow:0 0 16px color-mix(in srgb,var(--orb) 28%,transparent)}
-#ai-gifts-home .home-sample-player{left:16px;right:16px;bottom:50%;transform:translateY(50%);padding:6px 8px;background:rgba(3,9,17,.20);border-color:rgba(178,230,255,.07);box-shadow:0 4px 18px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.03)}
+#ai-gifts-home .home-sample-player{left:16px;right:16px;bottom:40%;transform:translateY(50%);padding:6px 8px;background:rgba(3,9,17,.20);border-color:rgba(178,230,255,.07);box-shadow:0 4px 18px rgba(0,0,0,.16),inset 0 1px 0 rgba(255,255,255,.03)}
 #ai-gifts-home .home-sample-play{width:22px;height:22px;flex-basis:22px;font-size:7px;box-shadow:0 0 15px color-mix(in srgb,var(--orb) 18%,transparent)}
 #ai-gifts-home .home-sample-track-line:after{animation:aiTrackShimmer 3.8s linear infinite}
 @keyframes aiOrbFloat{0%,100%{margin-top:0}50%{margin-top:-5px}}
