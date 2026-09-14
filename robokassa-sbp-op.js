@@ -11,9 +11,9 @@ const MAXTOKEN = String(process.env.MAX_BOT_TOKEN || '').trim();
 const PAYMENT_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
 const PLANS = Object.freeze({
+  200: { amount: 200, bonus: 0, credited: 200 },
   400: { amount: 400, bonus: 20, credited: 420 },
-  800: { amount: 800, bonus: 80, credited: 880 },
-  2400: { amount: 2400, bonus: 480, credited: 2880 }
+  800: { amount: 800, bonus: 80, credited: 880 }
 });
 
 const dbHeaders = {
@@ -48,32 +48,19 @@ function validateMax(initData) {
   return JSON.parse(values.user);
 }
 
-async function dbGet(table, query) {
-  return (await axios.get(SUPA + '/rest/v1/' + table, { headers: dbHeaders, params: query, timeout: 15000 })).data;
-}
-async function dbPost(table, body) {
-  return (await axios.post(SUPA + '/rest/v1/' + table, body, { headers: dbHeaders, timeout: 15000 })).data;
-}
-async function dbRpc(functionName, body) {
-  return (await axios.post(SUPA + '/rest/v1/rpc/' + functionName, body, { headers: dbHeaders, timeout: 15000 })).data;
-}
+async function dbGet(table, query) { return (await axios.get(SUPA + '/rest/v1/' + table, { headers: dbHeaders, params: query, timeout: 15000 })).data; }
+async function dbPost(table, body) { return (await axios.post(SUPA + '/rest/v1/' + table, body, { headers: dbHeaders, timeout: 15000 })).data; }
+async function dbRpc(functionName, body) { return (await axios.post(SUPA + '/rest/v1/rpc/' + functionName, body, { headers: dbHeaders, timeout: 15000 })).data; }
 
 async function getOperationState(invoiceId) {
   const signature = md5(LOGIN + ':' + invoiceId + ':' + PASS2);
-  const response = await axios.get('https://auth.robokassa.ru/Merchant/WebService/Service.asmx/OpStateExt', {
-    params: { MerchantLogin: LOGIN, InvoiceID: invoiceId, Signature: signature },
-    timeout: 15000
-  });
+  const response = await axios.get('https://auth.robokassa.ru/Merchant/WebService/Service.asmx/OpStateExt', { params: { MerchantLogin: LOGIN, InvoiceID: invoiceId, Signature: signature }, timeout: 15000 });
   const xml = String(response.data || '');
-  const resultMatch = xml.match(/<Result>\s*<Code>(\d+)<\/Code>/i);
-  const stateMatch = xml.match(/<State>\s*<Code>(\d+)<\/Code>/i);
-  const sumMatch = xml.match(/<OutSum>([^<]+)<\/OutSum>/i);
-  const methodMatch = xml.match(/<PaymentMethod>\s*<Description>([^<]*)<\/Description>/i);
   return {
-    code: Number(resultMatch?.[1]),
-    stateCode: Number(stateMatch?.[1]),
-    outSum: Number(sumMatch?.[1]),
-    paymentMethod: String(methodMatch?.[1] || '')
+    code: Number(xml.match(/<Result>\s*<Code>(\d+)<\/Code>/i)?.[1]),
+    stateCode: Number(xml.match(/<State>\s*<Code>(\d+)<\/Code>/i)?.[1]),
+    outSum: Number(xml.match(/<OutSum>([^<]+)<\/OutSum>/i)?.[1]),
+    paymentMethod: String(xml.match(/<PaymentMethod>\s*<Description>([^<]*)<\/Description>/i)?.[1] || '')
   };
 }
 
@@ -121,9 +108,7 @@ async function processReturn(req) {
       await dbRpc('process_robokassa_payment', { p_idempotence_key:'robokassa:' + invoiceId });
       return { ok:true, message:'Платёж подтверждён. Баланс пополнен.' };
     }
-  } catch (error) {
-    console.error('[ROBOKASSA RETURN STATE]', error.response?.data || error.message);
-  }
+  } catch (error) { console.error('[ROBOKASSA RETURN STATE]', error.response?.data || error.message); }
   return { ok:true, message:'Платёж принят. Окончательное подтверждение и зачисление выполняются автоматически.' };
 }
 
@@ -137,67 +122,43 @@ function install(app) {
       const user = validateMax(req.headers['x-max-init-data'] || '');
       const plan = PLANS[Number(req.body?.amount)];
       const email = String(req.body?.email || '').trim();
-      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 400, 800 или 2400 ₽' });
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
-      await dbGet('users', { select:'max_id', limit:1 });
+      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 200, 400 или 800 ₽' });
+      if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
       const invoiceId = String(Date.now()) + String(Math.floor(Math.random() * 100));
       const paymentUrl = buildPaymentUrl(plan.amount, invoiceId, email);
-      await dbPost('payments', {
-        user_id:String(user.id), amount:plan.amount, bonus:plan.bonus, credited_amount:plan.credited,
-        purpose:'balance_topup', status:'pending', idempotence_key:'robokassa:' + invoiceId,
-        confirmation_url:paymentUrl,
-        metadata:{ provider:'robokassa', payment_method:'BankCard/SBP', invoice_id:invoiceId, email }
-      });
-      console.log('[ROBOKASSA PAYMENT REDIRECT]', { invoiceId, amount:plan.amount, user:String(user.id) });
+      await dbPost('payments', { user_id:String(user.id), amount:plan.amount, bonus:plan.bonus, credited_amount:plan.credited, purpose:'balance_topup', status:'pending', idempotence_key:'robokassa:' + invoiceId, confirmation_url:paymentUrl, metadata:{ provider:'robokassa', payment_method:'BankCard/SBP', invoice_id:invoiceId, email } });
+      console.log('[ROBOKASSA PAYMENT REDIRECT]', { invoiceId, amount:plan.amount, bonus:plan.bonus, credited:plan.credited, user:String(user.id) });
       return res.json({ ok:true, paymentUrl, invoiceId, amount:plan.amount, bonus:plan.bonus, creditedAmount:plan.credited });
     } catch (error) {
       console.error('[POST /api/robokassa/start-sbp]', error.response?.data || error.message);
-      const status = error.response?.status === 401 || error.response?.status === 403 ? 503 : 400;
-      return res.status(status).json({ ok:false, error:error.response?.data?.message || error.message || 'Не удалось начать оплату' });
+      return res.status(400).json({ ok:false, error:error.response?.data?.message || error.message || 'Не удалось начать оплату' });
     }
   });
 
-  app.get('/api/robokassa/return', async (req, res) => {
-    try { return res.type('html').send(renderReturnPage(await processReturn(req))); }
-    catch (error) { console.error('[GET /api/robokassa/return]', error.response?.data || error.message); return res.type('html').send(renderReturnPage({ok:false,message:'Не удалось обработать возврат из платёжной системы.'})); }
-  });
-
-  app.post('/api/robokassa/return', express.urlencoded({ extended:false, limit:'50kb' }), async (req, res) => {
-    try { return res.type('html').send(renderReturnPage(await processReturn(req))); }
-    catch (error) { console.error('[POST /api/robokassa/return]', error.response?.data || error.message); return res.type('html').send(renderReturnPage({ok:false,message:'Не удалось обработать возврат из платёжной системы.'})); }
-  });
+  app.get('/api/robokassa/return', async (req, res) => { try { return res.type('html').send(renderReturnPage(await processReturn(req))); } catch (error) { console.error('[GET /api/robokassa/return]', error.message); return res.type('html').send(renderReturnPage({ok:false,message:'Не удалось обработать возврат из платёжной системы.'})); } });
+  app.post('/api/robokassa/return', express.urlencoded({ extended:false, limit:'50kb' }), async (req, res) => { try { return res.type('html').send(renderReturnPage(await processReturn(req))); } catch (error) { console.error('[POST /api/robokassa/return]', error.message); return res.type('html').send(renderReturnPage({ok:false,message:'Не удалось обработать возврат из платёжной системы.'})); } });
 
   async function processResult(req, res) {
-    const outSum = String(req.body?.OutSum || '').trim();
-    const invoiceId = String(req.body?.InvId || req.body?.InvoiceID || '').trim();
-    const signatureValue = String(req.body?.SignatureValue || '').trim();
+    const outSum = String(req.body?.OutSum || '').trim(), invoiceId = String(req.body?.InvId || req.body?.InvoiceID || '').trim(), signatureValue = String(req.body?.SignatureValue || '').trim();
     try {
       if (!LOGIN || !PASS2 || !SUPA || !SUPAKEY) return res.status(503).send('Service unavailable');
       if (!outSum || !invoiceId || !signatureValue) return res.status(400).send('Invalid notification');
-      const expected = md5(outSum + ':' + invoiceId + ':' + PASS2);
-      const a = Buffer.from(signatureValue.toLowerCase(), 'utf8');
-      const b = Buffer.from(expected.toLowerCase(), 'utf8');
+      const expected = md5(outSum + ':' + invoiceId + ':' + PASS2), a = Buffer.from(signatureValue.toLowerCase(), 'utf8'), b = Buffer.from(expected.toLowerCase(), 'utf8');
       if (a.length !== b.length || !a.length || !crypto.timingSafeEqual(a, b)) return res.status(400).send('Invalid signature');
       const rows = await dbGet('payments', { idempotence_key:'eq.robokassa:' + invoiceId, select:'*', limit:1 });
       if (!rows.length) return res.status(404).send('Payment not found');
       if (Number(rows[0].amount).toFixed(2) !== Number(outSum).toFixed(2)) return res.status(400).send('Amount mismatch');
-      const processed = await dbRpc('process_robokassa_payment', { p_idempotence_key:'robokassa:' + invoiceId });
-      console.log('[ROBOKASSA RESULT]', { invoiceId, result:processed });
+      await dbRpc('process_robokassa_payment', { p_idempotence_key:'robokassa:' + invoiceId });
       return res.send('OK' + invoiceId);
-    } catch (error) {
-      console.error('[ROBOKASSA RESULT]', error.response?.data || error.message);
-      return res.status(500).send('Temporary error');
-    }
+    } catch (error) { console.error('[ROBOKASSA RESULT]', error.response?.data || error.message); return res.status(500).send('Temporary error'); }
   }
-
   app.post('/api/robokassa/result', express.urlencoded({ extended:false, limit:'50kb' }), processResult);
   app.post('/api/robokassa/result-sbp', express.urlencoded({ extended:false, limit:'50kb' }), processResult);
 
   app.get('/api/robokassa/status', async (req, res) => {
     try {
       if (!LOGIN || !PASS2 || !SUPA || !SUPAKEY || !MAXTOKEN) return res.status(503).json({ ok:false, error:'Payment service is not configured' });
-      const user = validateMax(req.headers['x-max-init-data'] || '');
-      const invoiceId = String(req.query?.invoiceId || '').trim();
+      const user = validateMax(req.headers['x-max-init-data'] || ''), invoiceId = String(req.query?.invoiceId || '').trim();
       if (!/^\d{6,30}$/.test(invoiceId)) return res.status(400).json({ ok:false, error:'Invalid invoiceId' });
       const rows = await dbGet('payments', { idempotence_key:'eq.robokassa:' + invoiceId, user_id:'eq.' + String(user.id), select:'*', limit:1 });
       if (!rows.length) return res.status(404).json({ ok:false, error:'Payment not found' });
@@ -207,23 +168,13 @@ function install(app) {
       const operation = await getOperationState(invoiceId);
       if (operation.code !== 0) return res.json({ ok:true, status:'pending', invoiceId, providerChecked:false });
       if (!Number.isFinite(operation.outSum) || operation.outSum !== Number(payment.amount)) return res.status(409).json({ ok:false, error:'Payment amount mismatch' });
-      if (operation.stateCode === 100) {
-        await dbRpc('process_robokassa_payment', { p_idempotence_key:'robokassa:' + invoiceId });
-        return res.json({ ok:true, status:'paid', invoiceId, creditedAmount:Number(payment.credited_amount || 0), paymentMethod:operation.paymentMethod });
-      }
+      if (operation.stateCode === 100) { await dbRpc('process_robokassa_payment', { p_idempotence_key:'robokassa:' + invoiceId }); return res.json({ ok:true, status:'paid', invoiceId, creditedAmount:Number(payment.credited_amount || 0), paymentMethod:operation.paymentMethod }); }
       if (operation.stateCode === 60) return res.json({ ok:true, status:'canceled', invoiceId, paymentMethod:operation.paymentMethod });
       return res.json({ ok:true, status:'pending', invoiceId, stateCode:operation.stateCode, paymentMethod:operation.paymentMethod });
-    } catch (error) {
-      console.error('[GET /api/robokassa/status]', error.response?.data || error.message);
-      return res.status(500).json({ ok:false, error:'Unable to verify payment status' });
-    }
+    } catch (error) { console.error('[GET /api/robokassa/status]', error.response?.data || error.message); return res.status(500).json({ ok:false, error:'Unable to verify payment status' }); }
   });
 }
 
 const listen = express.application.listen;
-express.application.listen = function (...args) {
-  try { install(this); } catch (error) { console.error('[ROBOKASSA PAYMENT INSTALL]', error.message); }
-  return listen.apply(this, args);
-};
-
-console.log('[ROBOKASSA PAYMENT] module loaded');
+express.application.listen = function (...args) { try { install(this); } catch (error) { console.error('[ROBOKASSA PAYMENT INSTALL]', error.message); } return listen.apply(this, args); };
+console.log('[ROBOKASSA PAYMENT] module loaded: plans 200/400/800');
