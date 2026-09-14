@@ -11,9 +11,9 @@ const MAXTOKEN = String(process.env.MAX_BOT_TOKEN || '').trim();
 const PAYMENT_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
 const PLANS = Object.freeze({
-  200: { amount: 200, bonus: 0, credited: 200 },
-  400: { amount: 400, bonus: 40, credited: 440 },
-  800: { amount: 800, bonus: 160, credited: 960 }
+  400: { amount: 400, bonus: 20, credited: 420 },
+  800: { amount: 800, bonus: 80, credited: 880 },
+  2400: { amount: 2400, bonus: 480, credited: 2880 }
 });
 
 const dbHeaders = {
@@ -137,8 +137,8 @@ function install(app) {
       const user = validateMax(req.headers['x-max-init-data'] || '');
       const plan = PLANS[Number(req.body?.amount)];
       const email = String(req.body?.email || '').trim();
-      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 200, 400 или 800 ₽' });
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
+      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 400, 800 или 2400 ₽' });
+      if (!/^va[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
       await dbGet('users', { select:'max_id', limit:1 });
       const invoiceId = String(Date.now()) + String(Math.floor(Math.random() * 100));
       const paymentUrl = buildPaymentUrl(plan.amount, invoiceId, email);
