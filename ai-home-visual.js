@@ -35,6 +35,13 @@ const visualCss = `
   z-index:-1;
   pointer-events:none;
 }
+
+/* Keep the hero clean: action remains, duplicate title/kicker are removed. */
+#ai-gifts-home .home-hero-kicker,
+#ai-gifts-home .home-hero-title{display:none!important}
+#ai-gifts-home .home-hero-content{bottom:20px}
+#ai-gifts-home .home-hero-text{margin-top:0}
+
 #ai-gifts-home .home-section-head{position:relative}
 #ai-gifts-home .home-section-head:after{
   content:"";
@@ -47,50 +54,53 @@ const visualCss = `
   box-shadow:0 0 12px rgba(95,202,255,.24);
 }
 
-/* Remove the remaining placeholder/hint line under the showcase. */
+/* No technical placeholder text under the showcase. */
 #ai-gifts-home .home-carousel-hint{display:none!important}
 #ai-gifts-home .home-sample-note{display:none!important}
 
-/* Make the orb stage feel volumetric rather than like cards sitting on a rectangle. */
+/* Glass orb stage: transparent and borderless so the spheres float on the page. */
 #ai-gifts-home .home-carousel{
   position:relative;
-  height:274px;
-  padding:9px 0 18px;
+  height:236px;
+  padding:8px 0 14px;
   gap:0;
   align-items:center;
   background:transparent!important;
   border:0!important;
   box-shadow:none!important;
   scrollbar-width:none;
-  mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.92) 9%,#000 22%,#000 78%,rgba(0,0,0,.92) 91%,transparent 100%);
-  -webkit-mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.92) 9%,#000 22%,#000 78%,rgba(0,0,0,.92) 91%,transparent 100%);
+  perspective:1100px;
+  mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.94) 10%,#000 20%,#000 80%,rgba(0,0,0,.94) 90%,transparent 100%);
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,rgba(0,0,0,.94) 10%,#000 20%,#000 80%,rgba(0,0,0,.94) 90%,transparent 100%);
 }
 #ai-gifts-home .home-carousel:before{
   content:"";
   position:absolute;
-  left:12%;right:12%;top:50%;height:120px;
+  left:12%;right:12%;top:50%;height:96px;
   transform:translateY(-50%);
   border-radius:50%;
-  background:radial-gradient(ellipse at center,rgba(66,188,255,.105),rgba(118,91,255,.045) 38%,transparent 72%);
-  filter:blur(22px);
+  background:radial-gradient(ellipse at center,rgba(66,188,255,.10),rgba(118,91,255,.04) 38%,transparent 72%);
+  filter:blur(24px);
   pointer-events:none;
 }
 #ai-gifts-home .home-sample{
-  flex-basis:67%;
-  height:228px;
-  margin-left:-8%;
+  flex-basis:54%;
+  height:178px;
+  margin-left:-7%;
   border-color:rgba(157,224,255,.24);
   box-shadow:
-    0 24px 56px rgba(0,0,0,.48),
-    0 0 34px color-mix(in srgb,var(--orb) 26%,transparent),
-    0 0 78px color-mix(in srgb,var(--orb2) 10%,transparent),
-    inset 0 0 36px rgba(255,255,255,.045),
+    0 20px 48px rgba(0,0,0,.46),
+    0 0 30px color-mix(in srgb,var(--orb) 24%,transparent),
+    0 0 68px color-mix(in srgb,var(--orb2) 9%,transparent),
+    inset 0 0 30px rgba(255,255,255,.045),
     inset 0 0 0 1px rgba(255,255,255,.035);
   backdrop-filter:blur(15px) saturate(125%);
   -webkit-backdrop-filter:blur(15px) saturate(125%);
   transform-origin:center center;
+  transition:transform 2.15s cubic-bezier(.22,.72,.2,1),opacity 2.15s ease,filter 2.15s ease;
+  will-change:transform,opacity,filter;
 }
-#ai-gifts-home .home-sample:first-child{margin-left:16.5%}
+#ai-gifts-home .home-sample:first-child{margin-left:23%}
 #ai-gifts-home .home-sample:after{
   left:17%;right:17%;top:9%;height:22%;
   background:linear-gradient(115deg,transparent 2%,rgba(255,255,255,.26) 40%,rgba(164,233,255,.17) 55%,transparent 84%);
@@ -101,20 +111,29 @@ const visualCss = `
   border-color:rgba(225,247,255,.11);
   box-shadow:inset 0 0 28px rgba(255,255,255,.035),0 0 18px rgba(110,214,255,.035);
 }
-#ai-gifts-home .home-sample.is-active{transform:translateY(-9px) scale(1.055);opacity:1;filter:saturate(1.15) brightness(1.05)}
-#ai-gifts-home .home-sample:not(.is-active){opacity:.48;transform:translateY(6px) scale(.86);filter:saturate(.84) blur(.1px)}
-#ai-gifts-home .home-sample-text strong{text-shadow:0 0 18px color-mix(in srgb,var(--orb) 32%,transparent)}
-#ai-gifts-home .home-sample-art{box-shadow:0 0 34px color-mix(in srgb,var(--orb) 28%,transparent),inset 0 0 20px rgba(255,255,255,.08)}
+#ai-gifts-home .home-sample.is-active{transform:translateY(-6px) scale(1.035);opacity:1;filter:saturate(1.15) brightness(1.05)}
+#ai-gifts-home .home-sample:not(.is-active){opacity:.50;transform:translateY(4px) scale(.88);filter:saturate(.84) blur(.1px)}
+#ai-gifts-home .home-sample-top{padding:28px 16px 22px}
+#ai-gifts-home .home-sample-art{width:48px;height:48px;margin-bottom:9px;font-size:18px;box-shadow:0 0 28px color-mix(in srgb,var(--orb) 28%,transparent),inset 0 0 20px rgba(255,255,255,.08)}
+#ai-gifts-home .home-sample-text strong{font-size:12px;text-shadow:0 0 18px color-mix(in srgb,var(--orb) 32%,transparent)}
+#ai-gifts-home .home-sample-text small{font-size:6.5px}
+#ai-gifts-home .home-sample-player{left:18px;right:18px;bottom:18px;padding:6px 8px}
+#ai-gifts-home .home-sample-play{width:24px;height:24px;flex-basis:24px;font-size:8px}
 
 /* Hide the center dot from the cinematic transition; the glow/rings carry the animation. */
 #ai-song-page-transition .transition-pulse{display:none!important}
 
 @media(max-width:390px){
   #ai-gifts-home .home-title{font-size:26px}
-  #ai-gifts-home .home-carousel{height:252px}
-  #ai-gifts-home .home-sample{height:210px;flex-basis:72%;margin-left:-10%}
-  #ai-gifts-home .home-sample:first-child{margin-left:14%}
+  #ai-gifts-home .home-carousel{height:214px}
+  #ai-gifts-home .home-sample{height:165px;flex-basis:58%;margin-left:-9%}
+  #ai-gifts-home .home-sample:first-child{margin-left:21%}
+  #ai-gifts-home .home-sample-top{padding:24px 13px 18px}
+  #ai-gifts-home .home-sample-art{width:44px;height:44px;font-size:16px}
+  #ai-gifts-home .home-sample-player{left:15px;right:15px;bottom:15px}
 }
+@media(min-width:520px){#ai-gifts-home .home-sample{flex-basis:47%}}
+@media(prefers-reduced-motion:reduce){.home-hero-media img,.home-sample{transition:none}}
 </style>
 `;
 
@@ -135,24 +154,24 @@ const visualScript = `
     let pausedUntil=0;
 
     function setActive(i){cards.forEach((card,n)=>card.classList.toggle('is-active',n===i));}
-    function goTo(i){
+    function centerCard(i,behavior='smooth'){
       index=(i+cards.length)%cards.length;
       setActive(index);
       const card=cards[index];
       const target=Math.max(0,card.offsetLeft-(carousel.clientWidth-card.offsetWidth)/2);
-      carousel.scrollTo({left:target,behavior:'smooth'});
+      carousel.scrollTo({left:target,behavior});
     }
     function schedule(){
       clearTimeout(timer);
       timer=setTimeout(function step(){
         if(document.hidden||Date.now()<pausedUntil){schedule();return;}
-        goTo(index+1);
+        centerCard(index+1,'smooth');
         schedule();
-      },7600);
+      },8200);
     }
-    function pause(){pausedUntil=Date.now()+9000;schedule();}
+    function pause(){pausedUntil=Date.now()+9500;schedule();}
 
-    setActive(0);
+    centerCard(0,'auto');
     carousel.addEventListener('pointerdown',pause,{passive:true});
     carousel.addEventListener('touchstart',pause,{passive:true});
     carousel.addEventListener('wheel',pause,{passive:true});
