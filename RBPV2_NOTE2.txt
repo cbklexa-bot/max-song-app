@@ -1,1 +1,0 @@
-activate robokassa v2 runtime after robokassa ui
