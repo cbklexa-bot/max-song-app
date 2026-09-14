@@ -1,5 +1,4 @@
 const express = require('express');
-
 const originalSendFile = express.response.sendFile;
 
 const visualCss = `
@@ -44,7 +43,7 @@ const visualCss = `
 const visualScript = `
 <script id="ai-home-visual-script">
 (function(){
-  if(window.__AI_HOME_VISUAL_MOTION__)return;
+  if(window.__AI_HOME_AUDIO_FINAL__||window.__AI_HOME_VISUAL_MOTION__)return;
   window.__AI_HOME_VISUAL_MOTION__=true;
   function initCarousel(){
     const carousel=document.querySelector('#ai-gifts-home .home-carousel');
