@@ -41,6 +41,7 @@ const visualCss = `
 #ai-gifts-home .home-hero-title{display:none!important}
 #ai-gifts-home .home-hero-content{bottom:20px}
 #ai-gifts-home .home-hero-text{margin-top:0}
+#ai-gifts-home .home-hero-action{margin-top:13px}
 
 #ai-gifts-home .home-section-head{position:relative}
 #ai-gifts-home .home-section-head:after{
@@ -99,6 +100,7 @@ const visualCss = `
   transform-origin:center center;
   transition:transform 2.15s cubic-bezier(.22,.72,.2,1),opacity 2.15s ease,filter 2.15s ease;
   will-change:transform,opacity,filter;
+  overflow:hidden;
 }
 #ai-gifts-home .home-sample:first-child{margin-left:23%}
 #ai-gifts-home .home-sample:after{
@@ -111,14 +113,31 @@ const visualCss = `
   border-color:rgba(225,247,255,.11);
   box-shadow:inset 0 0 28px rgba(255,255,255,.035),0 0 18px rgba(110,214,255,.035);
 }
-#ai-gifts-home .home-sample.is-active{transform:translateY(-6px) scale(1.035);opacity:1;filter:saturate(1.15) brightness(1.05)}
+#ai-gifts-home .home-sample.is-active{
+  transform:translateY(-6px) scale(1.035);
+  opacity:1;
+  filter:saturate(1.15) brightness(1.05);
+  animation:aiOrbFloat 5.8s ease-in-out infinite;
+}
 #ai-gifts-home .home-sample:not(.is-active){opacity:.50;transform:translateY(4px) scale(.88);filter:saturate(.84) blur(.1px)}
-#ai-gifts-home .home-sample-top{padding:28px 16px 22px}
-#ai-gifts-home .home-sample-art{width:48px;height:48px;margin-bottom:9px;font-size:18px;box-shadow:0 0 28px color-mix(in srgb,var(--orb) 28%,transparent),inset 0 0 20px rgba(255,255,255,.08)}
-#ai-gifts-home .home-sample-text strong{font-size:12px;text-shadow:0 0 18px color-mix(in srgb,var(--orb) 32%,transparent)}
-#ai-gifts-home .home-sample-text small{font-size:6.5px}
-#ai-gifts-home .home-sample-player{left:18px;right:18px;bottom:18px;padding:6px 8px}
-#ai-gifts-home .home-sample-play{width:24px;height:24px;flex-basis:24px;font-size:8px}
+#ai-gifts-home .home-sample-text strong{text-shadow:0 0 18px color-mix(in srgb,var(--orb) 32%,transparent)}
+#ai-gifts-home .home-sample-art{box-shadow:0 0 28px color-mix(in srgb,var(--orb) 28%,transparent),inset 0 0 20px rgba(255,255,255,.08);animation:aiOrbCore 4.4s ease-in-out infinite}
+#ai-gifts-home .home-sample-player{box-shadow:0 4px 18px rgba(0,0,0,.18),inset 0 1px 0 rgba(255,255,255,.035)}
+#ai-gifts-home .home-sample-track-line:after{animation:aiTrackShimmer 3.8s linear infinite}
+
+@keyframes aiOrbFloat{
+  0%,100%{margin-top:0}
+  50%{margin-top:-5px}
+}
+@keyframes aiOrbCore{
+  0%,100%{transform:scale(1);box-shadow:0 0 24px color-mix(in srgb,var(--orb) 24%,transparent),inset 0 0 18px rgba(255,255,255,.07)}
+  50%{transform:scale(1.045);box-shadow:0 0 34px color-mix(in srgb,var(--orb) 34%,transparent),inset 0 0 22px rgba(255,255,255,.10)}
+}
+@keyframes aiTrackShimmer{
+  0%{filter:brightness(.85)}
+  50%{filter:brightness(1.25)}
+  100%{filter:brightness(.85)}
+}
 
 /* Hide the center dot from the cinematic transition; the glow/rings carry the animation. */
 #ai-song-page-transition .transition-pulse{display:none!important}
@@ -133,7 +152,9 @@ const visualCss = `
   #ai-gifts-home .home-sample-player{left:15px;right:15px;bottom:15px}
 }
 @media(min-width:520px){#ai-gifts-home .home-sample{flex-basis:47%}}
-@media(prefers-reduced-motion:reduce){.home-hero-media img,.home-sample{transition:none}}
+@media(prefers-reduced-motion:reduce){
+  .home-hero-media img,.home-sample,.home-sample.is-active,.home-sample-art,.home-sample-track-line:after{transition:none;animation:none}
+}
 </style>
 `;
 
