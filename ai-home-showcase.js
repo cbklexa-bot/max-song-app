@@ -50,19 +50,19 @@ function init(){
   return c;
  }
  const first=tracks.map((t,i)=>makeCard(t,i));const second=tracks.map((t,i)=>makeCard(t,i+tracks.length));first.forEach(c=>track.appendChild(c));second.forEach(c=>track.appendChild(c));
- let x=0,firstWidth=0,drag=false,startX=0,startOffset=0,last=performance.now(),pauseUntil=0,suppress=0;
+ let x=0,firstWidth=0,drag=false,startX=0,startOffset=0,last=performance.now(),pauseUntil=0,suppress=0,dragMoved=false;
  const gap=8;
  function measure(){firstWidth=first.reduce((n,c)=>n+c.getBoundingClientRect().width,0)+gap*(first.length-1);const w=carousel.clientWidth,cw=first[0]?.getBoundingClientRect().width||0;if(!drag&&Math.abs(x)<1)x=(w-cw)/2}
  function wrap(){if(!firstWidth)return;if(x<=-firstWidth)x+=firstWidth;if(x>firstWidth)x-=firstWidth}
  function visuals(){const center=carousel.getBoundingClientRect().left+carousel.clientWidth/2;track.querySelectorAll('.home-sample').forEach(c=>{const r=c.getBoundingClientRect(),d=Math.abs((r.left+r.width/2)-center)/(carousel.clientWidth*.52);c.classList.toggle('is-center',d<.22);c.classList.toggle('is-near',d>=.22&&d<.62);c.classList.toggle('is-side',d>=.62)})}
  function render(){track.style.transform='translate3d('+x.toFixed(2)+'px,0,0)';visuals()}
  function hold(ms){pauseUntil=Math.max(pauseUntil,performance.now()+ms)}
- function down(e){if(e.pointerType==='mouse'&&e.button!==0)return;drag=true;startX=e.clientX;startOffset=x;hold(8000);carousel.classList.add('is-dragging');try{carousel.setPointerCapture(e.pointerId)}catch(_){} }
- function move(e){if(!drag)return;const dx=e.clientX-startX;if(Math.abs(dx)>4)suppress=performance.now()+250;x=startOffset+dx;wrap();render()}
- function up(e){if(!drag)return;drag=false;carousel.classList.remove('is-dragging');try{carousel.releasePointerCapture(e.pointerId)}catch(_){}hold(2200)}
+ function down(e){if(e.pointerType==='mouse'&&e.button!==0)return;drag=true;dragMoved=false;startX=e.clientX;startOffset=x;carousel.classList.add('is-dragging');try{carousel.setPointerCapture(e.pointerId)}catch(_){} }
+ function move(e){if(!drag)return;const dx=e.clientX-startX;if(Math.abs(dx)>5){dragMoved=true;hold(1200)}x=startOffset+dx;wrap();render()}
+ function up(e){if(!drag)return;drag=false;carousel.classList.remove('is-dragging');if(dragMoved){suppress=performance.now()+300;hold(2200)}try{carousel.releasePointerCapture(e.pointerId)}catch(_){} }
  carousel.addEventListener('pointerdown',down,{passive:true});carousel.addEventListener('pointermove',move,{passive:true});carousel.addEventListener('pointerup',up,{passive:true});carousel.addEventListener('pointercancel',up,{passive:true});
  carousel.addEventListener('click',e=>{if(performance.now()<suppress){e.preventDefault();e.stopPropagation()}},{capture:true});
- carousel.addEventListener('wheel',()=>hold(5000),{passive:true});
+ carousel.addEventListener('wheel',()=>hold(1000),{passive:true});
  window.addEventListener('resize',()=>{measure();render()},{passive:true});
  measure();render();
  function frame(now){const dt=Math.min(40,now-last);last=now;if(!drag&&now>=pauseUntil&&!carousel.classList.contains('is-audio-playing')){x-=0.012*dt;wrap();render()}else{visuals()}requestAnimationFrame(frame)}
