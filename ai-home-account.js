@@ -21,14 +21,20 @@ const extraCss=`
 
 #ai-song-page-transition{position:fixed;inset:0;z-index:999999;display:grid;place-items:center;overflow:hidden;pointer-events:none;opacity:0;background:#07050b;transition:opacity .30s ease}
 #ai-song-page-transition.active{opacity:1}
-#ai-song-page-transition .transition-bg{position:absolute;inset:-20%;background:radial-gradient(circle at 50% 45%,rgba(196,112,255,.34),transparent 22%),radial-gradient(circle at 20% 80%,rgba(87,197,255,.15),transparent 25%),radial-gradient(circle at 84% 20%,rgba(239,69,165,.16),transparent 28%),linear-gradient(135deg,#08060e,#160b24 48%,#08060f);transform:scale(.92);animation:aiHomeCinemaBg 2.55s ease forwards}
-#ai-song-page-transition .transition-orb{position:absolute;width:66vmax;height:66vmax;border-radius:50%;background:radial-gradient(circle at 50% 47%,rgba(255,255,255,.92) 0 2%,rgba(221,171,255,.72) 6%,rgba(170,87,255,.43) 19%,rgba(98,38,160,.12) 43%,transparent 66%);filter:blur(1px);transform:scale(.08);animation:aiHomeCinemaOrb 2.55s cubic-bezier(.18,.78,.19,1) forwards}
-#ai-song-page-transition .transition-ring{position:absolute;width:40vmax;height:40vmax;border:1px solid rgba(255,255,255,.18);border-radius:50%;box-shadow:0 0 80px rgba(170,88,255,.24),inset 0 0 50px rgba(255,255,255,.05);transform:scale(.15);opacity:0;animation:aiHomeCinemaRing 2.25s .08s ease forwards}
-#ai-song-page-transition .transition-content{position:relative;z-index:2;text-align:center;padding:24px;transform:translateY(16px);opacity:0;animation:aiHomeCinemaText 1.9s .26s cubic-bezier(.2,.8,.2,1) forwards}
+#ai-song-page-transition .transition-bg,#ai-song-page-transition .transition-orb,#ai-song-page-transition .transition-ring,#ai-song-page-transition .transition-content,#ai-song-page-transition .transition-pulse{animation:none}
+#ai-song-page-transition .transition-bg{position:absolute;inset:-20%;opacity:.35;background:radial-gradient(circle at 50% 45%,rgba(196,112,255,.34),transparent 22%),radial-gradient(circle at 20% 80%,rgba(87,197,255,.15),transparent 25%),radial-gradient(circle at 84% 20%,rgba(239,69,165,.16),transparent 28%),linear-gradient(135deg,#08060e,#160b24 48%,#08060f);transform:scale(.92)}
+#ai-song-page-transition .transition-orb{position:absolute;width:66vmax;height:66vmax;border-radius:50%;opacity:0;background:radial-gradient(circle at 50% 47%,rgba(255,255,255,.92) 0 2%,rgba(221,171,255,.72) 6%,rgba(170,87,255,.43) 19%,rgba(98,38,160,.12) 43%,transparent 66%);filter:blur(1px);transform:scale(.08)}
+#ai-song-page-transition .transition-ring{position:absolute;width:40vmax;height:40vmax;border:1px solid rgba(255,255,255,.18);border-radius:50%;opacity:0;box-shadow:0 0 80px rgba(170,88,255,.24),inset 0 0 50px rgba(255,255,255,.05);transform:scale(.15)}
+#ai-song-page-transition .transition-content{position:relative;z-index:2;text-align:center;padding:24px;opacity:0;transform:translateY(16px)}
 #ai-song-page-transition .transition-kicker{margin:0 0 10px;color:rgba(255,255,255,.45);font-size:8px;font-weight:900;letter-spacing:.22em;text-transform:uppercase}
 #ai-song-page-transition .transition-label{margin:0;color:#fff;font-size:clamp(31px,9vw,48px);line-height:1;letter-spacing:-.055em;font-weight:950;text-shadow:0 12px 40px rgba(0,0,0,.40)}
 #ai-song-page-transition .transition-line{width:74px;height:2px;margin:15px auto 0;border-radius:999px;background:linear-gradient(90deg,transparent,#fff,transparent);opacity:.75}
-#ai-song-page-transition .transition-pulse{position:absolute;width:12px;height:12px;left:50%;top:50%;margin:-6px;border-radius:50%;background:#fff;box-shadow:0 0 34px 12px rgba(214,153,255,.65);animation:aiHomeCinemaPulse 1.2s ease-in-out infinite alternate}
+#ai-song-page-transition .transition-pulse{position:absolute;width:12px;height:12px;left:50%;top:50%;margin:-6px;border-radius:50%;opacity:0;background:#fff;box-shadow:0 0 34px 12px rgba(214,153,255,.65)}
+#ai-song-page-transition.active .transition-bg{animation:aiHomeCinemaBg 2.55s ease forwards}
+#ai-song-page-transition.active .transition-orb{animation:aiHomeCinemaOrb 2.55s cubic-bezier(.18,.78,.19,1) forwards}
+#ai-song-page-transition.active .transition-ring{animation:aiHomeCinemaRing 2.25s .08s ease forwards}
+#ai-song-page-transition.active .transition-content{animation:aiHomeCinemaText 1.9s .26s cubic-bezier(.2,.8,.2,1) forwards}
+#ai-song-page-transition.active .transition-pulse{animation:aiHomeCinemaPulse 1.2s ease-in-out infinite alternate}
 @keyframes aiHomeCinemaBg{0%{opacity:.35;transform:scale(.92) rotate(0deg)}45%{opacity:1;transform:scale(1.02) rotate(5deg)}100%{opacity:1;transform:scale(1.08) rotate(-3deg)}}
 @keyframes aiHomeCinemaOrb{0%{opacity:0;transform:scale(.08)}18%{opacity:.95;transform:scale(.20)}62%{opacity:.82;transform:scale(.72)}100%{opacity:0;transform:scale(1.70)}}
 @keyframes aiHomeCinemaRing{0%{opacity:0;transform:scale(.15)}38%{opacity:.7;transform:scale(.62)}100%{opacity:0;transform:scale(2.0)}}
