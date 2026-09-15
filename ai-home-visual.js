@@ -77,7 +77,13 @@ const visualScript = `
     document.body.appendChild(intro);
 
     let opening=false;
+    let skipNext=false;
     song.addEventListener('click',function(event){
+      if(skipNext){
+        skipNext=false;
+        opening=false;
+        return;
+      }
       if(opening)return;
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -85,6 +91,7 @@ const visualScript = `
       intro.classList.add('is-visible');
       window.setTimeout(function(){
         intro.classList.remove('is-visible');
+        skipNext=true;
         window.setTimeout(function(){song.click()},280);
       },2000);
     },true);
