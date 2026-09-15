@@ -15,8 +15,7 @@ const homeMarkup = `
 .home-card{display:block;position:relative;overflow:hidden;width:100%;padding:0;border:1px solid rgba(255,255,255,.09);border-radius:24px;background:rgba(20,13,30,.88);color:#fff;text-align:left;cursor:pointer;box-shadow:0 18px 46px rgba(0,0,0,.25);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
 .home-card:active{transform:scale(.988)}
 .home-card:focus-visible{outline:2px solid rgba(190,137,255,.65);outline-offset:2px}
-.home-art{height:176px;display:grid;place-items:center;position:relative;overflow:hidden;background:linear-gradient(135deg,#3a1d69,#161024)}
-.home-art:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 45%,rgba(0,0,0,.12))}
+.home-art{height:320px;display:block;position:relative;overflow:hidden;background:linear-gradient(135deg,#3a1d69,#161024);background-image:linear-gradient(180deg,rgba(0,0,0,.06),rgba(0,0,0,.18)),url('/песня%20в%20подарок.jpg');background-position:center;background-size:cover;background-repeat:no-repeat}
 .home-body{padding:15px 15px 16px}
 .home-kicker{font-size:16px;font-weight:950;letter-spacing:-.02em}
 .home-desc{margin:7px 0 12px;color:rgba(255,255,255,.47);font-size:9px;line-height:1.45}
@@ -34,7 +33,7 @@ const homeMarkup = `
 .home-footer strong{color:rgba(255,255,255,.60)}
 .home-footer a{color:rgba(207,172,255,.76);text-decoration:none}
 .home-footer .mail{color:rgba(140,221,255,.68)}
-@media(max-width:390px){.home-title{font-size:29px}.home-showcase-grid{grid-template-columns:1fr}.home-sample{min-height:70px}}
+@media(max-width:390px){.home-title{font-size:29px}.home-art{height:280px}.home-showcase-grid{grid-template-columns:1fr}.home-sample{min-height:70px}}
 </style>
 <div id="ai-gifts-home">
   <div class="wrap">
@@ -47,7 +46,7 @@ const homeMarkup = `
     </div>
 
     <button class="home-card" id="ai-home-song" type="button">
-      <div class="home-art"></div>
+      <div class="home-art" aria-label="Песня в подарок"></div>
       <div class="home-body">
         <div class="home-kicker">Песня под заказ</div>
         <div class="home-desc">Опишите человека, повод и чувства. Сгенерируем персональную песню и покажем демо перед покупкой.</div>
