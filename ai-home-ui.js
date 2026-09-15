@@ -12,28 +12,11 @@ const homeMarkup = `
 .home-title{margin:0;font-size:31px;line-height:1;letter-spacing:-.05em;font-weight:950;background:linear-gradient(90deg,#dfb2ff,#b992ff 48%,#7ce0ff);-webkit-background-clip:text;background-clip:text;color:transparent}
 .ai-home-status{display:flex;align-items:center;gap:6px;flex:0 0 auto;padding:7px 9px;border-radius:999px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07);color:rgba(255,255,255,.55);font-size:7px;font-weight:900}
 .ai-home-status-dot{width:6px;height:6px;border-radius:50%;background:#7df1c7;box-shadow:0 0 12px rgba(125,241,199,.7)}
-.ai-home-hero{position:relative;overflow:hidden;margin-bottom:13px;padding:19px 17px 18px;border-radius:24px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(145deg,rgba(41,25,63,.95),rgba(15,10,24,.98));box-shadow:0 20px 50px rgba(0,0,0,.27)}
-.ai-home-hero:before{content:"";position:absolute;width:200px;height:200px;right:-80px;top:-110px;border-radius:50%;background:radial-gradient(circle,rgba(173,113,255,.24),transparent 68%)}
-.ai-home-hero:after{content:"";position:absolute;width:140px;height:140px;left:-80px;bottom:-100px;border-radius:50%;background:radial-gradient(circle,rgba(86,204,255,.12),transparent 70%)}
-.ai-home-hero-inner{position:relative;z-index:1}
-.ai-home-hero-kicker{display:inline-flex;align-items:center;gap:6px;padding:5px 8px;border-radius:999px;background:rgba(180,123,255,.10);border:1px solid rgba(180,123,255,.18);color:#d9bcff;font-size:7px;font-weight:950;letter-spacing:.10em;text-transform:uppercase}
-.ai-home-hero-title{margin:10px 0 6px;font-size:22px;line-height:1.12;font-weight:950;letter-spacing:-.03em}
-.ai-home-hero-text{margin:0;color:rgba(255,255,255,.55);font-size:10px;line-height:1.52}
-.ai-home-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:13px}
-.ai-home-chip{padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.68);font-size:7px;font-weight:850}
-.home-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin:0 2px 8px}
-.home-section-title{margin:0;font-size:11px;font-weight:950}
-.home-section-subtitle{margin:3px 0 0;color:rgba(255,255,255,.36);font-size:7px}
-.home-section-badge{padding:4px 7px;border-radius:999px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);color:rgba(255,255,255,.43);font-size:6.5px;font-weight:900}
 .home-card{display:block;position:relative;overflow:hidden;width:100%;padding:0;border:1px solid rgba(255,255,255,.09);border-radius:24px;background:rgba(20,13,30,.88);color:#fff;text-align:left;cursor:pointer;box-shadow:0 18px 46px rgba(0,0,0,.25);transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease}
 .home-card:active{transform:scale(.988)}
 .home-card:focus-visible{outline:2px solid rgba(190,137,255,.65);outline-offset:2px}
-.home-art{height:176px;display:grid;place-items:center;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 42%,rgba(211,139,255,.48),transparent 31%),linear-gradient(135deg,#3a1d69,#161024)}
+.home-art{height:176px;display:grid;place-items:center;position:relative;overflow:hidden;background:linear-gradient(135deg,#3a1d69,#161024)}
 .home-art:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.06),transparent 45%,rgba(0,0,0,.12))}
-.home-art-ring{position:absolute;width:116px;height:116px;border-radius:50%;border:1px solid rgba(255,255,255,.12);box-shadow:0 0 60px rgba(178,109,255,.18)}
-.home-orb{position:relative;z-index:1;width:74px;height:74px;border-radius:23px;display:grid;place-items:center;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);box-shadow:0 15px 34px rgba(0,0,0,.18);font-size:31px;animation:homeFloat 3.2s ease-in-out infinite}
-.home-chip{position:absolute;left:11px;bottom:11px;padding:5px 7px;border-radius:999px;background:rgba(5,2,12,.42);border:1px solid rgba(255,255,255,.10);font-size:6px;font-weight:950;letter-spacing:.10em;text-transform:uppercase;color:rgba(255,255,255,.67)}
-.home-ready{position:absolute;right:11px;top:11px;padding:5px 7px;border-radius:999px;background:rgba(123,241,197,.09);border:1px solid rgba(123,241,197,.15);color:#9af5d1;font-size:6px;font-weight:950;letter-spacing:.08em;text-transform:uppercase}
 .home-body{padding:15px 15px 16px}
 .home-kicker{font-size:16px;font-weight:950;letter-spacing:-.02em}
 .home-desc{margin:7px 0 12px;color:rgba(255,255,255,.47);font-size:9px;line-height:1.45}
@@ -51,9 +34,7 @@ const homeMarkup = `
 .home-footer strong{color:rgba(255,255,255,.60)}
 .home-footer a{color:rgba(207,172,255,.76);text-decoration:none}
 .home-footer .mail{color:rgba(140,221,255,.68)}
-@keyframes homeFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@media(max-width:390px){.home-title{font-size:29px}.ai-home-hero{padding:16px 14px}.ai-home-hero-title{font-size:19px}.home-art{height:156px}.home-body{padding:12px}.home-showcase-grid{grid-template-columns:1fr}.home-sample{min-height:70px}}
-@media(prefers-reduced-motion:reduce){.home-orb{animation:none}}
+@media(max-width:390px){.home-title{font-size:29px}.home-showcase-grid{grid-template-columns:1fr}.home-sample{min-height:70px}}
 </style>
 <div id="ai-gifts-home">
   <div class="wrap">
@@ -65,48 +46,14 @@ const homeMarkup = `
       <div class="ai-home-status"><span class="ai-home-status-dot"></span> Сервис онлайн</div>
     </div>
 
-    <section class="ai-home-hero">
-      <div class="ai-home-hero-inner">
-        <div class="ai-home-hero-kicker">✨ Создайте песню, которую запомнят</div>
-        <h2 class="ai-home-hero-title">Песня не из шаблона.<br>Песня про вашего человека.</h2>
-        <p class="ai-home-hero-text">Опишите человека, вашу историю и настроение — сервис создаст персональную песню через AI.</p>
-        <div class="ai-home-chips">
-          <span class="ai-home-chip">🎵 Персональный текст</span>
-          <span class="ai-home-chip">🎙️ Выбор вокала</span>
-          <span class="ai-home-chip">💳 Оплата через Robokassa</span>
-        </div>
-      </div>
-    </section>
-
-    <div class="home-section-head">
-      <div>
-        <h3 class="home-section-title">Создайте свою песню</h3>
-        <p class="home-section-subtitle">Готово к заказу прямо сейчас</p>
-      </div>
-      <div class="home-section-badge">AI Music</div>
-    </div>
-
     <button class="home-card" id="ai-home-song" type="button">
-      <div class="home-art">
-        <div class="home-art-ring"></div>
-        <div class="home-orb">🎵</div>
-        <span class="home-chip">AI Music</span>
-        <span class="home-ready">Готово</span>
-      </div>
+      <div class="home-art"></div>
       <div class="home-body">
         <div class="home-kicker">Песня под заказ</div>
-        <div class="home-desc">Опишите человека, повод и чувства. Сгенерируем песню, покажем демо и дадим выбрать вариант перед покупкой.</div>
+        <div class="home-desc">Опишите человека, повод и чувства. Сгенерируем персональную песню и покажем демо перед покупкой.</div>
         <div class="home-link"><span>Создать песню</span><span class="home-arrow">→</span></div>
       </div>
     </button>
-
-    <div class="home-section-head" style="margin-top:14px">
-      <div>
-        <h3 class="home-section-title">Примеры</h3>
-        <p class="home-section-subtitle">Что можно заказать</p>
-      </div>
-      <div class="home-section-badge">🎵 Music</div>
-    </div>
 
     <section class="home-showcase">
       <div class="home-showcase-grid">
