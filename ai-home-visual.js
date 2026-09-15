@@ -4,61 +4,27 @@ const originalSendFile = express.response.sendFile;
 
 const visualCss = `
 <style id="ai-home-visual-style">
-/* Compact top area: profile becomes the first app block directly below MAX header. */
-#ai-gifts-home{padding-top:0 !important}
-#ai-gifts-home .ai-home-top{display:none !important}
-#ai-gifts-home .ai-home-account{margin:0 0 8px !important;padding:9px 11px !important;border:1px solid rgba(255,255,255,.11) !important;border-radius:18px !important;background:linear-gradient(145deg,rgba(34,19,50,.98),rgba(14,9,23,.98)) !important;box-shadow:0 14px 34px rgba(0,0,0,.22) !important}
-#ai-gifts-home .ai-home-account-avatar{width:36px;height:36px;flex-basis:36px}
-#ai-gifts-home .ai-home-account-name{font-size:10.5px}
-#ai-gifts-home .ai-home-account-subtitle{font-size:6.5px}
-#ai-gifts-home .ai-home-account-balance{min-height:34px;padding:5px 8px}
-#ai-gifts-home .ai-home-account-balance-value{font-size:10px}
+/* Music home: keep the account at the top and show the main neon title. */
+#ai-gifts-home{padding-top:10px !important}
+#ai-gifts-home .ai-home-top{display:block !important;margin:8px 0 17px !important;text-align:center !important}
+#ai-gifts-home .ai-home-top .home-title{display:block !important}
 
-/* Trim the intro card so the product choices move into the visible first screen. */
-#ai-gifts-home .ai-home-hero{margin:0 0 11px !important;padding:11px 13px 12px !important;border:1px solid rgba(255,255,255,.10) !important;border-radius:18px !important;background:linear-gradient(145deg,rgba(38,22,56,.96),rgba(15,10,24,.98)) !important;box-shadow:0 15px 38px rgba(0,0,0,.23) !important}
-#ai-gifts-home .ai-home-hero-kicker,#ai-gifts-home .ai-home-hero-glow{display:none !important}
-#ai-gifts-home .ai-home-hero-title{margin:0 0 5px !important;font-size:18px !important;line-height:1.08 !important}
-#ai-gifts-home .ai-home-hero-text{font-size:8.5px !important;line-height:1.36 !important;max-height:34px;overflow:hidden}
+/* Main music card: portrait image fills the entire card. */
+#ai-gifts-home .home-card{min-height:0 !important;height:auto !important;border-radius:28px !important;overflow:hidden !important}
+#ai-gifts-home .home-art{height:auto !important;aspect-ratio:4/5 !important;min-height:0 !important;background-size:cover !important;background-position:center !important}
 
-/* Keep the two product choices prominent, but slightly shorter than the previous pass. */
-#ai-gifts-home .home-section-head{margin:0 2px 8px}
-#ai-gifts-home .home-section-title{font-size:14px}
-#ai-gifts-home .home-section-subtitle{font-size:8px;margin-top:3px}
-#ai-gifts-home .home-section-badge{font-size:7px;padding:5px 8px}
-#ai-gifts-home .home-types{gap:9px;margin-bottom:13px}
-#ai-gifts-home .home-card{min-height:215px !important;border-width:2px;border-radius:23px;transform:none;box-shadow:0 19px 45px rgba(0,0,0,.31),inset 0 1px 0 rgba(255,255,255,.08)}
-#ai-gifts-home .home-art{height:122px !important}
-#ai-gifts-home .home-art-ring{width:90px;height:90px}
-#ai-gifts-home .home-orb{width:64px;height:64px;border-radius:20px;font-size:29px}
-#ai-gifts-home .home-body{padding:12px 12px 13px}
-#ai-gifts-home .home-kicker{font-size:11.5px}
-#ai-gifts-home .home-desc{margin:5px 0 9px;font-size:8.5px;line-height:1.38;min-height:31px}
-#ai-gifts-home .home-link{font-size:8.5px}
-#ai-gifts-home .home-arrow{width:25px;height:25px;border-radius:9px;font-size:12px}
-
-/* Keep the showcase large enough to remain visible on the first mobile screen. */
-#ai-gifts-home .home-showcase{margin-top:2px;margin-bottom:12px;padding:14px;border-radius:21px}
-#ai-gifts-home .home-marquee-viewport{border-radius:16px}
-#ai-gifts-home .home-marquee{gap:9px;animation-duration:30s}
-#ai-gifts-home .home-sample{width:210px;min-height:104px;padding:11px;border-radius:17px;gap:10px}
-#ai-gifts-home .home-sample-art{width:56px;height:56px;flex-basis:56px;border-radius:16px;font-size:23px}
-#ai-gifts-home .home-sample-text span{font-size:7px}
-#ai-gifts-home .home-sample-text strong{margin-top:5px;font-size:9.5px}
-#ai-gifts-home .home-sample-text small{margin-top:4px;font-size:7px}
-
-/* Preserve the stronger visual separation of Song and Video cards. */
-#ai-gifts-home .home-card.ai-home-song-card{border-color:rgba(203,148,255,.68);background:linear-gradient(160deg,rgba(64,30,99,.98),rgba(25,13,42,.98));box-shadow:0 19px 48px rgba(0,0,0,.31),0 0 32px rgba(166,97,255,.19),inset 0 1px 0 rgba(255,255,255,.10)}
-#ai-gifts-home .home-card.ai-home-video-card{border-color:rgba(103,208,255,.62);background:linear-gradient(160deg,rgba(26,57,100,.98),rgba(15,20,42,.98));box-shadow:0 19px 48px rgba(0,0,0,.31),0 0 32px rgba(72,177,255,.16),inset 0 1px 0 rgba(255,255,255,.10)}
+/* CTA is printed directly over the image, with no separate panel/icon container. */
+#ai-gifts-home .home-card-cta{left:18px !important;right:auto !important;bottom:18px !important;padding:0 !important;margin:0 !important;display:flex !important;align-items:center !important;justify-content:flex-start !important;gap:9px !important;background:none !important;border:0 !important;border-radius:0 !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important}
+#ai-gifts-home .home-card-cta span:first-child{font-size:16px !important;line-height:1 !important;font-weight:950 !important;letter-spacing:-.02em !important;color:#fff !important;text-shadow:0 2px 16px rgba(0,0,0,.72),0 0 18px rgba(255,255,255,.14) !important}
+#ai-gifts-home .home-arrow{width:auto !important;height:auto !important;min-width:0 !important;flex:0 0 auto !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:none !important;color:#fff !important;font-size:25px !important;line-height:.8 !important;box-shadow:none !important;text-shadow:0 2px 16px rgba(0,0,0,.72),0 0 18px rgba(255,255,255,.16) !important}
 
 @media(max-width:390px){
-  #ai-gifts-home .home-card{min-height:205px !important}
-  #ai-gifts-home .home-art{height:116px !important}
-  #ai-gifts-home .home-orb{width:60px;height:60px;font-size:26px}
-  #ai-gifts-home .home-body{padding:10px}
-  #ai-gifts-home .home-kicker{font-size:11px}
-  #ai-gifts-home .home-desc{font-size:8px;line-height:1.35}
-  #ai-gifts-home .home-sample{width:195px;min-height:98px}
-  #ai-gifts-home .home-sample-art{width:52px;height:52px;flex-basis:52px}
+  #ai-gifts-home{padding-left:10px !important;padding-right:10px !important}
+  #ai-gifts-home .ai-home-top{margin-bottom:14px !important}
+  #ai-gifts-home .ai-home-top .home-title{font-size:32px !important}
+  #ai-gifts-home .home-card-cta{left:14px !important;bottom:14px !important}
+  #ai-gifts-home .home-card-cta span:first-child{font-size:15px !important}
+  #ai-gifts-home .home-arrow{font-size:23px !important}
 }
 </style>
 `;
