@@ -13,7 +13,7 @@ const PAYMENT_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 const PLANS = Object.freeze({
   200: { amount: 200, bonus: 0, credited: 200 },
   400: { amount: 400, bonus: 20, credited: 420 },
-  700: { amount: 700, bonus: 70, credited: 770 }
+  800: { amount: 800, bonus: 80, credited: 880 }
 });
 
 const dbHeaders = {
@@ -137,16 +137,15 @@ function install(app) {
       const user = validateMax(req.headers['x-max-init-data'] || '');
       const plan = PLANS[Number(req.body?.amount)];
       const email = String(req.body?.email || '').trim();
-      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 200, 400 или 700 ₽' });
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
-      await dbGet('users', { select:'max_id', limit:1 });
+      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 200, 400 или 800 ₽' });
+      if (!/^\S+@\S+\.\S+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
       const invoiceId = String(Date.now()) + String(Math.floor(Math.random() * 100));
       const paymentUrl = buildPaymentUrl(plan.amount, invoiceId, email);
       await dbPost('payments', {
         user_id:String(user.id), amount:plan.amount, bonus:plan.bonus, credited_amount:plan.credited,
         purpose:'balance_topup', status:'pending', idempotence_key:'robokassa:' + invoiceId,
         confirmation_url:paymentUrl,
-        metadata:{ provider:'robokassa', payment_method:'BankCard/SBP', invoice_id:invoiceId, email }
+        metadata:{ provider:'robokassa', payment_method:'BankCard/SBP', invoice_id:invoiceId, email, plan_amount:plan.amount }
       });
       console.log('[ROBOKASSA PAYMENT REDIRECT]', { invoiceId, amount:plan.amount, user:String(user.id) });
       return res.json({ ok:true, paymentUrl, invoiceId, amount:plan.amount, bonus:plan.bonus, creditedAmount:plan.credited });
@@ -226,4 +225,4 @@ express.application.listen = function (...args) {
   return listen.apply(this, args);
 };
 
-console.log('[ROBOKASSA PAYMENT] module loaded: plans 200/400/700');
+console.log('[ROBOKASSA PAYMENT] module loaded: plans 200/400/800');
