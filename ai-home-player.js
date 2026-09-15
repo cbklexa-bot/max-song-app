@@ -114,10 +114,6 @@ const playerScript = `
         const rect=progress.getBoundingClientRect();
         const ratio=Math.max(0,Math.min(1,(event.clientX-rect.left)/rect.width));
         audio.currentTime=ratio*audio.duration;
-        if(audio.paused){
-          const playPromise=audio.play();
-          if(playPromise&&typeof playPromise.catch==='function')playPromise.catch(function(){});
-        }
       });
     }
 
