@@ -7,7 +7,7 @@ const visualCss = `
 /* Music home: keep the account at the top and show the main neon title. */
 #ai-gifts-home{padding-top:10px !important}
 #ai-gifts-home .ai-home-top{display:block !important;margin:8px 0 17px !important;text-align:center !important}
-#ai-gifts-home .ai-home-top .home-title{display:block !important}
+#ai-gifts-home .ai-home-top .home-title{display:block !important;color:transparent !important;background:linear-gradient(100deg,#f4d7ff 0%,#be8cff 42%,#ff68cb 72%,#ffd0ef 100%) !important;-webkit-background-clip:text !important;background-clip:text !important;text-shadow:0 0 8px rgba(221,157,255,.65),0 0 22px rgba(186,101,255,.48),0 0 42px rgba(255,74,193,.28) !important;filter:drop-shadow(0 0 14px rgba(188,103,255,.28)) !important}
 
 /* Main music card: portrait image fills the entire card. */
 #ai-gifts-home .home-card{min-height:0 !important;height:auto !important;border-radius:28px !important;overflow:hidden !important}
