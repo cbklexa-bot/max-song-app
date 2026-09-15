@@ -5,19 +5,27 @@ const path = require('path');
 const originalSendFile = express.response.sendFile;
 
 function getShowcaseTracks() {
-  const dir = path.join(process.cwd(), 'public', 'showcase');
-  try {
-    const allowed = new Set(['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.webm']);
-    return fs.readdirSync(dir, { withFileTypes: true })
-      .filter((entry) => entry.isFile() && allowed.has(path.extname(entry.name).toLowerCase()))
-      .sort((a, b) => a.name.localeCompare(b.name, 'ru'))
-      .map((entry) => ({
-        src: '/showcase/' + encodeURIComponent(entry.name).replace(/%2F/g, '/'),
-        title: path.basename(entry.name, path.extname(entry.name)).replace(/[_-]+/g, ' ').trim()
-      }));
-  } catch (_) {
-    return [];
+  const roots = [
+    { dir: path.join(process.cwd(), 'public', 'showcase'), base: '/showcase/' },
+    { dir: path.join(process.cwd(), 'public', 'public', 'showcase'), base: '/public/showcase/' }
+  ];
+  const allowed = new Set(['.mp3', '.m4a', '.wav', '.ogg', '.aac', '.webm']);
+  const tracks = [];
+
+  for (const root of roots) {
+    try {
+      fs.readdirSync(root.dir, { withFileTypes: true })
+        .filter((entry) => entry.isFile() && allowed.has(path.extname(entry.name).toLowerCase()))
+        .forEach((entry) => {
+          tracks.push({
+            src: root.base + encodeURIComponent(entry.name).replace(/%2F/g, '/'),
+            title: path.basename(entry.name, path.extname(entry.name)).replace(/[_-]+/g, ' ').trim()
+          });
+        });
+    } catch (_) {}
   }
+
+  return tracks.sort((a, b) => a.title.localeCompare(b.title, 'ru'));
 }
 
 const showcaseTracks = getShowcaseTracks();
