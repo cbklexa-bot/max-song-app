@@ -12,8 +12,8 @@ const PAYMENT_URL = 'https://auth.robokassa.ru/Merchant/Index.aspx';
 
 const PLANS = Object.freeze({
   200: { amount: 200, bonus: 0, credited: 200 },
-  400: { amount: 400, bonus: 40, credited: 440 },
-  800: { amount: 800, bonus: 160, credited: 960 }
+  400: { amount: 400, bonus: 20, credited: 420 },
+  700: { amount: 700, bonus: 70, credited: 770 }
 });
 
 const dbHeaders = {
@@ -95,7 +95,7 @@ function buildPaymentUrl(amount, invoiceId, email) {
 }
 
 function renderReturnPage({ ok, message }) {
-  const safeMessage = String(message || '').replace(/[&<>"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[ch]));
+  const safeMessage = String(message || '').replace(/[&<>\"']/g, (ch) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;' }[ch]));
   return `<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Результат оплаты</title><style>body{font-family:Arial,sans-serif;text-align:center;padding:40px 18px;background:#fff;color:#222}.box{max-width:420px;margin:0 auto}.ok{color:#0b8f64}.muted{color:#777;line-height:1.5}</style></head><body><div class="box"><h2 class="${ok ? 'ok' : ''}">${ok ? 'Оплата подтверждена' : 'Возврат из платёжной системы'}</h2><p class="muted">${safeMessage}</p><p class="muted">Вернитесь в MAX. Баланс обновится автоматически.</p></div></body></html>`;
 }
 
@@ -137,7 +137,7 @@ function install(app) {
       const user = validateMax(req.headers['x-max-init-data'] || '');
       const plan = PLANS[Number(req.body?.amount)];
       const email = String(req.body?.email || '').trim();
-      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 200, 400 или 800 ₽' });
+      if (!plan) return res.status(400).json({ ok:false, error:'Можно пополнить только на 200, 400 или 700 ₽' });
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ ok:false, error:'Укажите корректный e-mail' });
       await dbGet('users', { select:'max_id', limit:1 });
       const invoiceId = String(Date.now()) + String(Math.floor(Math.random() * 100));
@@ -226,4 +226,4 @@ express.application.listen = function (...args) {
   return listen.apply(this, args);
 };
 
-console.log('[ROBOKASSA PAYMENT] module loaded');
+console.log('[ROBOKASSA PAYMENT] module loaded: plans 200/400/700');
