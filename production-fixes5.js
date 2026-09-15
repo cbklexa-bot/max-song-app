@@ -80,6 +80,7 @@ function installInteractions(){
   if(document.documentElement.dataset.pf5==='1')return;
   document.documentElement.dataset.pf5='1';
   document.addEventListener('click',function(event){
+    if(window.__PF5_NATIVE_CLICK__){window.__PF5_NATIVE_CLICK__=false;return;}
     const song=event.target.closest?.('#ai-home-song');
     if(song){
       event.preventDefault();event.stopImmediatePropagation();
@@ -95,17 +96,8 @@ function installInteractions(){
     const choice=event.target.closest?.('.app .choice');
     if(choice){
       event.preventDefault();event.stopImmediatePropagation();
-      if(choice.dataset.genre){
-        document.querySelectorAll('.app [data-genre]').forEach(el=>el.classList.remove('selected'));
-        choice.classList.add('selected');
-      }
-      if(choice.dataset.vocal){
-        document.querySelectorAll('.app [data-vocal]').forEach(el=>el.classList.remove('selected'));
-        choice.classList.add('selected');
-      }
-      const clone=choice.cloneNode(true);
-      clone.dataset.pf5Synthetic='1';
-      choice.replaceWith(clone);
+      window.__PF5_NATIVE_CLICK__=true;
+      try{choice.click()}catch(_){window.__PF5_NATIVE_CLICK__=false}
       return;
     }
   },true);
