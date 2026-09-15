@@ -8,7 +8,7 @@ const visualCss = `
 #ai-gifts-home{padding-top:4px !important}
 #ai-gifts-home .ai-home-top{display:none !important}
 
-/* Main music card: keep portrait layout and add a vivid cyan-blue neon halo. */
+/* Main music card: portrait layout with a vivid cyan-blue neon halo. */
 #ai-gifts-home .home-card{min-height:0 !important;height:auto !important;border-radius:26px !important;overflow:hidden !important;border-color:rgba(126,221,255,.30) !important;box-shadow:0 22px 58px rgba(0,0,0,.38),0 0 28px rgba(44,190,255,.16),0 0 62px rgba(41,156,255,.11) !important;transition:transform .22s ease,box-shadow .22s ease,border-color .22s ease !important}
 #ai-gifts-home .home-card:hover{border-color:rgba(133,230,255,.58) !important;box-shadow:0 24px 64px rgba(0,0,0,.40),0 0 34px rgba(44,205,255,.24),0 0 84px rgba(41,156,255,.16) !important}
 #ai-gifts-home .home-art{height:auto !important;aspect-ratio:16/17 !important;min-height:0 !important;background-size:cover !important;background-position:center !important}
@@ -19,20 +19,21 @@ const visualCss = `
 #ai-gifts-home .home-card-cta span:first-child{font-size:16px !important;line-height:1 !important;font-weight:950 !important;letter-spacing:-.02em !important;color:#fff !important;text-shadow:0 2px 16px rgba(0,0,0,.72),0 0 18px rgba(255,255,255,.14),0 0 30px rgba(65,206,255,.28) !important}
 #ai-gifts-home .home-arrow{width:auto !important;height:auto !important;min-width:0 !important;flex:0 0 auto !important;padding:0 !important;border:0 !important;border-radius:0 !important;background:none !important;color:#fff !important;font-size:25px !important;line-height:.8 !important;box-shadow:none !important;text-shadow:0 2px 16px rgba(0,0,0,.72),0 0 18px rgba(255,255,255,.16),0 0 26px rgba(65,206,255,.32) !important}
 
-/* Make the showcase feel like luminous 3D glass planets with a magical core. */
+/* Glass showcase spheres. The image slot is kept clean; the user can replace the visuals with their own assets. */
 #ai-gifts-home .showcase-track{align-items:center}
 #ai-gifts-home .showcase-sphere{position:relative;isolation:isolate;overflow:visible;background:radial-gradient(circle at 28% 20%,rgba(255,255,255,.28),rgba(175,117,255,.18) 25%,rgba(91,53,145,.13) 53%,rgba(20,11,39,.06) 100%) !important;border-color:rgba(193,224,255,.23) !important;box-shadow:inset 0 2px 0 rgba(255,255,255,.16),inset 0 -22px 42px rgba(86,56,158,.16),inset 10px 8px 28px rgba(255,255,255,.05),0 16px 38px rgba(0,0,0,.30),0 0 36px rgba(113,101,255,.13) !important}
-#ai-gifts-home .showcase-sphere:after{content:"";position:absolute;z-index:0;left:50%;top:49%;width:44px;height:44px;transform:translate(-50%,-50%) rotate(45deg);border-radius:10px;background:radial-gradient(circle at 35% 30%,#fff 0%,#d8fbff 20%,#72ddff 42%,#a76cff 72%,rgba(167,108,255,0) 100%);box-shadow:0 0 16px rgba(94,219,255,.66),0 0 34px rgba(166,102,255,.46);opacity:.72;filter:blur(.1px);pointer-events:none}
 #ai-gifts-home .showcase-sphere:before{inset:8px !important;border-color:rgba(255,255,255,.09) !important;box-shadow:inset 0 0 22px rgba(127,220,255,.08),0 0 26px rgba(139,96,255,.06)}
 #ai-gifts-home .showcase-sphere-title{z-index:2;text-shadow:0 1px 14px rgba(255,255,255,.16),0 0 14px rgba(111,190,255,.12)}
 #ai-gifts-home .showcase-play{z-index:3;background:rgba(255,255,255,.10) !important;border-color:rgba(255,255,255,.23) !important;box-shadow:0 0 20px rgba(104,183,255,.15),inset 0 0 16px rgba(255,255,255,.04) !important;transition:transform .18s ease,background .18s ease,box-shadow .18s ease !important}
 #ai-gifts-home .showcase-play:active{transform:scale(.93) !important}
 #ai-gifts-home .showcase-sphere.is-playing{transform:scale(1.11);border-color:rgba(140,236,255,.72) !important;background:radial-gradient(circle at 28% 20%,rgba(255,255,255,.34),rgba(111,225,255,.24) 25%,rgba(117,76,184,.20) 55%,rgba(255,255,255,.05) 100%) !important;box-shadow:inset 0 2px 0 rgba(255,255,255,.22),inset 0 -22px 44px rgba(67,157,197,.18),0 20px 46px rgba(0,0,0,.35),0 0 42px rgba(65,220,255,.32),0 0 84px rgba(149,95,255,.22) !important}
-#ai-gifts-home .showcase-sphere.is-playing:after{width:51px;height:51px;opacity:.92;box-shadow:0 0 20px rgba(99,227,255,.80),0 0 44px rgba(187,113,255,.62)}
 #ai-gifts-home .showcase-sphere.is-playing .showcase-play{background:rgba(255,255,255,.18) !important;border-color:rgba(255,255,255,.34) !important;box-shadow:0 0 26px rgba(103,225,255,.34),inset 0 0 18px rgba(255,255,255,.05) !important}
 
+/* Remove the small metadata row under the play control. */
+#ai-gifts-home .showcase-time{display:none !important}
+
 /* Full-screen creation intro shown before the existing song form. */
-#ai-song-intro{position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 42%,rgba(93,205,255,.18),transparent 24%),radial-gradient(circle at 28% 28%,rgba(154,83,255,.18),transparent 30%),linear-gradient(180deg,#050611 0%,#090518 54%,#04050c 100%);opacity:0;pointer-events:none;transition:opacity .28s ease}
+#ai-song-intro{position:fixed;inset:0;z-index:2147483646;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 42%,rgba(93,205,255,.18),transparent 24%),radial-gradient(circle at 28% 28%,rgba(154,83,255,.18),transparent 30%),linear-gradient(180deg,#050611 0%,#090518 54%,#04050c 100%);opacity:0;pointer-events:none;transition:opacity .18s ease}
 #ai-song-intro.is-visible{opacity:1;pointer-events:auto}
 #ai-song-intro:before,#ai-song-intro:after{content:"";position:absolute;border-radius:50%;pointer-events:none}
 #ai-song-intro:before{width:46vmax;height:46vmax;background:radial-gradient(circle,rgba(77,215,255,.14),rgba(77,215,255,0) 67%);animation:aiIntroPulse 1.9s ease-in-out infinite}
@@ -90,9 +91,13 @@ const visualScript = `
       opening=true;
       intro.classList.add('is-visible');
       window.setTimeout(function(){
-        intro.classList.remove('is-visible');
+        /* Keep the full-screen intro visible while the existing home handler switches to the song form. */
         skipNext=true;
-        window.setTimeout(function(){song.click()},280);
+        song.click();
+        window.setTimeout(function(){
+          intro.classList.remove('is-visible');
+          opening=false;
+        },120);
       },2000);
     },true);
   }
@@ -124,4 +129,4 @@ express.response.sendFile=function patchedSendFile(filePath,...args){
   finally{response.send=originalSend}
 };
 
-console.log('[AI HOME VISUAL] module loaded: neon card, glass spheres, creation intro');
+console.log('[AI HOME VISUAL] module loaded: clean transition, neon card, glass spheres');
