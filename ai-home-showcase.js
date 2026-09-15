@@ -65,7 +65,7 @@ function init(){
  carousel.addEventListener('wheel',()=>hold(1000),{passive:true});
  window.addEventListener('resize',()=>{measure();render()},{passive:true});
  measure();render();
- function frame(now){const dt=Math.min(40,now-last);last=now;if(!drag&&now>=pauseUntil&&!carousel.classList.contains('is-audio-playing')){x-=0.012*dt;wrap();render()}else{visuals()}requestAnimationFrame(frame)}
+ function frame(now){const dt=Math.min(40,now-last);last=now;if(!drag&&now>=pauseUntil&&!carousel.classList.contains('is-audio-playing')){x-=0.0156*dt;wrap();render()}else{visuals()}requestAnimationFrame(frame)}
  requestAnimationFrame(frame);return true;
 }
 function boot(){if(init())return;setTimeout(boot,350)}
@@ -74,4 +74,4 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 </script>`;
 function inject(body){if(typeof body!=='string'||!body.includes('<body')||body.includes('ai-home-showcase-style'))return body;const i=body.toLowerCase().lastIndexOf('</body>');if(i<0)return body;return body.slice(0,i)+css+script+body.slice(i)}
 express.response.sendFile=function(filePath,...args){const isIndex=typeof filePath==='string'&&/(?:^|[\\/])index\.html$/i.test(filePath);if(!isIndex)return originalSendFile.call(this,filePath,...args);const old=this.send;this.send=body=>old.call(this,inject(body));try{return originalSendFile.call(this,filePath,...args)}finally{this.send=old}};
-console.log('[AI HOME SHOWCASE] interactive swipe showcase loaded');
+console.log('[AI HOME SHOWCASE] interactive swipe showcase loaded: speed +30%');
