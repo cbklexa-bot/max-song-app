@@ -15,39 +15,71 @@ const imageEnhancement = `
 <script id="ai-showcase-images-script">
 (function(){
   const exts=['.jpg','.jpeg','.png','.webp'];
+
   function loadImage(urls,img,card,art,index){
     if(index>=urls.length)return;
-    img.onload=function(){card.classList.add('has-image');art.style.display='block'};
+    img.onload=function(){
+      card.classList.add('has-image');
+      art.style.display='block';
+    };
     img.onerror=function(){loadImage(urls,img,card,art,index+1)};
     img.src=urls[index];
   }
-  function enhance(){
-    document.querySelectorAll('#music-showcase-track .showcase-sphere').forEach(function(card){
-      if(card.dataset.imageEnhance==='1')return;
-      card.dataset.imageEnhance='1';
-      const audio=card.querySelector('.showcase-audio');
-      if(!audio||!audio.src)return;
-      const src=new URL(audio.src,window.location.href).pathname;
-      const slash=src.lastIndexOf('/');
-      if(slash<0)return;
-      const dir=src.slice(0,slash);
-      const encodedName=src.slice(slash+1);
-      let stem='';
-      try{stem=decodeURIComponent(encodedName).replace(/\.[^.]+$/,'')}catch(e){stem=encodedName.replace(/\.[^.]+$/,'')}
-      const encStem=encodeURIComponent(stem);
-      const urls=exts.map(function(ext){return dir+'/images/'+encStem+ext});
-      const art=document.createElement('div');
-      art.className='showcase-sphere-art';
-      const img=document.createElement('img');
-      img.alt='';
-      img.loading='lazy';
-      art.appendChild(img);
-      card.insertBefore(art,card.firstChild);
-      loadImage(urls,img,card,art,0);
-    });
+
+  function enhanceCard(card){
+    if(!card)return;
+    const audio=card.querySelector('.showcase-audio');
+    if(!audio||!audio.src)return;
+
+    let src;
+    try{src=new URL(audio.src,window.location.href).pathname}catch(e){return}
+    const slash=src.lastIndexOf('/');
+    if(slash<0)return;
+
+    const dir=src.slice(0,slash);
+    const encodedName=src.slice(slash+1);
+    let stem='';
+    try{stem=decodeURIComponent(encodedName).replace(/\.[^.]+$/,'')}catch(e){stem=encodedName.replace(/\.[^.]+$/,'')}
+    const encStem=encodeURIComponent(stem);
+    const urls=exts.map(function(ext){return dir+'/images/'+encStem+ext});
+
+    let art=card.querySelector('.showcase-sphere-art');
+    let img=art&&art.querySelector('img');
+    if(art&&img){
+      if(img.src!==new URL(urls[0],window.location.href).href && !card.classList.contains('has-image'))loadImage(urls,img,card,art,0);
+      return;
+    }
+
+    art=document.createElement('div');
+    art.className='showcase-sphere-art';
+    img=document.createElement('img');
+    img.alt='';
+    img.loading='lazy';
+    art.appendChild(img);
+    card.insertBefore(art,card.firstChild);
+    loadImage(urls,img,card,art,0);
   }
-  setTimeout(enhance,0);
-  setTimeout(enhance,350);
+
+  function enhance(){
+    document.querySelectorAll('#music-showcase-track .showcase-sphere').forEach(enhanceCard);
+  }
+
+  function install(){
+    enhance();
+    const track=document.getElementById('music-showcase-track');
+    if(track){
+      const observer=new MutationObserver(function(){enhance()});
+      observer.observe(track,{childList:true,subtree:true});
+    }
+    window.setTimeout(enhance,100);
+    window.setTimeout(enhance,350);
+    window.setTimeout(enhance,800);
+    window.setTimeout(enhance,1600);
+    window.setTimeout(enhance,3000);
+  }
+
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});
+  else install();
 })();
 </script>
 `;
@@ -74,4 +106,4 @@ express.response.sendFile=function patchedShowcaseImageSendFile(filePath,...args
   finally{response.send=originalSend}
 };
 
-console.log('[SHOWCASE IMAGES] module loaded');
+console.log('[SHOWCASE IMAGES] module loaded: resilient dynamic image enhancer');
