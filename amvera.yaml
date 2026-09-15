@@ -9,3 +9,4 @@ meta:
 run:
   command: node -r ./max-bootstrap.js -r ./index-fallback.js -r ./robokassa-env-normalize.js -r ./robokassa-sbp-op.js -r ./robokassa-ui-direct.js -r ./production-fixes2.js -r ./ai-home-ui.js -r ./ai-home-account.js -r ./ai-home-audio.js -r ./ai-home-visual.js -r ./ai-home-showcase.js -r ./ai-home-showcase-hotfix.js -r ./offer-hotfix.js -r ./ai-song-visual.js -r ./ai-song-modern-ui.js server.js
   persistenceMount: /data
+  containerPort: 10000
