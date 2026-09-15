@@ -4,14 +4,13 @@ const originalSendFile = express.response.sendFile;
 
 const visualCss = `
 <style id="ai-home-visual-style">
-/* Music home: keep the account at the top and show the main neon title. */
-#ai-gifts-home{padding-top:10px !important}
-#ai-gifts-home .ai-home-top{display:block !important;margin:8px 0 17px !important;text-align:center !important}
-#ai-gifts-home .ai-home-top .home-title{display:block !important;color:transparent !important;background:linear-gradient(100deg,#f4d7ff 0%,#be8cff 42%,#ff68cb 72%,#ffd0ef 100%) !important;-webkit-background-clip:text !important;background-clip:text !important;text-shadow:0 0 8px rgba(221,157,255,.65),0 0 22px rgba(186,101,255,.48),0 0 42px rgba(255,74,193,.28) !important;filter:drop-shadow(0 0 14px rgba(188,103,255,.28)) !important}
+/* Keep the account at the top. The large duplicate title is intentionally hidden. */
+#ai-gifts-home{padding-top:4px !important}
+#ai-gifts-home .ai-home-top{display:none !important}
 
-/* Main music card: portrait image fills the entire card. */
-#ai-gifts-home .home-card{min-height:0 !important;height:auto !important;border-radius:28px !important;overflow:hidden !important}
-#ai-gifts-home .home-art{height:auto !important;aspect-ratio:4/5 !important;min-height:0 !important;background-size:cover !important;background-position:center !important}
+/* Main music card: keep portrait layout, but reduce its height by about 15%. */
+#ai-gifts-home .home-card{min-height:0 !important;height:auto !important;border-radius:26px !important;overflow:hidden !important}
+#ai-gifts-home .home-art{height:auto !important;aspect-ratio:16/17 !important;min-height:0 !important;background-size:cover !important;background-position:center !important}
 
 /* CTA is printed directly over the image, with no separate panel/icon container. */
 #ai-gifts-home .home-card-cta{left:18px !important;right:auto !important;bottom:18px !important;padding:0 !important;margin:0 !important;display:flex !important;align-items:center !important;justify-content:flex-start !important;gap:9px !important;background:none !important;border:0 !important;border-radius:0 !important;backdrop-filter:none !important;-webkit-backdrop-filter:none !important;box-shadow:none !important}
@@ -20,8 +19,6 @@ const visualCss = `
 
 @media(max-width:390px){
   #ai-gifts-home{padding-left:10px !important;padding-right:10px !important}
-  #ai-gifts-home .ai-home-top{margin-bottom:14px !important}
-  #ai-gifts-home .ai-home-top .home-title{font-size:32px !important}
   #ai-gifts-home .home-card-cta{left:14px !important;bottom:14px !important}
   #ai-gifts-home .home-card-cta span:first-child{font-size:15px !important}
   #ai-gifts-home .home-arrow{font-size:23px !important}
@@ -51,4 +48,4 @@ express.response.sendFile=function patchedSendFile(filePath,...args){
   finally{response.send=originalSend}
 };
 
-console.log('[AI HOME VISUAL] module loaded');
+console.log('[AI HOME VISUAL] module loaded: title hidden, portrait card reduced');
