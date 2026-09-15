@@ -42,6 +42,11 @@ function installRoutePatch() {
         let responseBody = null;
         const originalJson = res.json;
         res.json = function pricingFixedJson(body) {
+          const amount = Number(req.body?.amount);
+          const plan = PLANS[amount];
+          if (plan && body && body.ok) {
+            body = { ...body, bonus: plan.bonus, creditedAmount: plan.credited };
+          }
           responseBody = body;
           return originalJson.call(this, body);
         };
