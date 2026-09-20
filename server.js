@@ -35,7 +35,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const PIAPI_KEY = process.env.PIAPI_KEY || '';
 const SONG_PRICE = 200;
-const AUDIO_PROXY_HOSTS = new Set(['s.bmnmny.cn']);
+const AUDIO_PROXY_HOSTS = new Set(['s.bmnmny.cn', 'cn.m4a.bmnmny.cn', 'cn2.m4a.bmnmny.cn']);
 
 const dbHeaders = {
   apikey: SUPABASE_KEY,
@@ -275,7 +275,9 @@ function extractPiApiSongs(taskResponse) {
 
 function getAllowedAudioUrl(rawUrl) {
   const url = new URL(String(rawUrl || '').trim());
-  if (url.protocol !== 'https:') throw new Error('Only HTTPS audio URLs are allowed');
+  if (!['https:', 'http:'].includes(url.protocol)) {
+    throw new Error('Only HTTP(S) audio URLs are allowed');
+  }
   if (!AUDIO_PROXY_HOSTS.has(url.hostname.toLowerCase())) {
     throw new Error('Audio host is not allowed');
   }
