@@ -8,7 +8,7 @@ const originalListen = express.application.listen;
 
 const CACHE_ROOT = fs.existsSync('/data') ? '/data' : '/tmp';
 const CACHE_DIR = path.join(CACHE_ROOT, 'max-song-audio-cache');
-const AUDIO_HOST = 's.bmnmny.cn';
+const AUDIO_HOSTS = new Set(['s.bmnmny.cn', 'cn.m4a.bmnmny.cn', 'cn2.m4a.bmnmny.cn']);
 const inflight = new Map();
 const FINAL_ROUTES_INSTALLED = Symbol('maxAudioFinalRoutesInstalled');
 
@@ -22,7 +22,7 @@ console.log('[AUDIO FINAL] loaded; cache:', CACHE_DIR);
 
 function allowedUrl(raw) {
   const url = new URL(String(raw || '').trim());
-  if (url.protocol !== 'https:' || url.hostname.toLowerCase() !== AUDIO_HOST) {
+  if (!['https:', 'http:'].includes(url.protocol) || !AUDIO_HOSTS.has(url.hostname.toLowerCase())) {
     throw new Error('Audio host is not allowed');
   }
   return url.toString();
