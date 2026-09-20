@@ -22,9 +22,17 @@ console.log('[AUDIO FINAL] loaded; cache:', CACHE_DIR);
 
 function allowedUrl(raw) {
   const url = new URL(String(raw || '').trim());
-  if (!['https:', 'http:'].includes(url.protocol) || !AUDIO_HOSTS.has(url.hostname.toLowerCase())) {
+  const host = url.hostname.toLowerCase();
+  if (!['https:', 'http:'].includes(url.protocol) || !AUDIO_HOSTS.has(host)) {
     throw new Error('Audio host is not allowed');
   }
+
+  // PiAPI started returning HTTP URLs on the cn*.m4a hosts.
+  // Prefer HTTPS for the same resource inside MAX.
+  if (url.protocol === 'http:' && host !== 's.bmnmny.cn') {
+    url.protocol = 'https:';
+  }
+
   return url.toString();
 }
 
