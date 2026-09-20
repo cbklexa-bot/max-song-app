@@ -63,7 +63,28 @@
     function audioProxyUrl(url){const value=String(url||'').trim();if(!value)return '';if(value.startsWith('/api/audio?'))return value;return `${API_BASE}/api/audio?url=${encodeURIComponent(value)}`}
     function applyDemoLimit(audio){audio.addEventListener('timeupdate',()=>{if(audio.currentTime>=30){audio.pause();audio.currentTime=30}})}
     async function unlockSong(orderId,variant){if(currentBalance<SONG_PRICE){openTopup();return}if(!confirm('Скачать выбранную полную версию за 200 ₽?'))return;const buttons=document.querySelectorAll(`[data-unlock-order="${orderId}"]`);buttons.forEach(button=>button.disabled=true);try{const data=await apiFetch('/api/unlock-song',{method:'POST',body:JSON.stringify({orderId:Number(orderId),variant:Number(variant)})},30000);if(!data.ok)throw new Error(data.error||'Не удалось купить песню.');setBalance(data.user?.balance??data.balance);downloadSong(data.audioUrl,data.title||'song');await loadOrders();showStatus('🎉 Полная версия разблокирована.');setTimeout(clearStatus,3000)}catch(error){console.error('[UNLOCK]',error);showStatus(error.message||'Ошибка покупки.','error');await loadOrders()}finally{buttons.forEach(button=>button.disabled=false)}}
-    function downloadSongFile(audioUrl) { const url = String(audioUrl || '').trim(); if (!/^https:\/\//i.test(url)) { showStatus('Некорректная ссылка на аудиофайл.', 'error'); return; } const webApp = getMaxWebApp(); if (webApp?.downloadFile) { try { webApp.downloadFile(url, 'song.m4a'); showDownloadStatus(); return; } catch (e) { console.warn('[MAX DOWNLOAD FILE]', e); } } if (webApp?.openLink) { try { webApp.openLink(url); showDownloadStatus(); return; } catch (e) { console.warn('[MAX DOWNLOAD LINK]', e); } } const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer'; document.body.appendChild(a); a.click(); a.remove(); showDownloadStatus(); }
+    function downloadSongFile(audioUrl) {
+      const url = String(audioUrl || '').trim();
+      if (!url) { showStatus('Некорректная ссылка на аудиофайл.', 'error'); return; }
+      const proxyUrl = API_BASE + '/api/download?url=' + encodeURIComponent(url);
+      const webApp = getMaxWebApp();
+      if (webApp?.downloadFile) {
+        try { webApp.downloadFile(proxyUrl, 'song.m4a'); showDownloadStatus(); return; }
+        catch (e) { console.warn('[MAX DOWNLOAD FILE]', e); }
+      }
+      if (webApp?.openLink) {
+        try { webApp.openLink(proxyUrl); showDownloadStatus(); return; }
+        catch (e) { console.warn('[MAX DOWNLOAD LINK]', e); }
+      }
+      const a = document.createElement('a');
+      a.href = proxyUrl;
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      showDownloadStatus();
+    }
     function showDownloadStatus() { const box = document.createElement('div'); box.id='download-status'; box.className='status visible'; box.textContent='📥 Запускаем загрузку файла…'; document.getElementById('orders-list').prepend(box); setTimeout(()=>box.remove(),5000); }
     function stopAllAudio() { document.querySelectorAll('audio').forEach(audio=>{try{audio.pause();audio.currentTime=0}catch(_) {}}); }
     window.addEventListener('pagehide', stopAllAudio);
