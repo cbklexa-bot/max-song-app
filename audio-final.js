@@ -8,7 +8,7 @@ const originalListen = express.application.listen;
 
 const CACHE_ROOT = fs.existsSync('/data') ? '/data' : '/tmp';
 const CACHE_DIR = path.join(CACHE_ROOT, 'max-song-audio-cache');
-const AUDIO_HOSTS = new Set(['s.bmnmny.cn', 'cn.m4a.bmnmny.cn', 'cn2.m4a.bmnmny.cn']);
+const AUDIO_HOSTS = new Set(['s.bmnmny.cn', 'cn.m4a.bmnmny.cn', 'cn2.m4a.bmnmny.cn', 'cn3.m4a.bmnmny.cn']);
 const inflight = new Map();
 const FINAL_ROUTES_INSTALLED = Symbol('maxAudioFinalRoutesInstalled');
 
@@ -27,12 +27,9 @@ function allowedUrl(raw) {
     throw new Error('Audio host is not allowed');
   }
 
-  // PiAPI started returning HTTP URLs on the cn*.m4a hosts.
-  // Prefer HTTPS for the same resource inside MAX.
-  if (url.protocol === 'http:' && host !== 's.bmnmny.cn') {
-    url.protocol = 'https:';
-  }
-
+  // Keep the exact upstream protocol returned by PiAPI.
+  // MAX requires HTTPS only for the outer mini-app/download URL;
+  // Amvera can safely proxy the upstream HTTP audio URL.
   return url.toString();
 }
 
