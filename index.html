@@ -51,7 +51,19 @@
     function getMaxWebApp(){return window.WebApp||null}
     function detectMaxUser(){const webApp=getMaxWebApp();if(!webApp)throw new Error('MAX Bridge не загрузился. Открой Mini App внутри MAX.');webApp.ready?.();maxInitData=String(webApp.initData||'').trim();const user=webApp.initDataUnsafe?.user||null;if(!maxInitData)throw new Error('MAX не передал initData. Запусти приложение через MAX.');if(!user?.id)throw new Error('MAX не передал пользователя.');currentMaxId=String(user.id);currentUserName=user.first_name||user.name||'Пользователь MAX';document.getElementById('user-name').textContent=currentUserName;document.getElementById('avatar').textContent=currentUserName.charAt(0).toUpperCase()}
     async function apiFetch(path,options={},timeoutMs=30000){const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),timeoutMs);try{const headers=new Headers(options.headers||{});headers.set('X-MAX-Init-Data',maxInitData);if(options.body&&!headers.has('Content-Type'))headers.set('Content-Type','application/json');const response=await fetch(`${API_BASE}${path}`,{...options,headers,signal:controller.signal});const text=await response.text();let data={};try{data=text?JSON.parse(text):{}}catch{throw new Error(`Сервер вернул не JSON (${response.status})`)}if(!response.ok)throw new Error(data.error||data.message||`Ошибка HTTP ${response.status}`);return data}catch(error){if(error?.name==='AbortError')throw new Error('Сервер слишком долго отвечает.');throw error}finally{clearTimeout(timeout)}}
-    async function loadUser(){detectMaxUser();const data=await apiFetch('/api/user',{method:'GET'},20000);if(!data.ok)throw new Error(data.error||'Не удалось загрузить пользователя.');setBalance(data.user?.balance||0);await loadOrders();clearStatus()}
+    async function loadUser(){
+      detectMaxUser();
+      try{
+        await apiFetch('/api/robokassa/reconcile',{method:'GET'},30000);
+      }catch(error){
+        console.warn('[ROBOKASSA RECONCILE]',error);
+      }
+      const data=await apiFetch('/api/user',{method:'GET'},20000);
+      if(!data.ok)throw new Error(data.error||'Не удалось загрузить пользователя.');
+      setBalance(data.user?.balance||0);
+      await loadOrders();
+      clearStatus();
+    }
     function openTopup(){document.getElementById('topup-modal').classList.add('visible')}function closeTopup(){document.getElementById('topup-modal').classList.remove('visible')}
     function selectTopup(amount,button){selectedTopupAmount=Number(amount);document.querySelectorAll('.amount').forEach(item=>item.classList.remove('selected'));button?.classList.add('selected');let credit=selectedTopupAmount;if(selectedTopupAmount===400)credit=440;if(selectedTopupAmount===800)credit=960;document.getElementById('credit-value').textContent=`${credit} ₽`}
     async function processTestTopup(){const button=document.getElementById('test-topup');button.disabled=true;try{const data=await apiFetch('/api/topup',{method:'POST',body:JSON.stringify({amount:selectedTopupAmount})},20000);if(!data.ok)throw new Error(data.error||'Ошибка пополнения.');setBalance(data.balance);closeTopup();showStatus(`Тестовый баланс пополнен на ${data.added} ₽.`);setTimeout(clearStatus,3500)}catch(error){console.error('[TOPUP]',error);showStatus(error.message||'Ошибка пополнения.','error')}finally{button.disabled=false}}
