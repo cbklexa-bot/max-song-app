@@ -35,7 +35,7 @@ const SUPABASE_URL = process.env.SUPABASE_URL || '';
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const PIAPI_KEY = process.env.PIAPI_KEY || '';
 const SONG_PRICE = 200;
-const AUDIO_PROXY_HOSTS = new Set(['s.bmnmny.cn', 'cn.m4a.bmnmny.cn', 'cn2.m4a.bmnmny.cn']);
+const AUDIO_PROXY_HOSTS = new Set(['s.bmnmny.cn', 'cn.m4a.bmnmny.cn', 'cn2.m4a.bmnmny.cn', 'cn3.m4a.bmnmny.cn']);
 
 const dbHeaders = {
   apikey: SUPABASE_KEY,
