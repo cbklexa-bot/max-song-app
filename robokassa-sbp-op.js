@@ -54,6 +54,13 @@ async function dbGet(table, query) {
 async function dbPost(table, body) {
   return (await axios.post(SUPA + '/rest/v1/' + table, body, { headers: dbHeaders, timeout: 15000 })).data;
 }
+async function dbPatch(table, query, body) {
+  return (await axios.patch(
+    SUPA + '/rest/v1/' + table,
+    body,
+    { headers: dbHeaders, params: query, timeout: 15000 }
+  )).data;
+}
 async function dbRpc(functionName, body) {
   return (await axios.post(SUPA + '/rest/v1/rpc/' + functionName, body, { headers: dbHeaders, timeout: 15000 })).data;
 }
@@ -127,6 +134,119 @@ async function processReturn(req) {
   return { ok:true, message:'Платёж принят. Окончательное подтверждение и зачисление выполняются автоматически.' };
 }
 
+let reconciliationRunning = false;
+
+async function reconcilePayment(payment) {
+  const invoiceId = String(payment?.idempotence_key || '')
+    .replace(/^robokassa:/, '')
+    .trim();
+
+  if (!/^\d{6,30}$/.test(invoiceId)) {
+    return { invoiceId, status:'invalid_invoice' };
+  }
+
+  try {
+    const state = await getOperationState(invoiceId);
+
+    if (state.code !== 0) {
+      return { invoiceId, status:'provider_error', code:state.code };
+    }
+
+    const expectedAmount = Number(payment.amount);
+    if (!Number.isFinite(state.outSum) || state.outSum !== expectedAmount) {
+      console.warn('[ROBOKASSA RECONCILE] amount mismatch', {
+        invoiceId,
+        expectedAmount,
+        providerAmount:state.outSum
+      });
+      return { invoiceId, status:'amount_mismatch', providerAmount:state.outSum };
+    }
+
+    if (state.stateCode === 100) {
+      const processed = await dbRpc('process_robokassa_payment', {
+        p_idempotence_key:'robokassa:' + invoiceId
+      });
+
+      console.log('[ROBOKASSA RECONCILE] credited', {
+        invoiceId,
+        paymentId:payment.id,
+        creditedAmount:payment.credited_amount,
+        result:processed
+      });
+
+      return { invoiceId, status:'succeeded', processed };
+    }
+
+    if (state.stateCode === 60) {
+      await dbPatch(
+        'payments',
+        { id:'eq.' + String(payment.id) },
+        { status:'canceled', updated_at:new Date().toISOString() }
+      );
+      return { invoiceId, status:'canceled' };
+    }
+
+    return {
+      invoiceId,
+      status:'pending',
+      stateCode:state.stateCode
+    };
+  } catch (error) {
+    console.error('[ROBOKASSA RECONCILE] failed', {
+      paymentId:payment?.id,
+      invoiceId,
+      error:error.response?.data || error.message
+    });
+    return { invoiceId, status:'error' };
+  }
+}
+
+async function reconcilePendingPayments(userId, limit = 20) {
+  if (!LOGIN || !PASS2 || !SUPA || !SUPAKEY) return [];
+
+  const payments = await dbGet('payments', {
+    user_id:'eq.' + String(userId),
+    purpose:'eq.balance_topup',
+    status:'eq.pending',
+    idempotence_key:'like.robokassa:*',
+    select:'*',
+    order:'created_at.desc',
+    limit
+  });
+
+  const results = [];
+  for (let i = 0; i < payments.length; i += 4) {
+    const batch = payments.slice(i, i + 4);
+    results.push(...await Promise.all(batch.map(reconcilePayment)));
+  }
+  return results;
+}
+
+async function reconcileAllPendingPayments(limit = 20) {
+  if (reconciliationRunning || !LOGIN || !PASS2 || !SUPA || !SUPAKEY) return;
+  reconciliationRunning = true;
+
+  try {
+    const payments = await dbGet('payments', {
+      purpose:'eq.balance_topup',
+      status:'eq.pending',
+      idempotence_key:'like.robokassa:*',
+      select:'*',
+      order:'created_at.desc',
+      limit
+    });
+
+    for (let i = 0; i < payments.length; i += 4) {
+      const batch = payments.slice(i, i + 4);
+      await Promise.all(batch.map(reconcilePayment));
+    }
+  } catch (error) {
+    console.error('[ROBOKASSA RECONCILE ALL]', error.response?.data || error.message);
+  } finally {
+    reconciliationRunning = false;
+  }
+}
+
 function install(app) {
   if (app.__robokassaPaymentInstalled) return;
   app.__robokassaPaymentInstalled = true;
@@ -167,9 +287,18 @@ function install(app) {
   });
 
   async function processResult(req, res) {
-    const outSum = String(req.body?.OutSum || '').trim();
-    const invoiceId = String(req.body?.InvId || req.body?.InvoiceID || '').trim();
-    const signatureValue = String(req.body?.SignatureValue || '').trim();
+    const source = req.method === 'POST' ? (req.body || {}) : (req.query || {});
+    const outSum = String(source.OutSum || source.out_sum || '').trim();
+    const invoiceId = String(source.InvId || source.InvoiceID || source.invoiceId || '').trim();
+    const signatureValue = String(source.SignatureValue || source.signatureValue || '').trim();
+
+    console.log('[ROBOKASSA RESULT] incoming', {
+      method:req.method,
+      invoiceId,
+      outSum,
+      hasSignature:Boolean(signatureValue)
+    });
+
     try {
       if (!LOGIN || !PASS2 || !SUPA || !SUPAKEY) return res.status(503).send('Service unavailable');
       if (!outSum || !invoiceId || !signatureValue) return res.status(400).send('Invalid notification');
@@ -190,7 +319,9 @@ function install(app) {
   }
 
   app.post('/api/robokassa/result', express.urlencoded({ extended:false, limit:'50kb' }), processResult);
+  app.get('/api/robokassa/result', processResult);
   app.post('/api/robokassa/result-sbp', express.urlencoded({ extended:false, limit:'50kb' }), processResult);
+  app.get('/api/robokassa/result-sbp', processResult);
 
   app.get('/api/robokassa/status', async (req, res) => {
     try {
@@ -219,9 +350,36 @@ function install(app) {
   });
 }
 
+  app.get('/api/robokassa/reconcile', async (req, res) => {
+    try {
+      if (!LOGIN || !PASS2 || !SUPA || !SUPAKEY || !MAXTOKEN) {
+        return res.status(503).json({ ok:false, error:'Payment service is not configured' });
+      }
+
+      const user = validateMax(req.headers['x-max-init-data'] || '');
+      const results = await reconcilePendingPayments(user.id, 20);
+      const succeeded = results.filter((item) => item.status === 'succeeded').length;
+
+      return res.json({
+        ok:true,
+        reconciled:results.length,
+        succeeded
+      });
+    } catch (error) {
+      console.error('[GET /api/robokassa/reconcile]', error.response?.data || error.message);
+      return res.status(500).json({ ok:false, error:'Unable to reconcile payments' });
+    }
+  });
+
 const listen = express.application.listen;
 express.application.listen = function (...args) {
-  try { install(this); } catch (error) { console.error('[ROBOKASSA PAYMENT INSTALL]', error.message); }
+  try {
+    install(this);
+    setTimeout(() => reconcileAllPendingPayments(20), 5000);
+    setInterval(() => reconcileAllPendingPayments(20), 60000);
+  } catch (error) {
+    console.error('[ROBOKASSA PAYMENT INSTALL]', error.message);
+  }
   return listen.apply(this, args);
 };
 
