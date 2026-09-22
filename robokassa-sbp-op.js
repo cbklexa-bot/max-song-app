@@ -348,7 +348,6 @@ function install(app) {
       return res.status(500).json({ ok:false, error:'Unable to verify payment status' });
     }
   });
-}
 
   app.get('/api/robokassa/reconcile', async (req, res) => {
     try {
@@ -370,6 +369,7 @@ function install(app) {
       return res.status(500).json({ ok:false, error:'Unable to reconcile payments' });
     }
   });
+}
 
 const listen = express.application.listen;
 express.application.listen = function (...args) {
