@@ -82,13 +82,19 @@
       let proxyUrl;
       try {
         const parsedUrl = new URL(url, window.location.origin);
+        const isDirectStorageSignedUrl =
+          parsedUrl.pathname.includes('/storage/v1/object/sign/') &&
+          parsedUrl.searchParams.has('token');
+
         if (
-          parsedUrl.pathname === '/api/audio' &&
-          parsedUrl.searchParams.has('orderId') &&
-          parsedUrl.searchParams.has('sig')
+          (
+            parsedUrl.pathname === '/api/audio' &&
+            parsedUrl.searchParams.has('orderId') &&
+            parsedUrl.searchParams.has('sig')
+          ) ||
+          isDirectStorageSignedUrl
         ) {
-          // Новые подписанные ссылки /api/audio?orderId=...&download=1
-          // нельзя оборачивать в старый /api/download endpoint.
+          // Новые защищённые ссылки нельзя оборачивать в legacy /api/download.
           proxyUrl = parsedUrl.toString();
         } else {
           // Старые внешние PiAPI-ссылки оставляем через legacy proxy.
