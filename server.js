@@ -185,6 +185,16 @@ function getStorageObjectUrl(storagePath) {
   );
 }
 
+function getStorageUploadUrl(storagePath) {
+  return (
+    SUPABASE_URL +
+    '/storage/v1/object/' +
+    AUDIO_STORAGE_BUCKET +
+    '/' +
+    encodeStoragePath(storagePath)
+  );
+}
+
 function getAudioExtension(sourceUrl, contentType) {
   const normalizedType = String(contentType || '').toLowerCase().split(';')[0];
 
@@ -239,21 +249,32 @@ async function saveExternalAudioToStorage(orderId, variant, sourceUrl, timeoutMs
         ? 'audio/mpeg'
         : 'audio/mp4';
 
-  await axios.post(
-    getStorageObjectUrl(storagePath),
-    sourceResponse.data,
-    {
-      headers: {
-        apikey: SUPABASE_KEY,
-        Authorization: 'Bearer ' + SUPABASE_KEY,
-        'Content-Type': uploadContentType,
-        'x-upsert': 'true'
-      },
-      timeout: 120000,
-      maxContentLength: 50 * 1024 * 1024,
-      maxBodyLength: 50 * 1024 * 1024
-    }
-  );
+  try {
+    await axios.post(
+      getStorageUploadUrl(storagePath),
+      sourceResponse.data,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: 'Bearer ' + SUPABASE_KEY,
+          'Content-Type': uploadContentType,
+          'x-upsert': 'true'
+        },
+        timeout: 120000,
+        maxContentLength: 50 * 1024 * 1024,
+        maxBodyLength: 50 * 1024 * 1024
+      }
+    );
+  } catch (uploadError) {
+    console.error(
+      '[SONG STORAGE UPLOAD]',
+      'order=' + String(orderId),
+      'variant=' + String(variant),
+      'status=' + String(uploadError.response?.status || ''),
+      uploadError.response?.data || uploadError.message
+    );
+    throw uploadError;
+  }
 
   console.log(
     '[SONG STORAGE] saved order=' +
