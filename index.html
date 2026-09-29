@@ -74,21 +74,30 @@
     async function loadOrders(){try{const data=await apiFetch('/api/orders',{method:'GET'},30000);if(!data.ok)throw new Error(data.error||'Не удалось получить заказы.');currentOrders=Array.isArray(data.orders)?data.orders.filter(order=>order.status!=='failed'):[];renderOrders(currentOrders);const processing=currentOrders.some(order=>order.status==='processing');if(processing){startPhraseAnimation();schedulePoll()}else stopPhraseAnimation();updateGenerateAvailability()}catch(error){console.error('[ORDERS]',error)}}
     function audioProxyUrl(url){const value=String(url||'').trim();if(!value)return '';if(value.startsWith('/api/audio?'))return value;return `${API_BASE}/api/audio?url=${encodeURIComponent(value)}`}
     function applyDemoLimit(audio){audio.addEventListener('timeupdate',()=>{if(audio.currentTime>=30){audio.pause();audio.currentTime=30}})}
-    async function unlockSong(orderId,variant){if(currentBalance<SONG_PRICE){openTopup();return}if(!confirm('Скачать выбранную полную версию за 200 ₽?'))return;const buttons=document.querySelectorAll(`[data-unlock-order="${orderId}"]`);buttons.forEach(button=>button.disabled=true);try{const data=await apiFetch('/api/unlock-song',{method:'POST',body:JSON.stringify({orderId:Number(orderId),variant:Number(variant)})},30000);if(!data.ok)throw new Error(data.error||'Не удалось купить песню.');setBalance(data.user?.balance??data.balance);downloadSongFile(data.audioUrl,data.title||'song');await loadOrders();showStatus('🎉 Полная версия разблокирована.');setTimeout(clearStatus,3000)}catch(error){console.error('[UNLOCK]',error);showStatus(error.message||'Ошибка покупки.','error');await loadOrders()}finally{buttons.forEach(button=>button.disabled=false)}}
+    async function unlockSong(orderId,variant){if(currentBalance<SONG_PRICE){openTopup();return}if(!confirm('Скачать выбранную полную версию за 200 ₽?'))return;const buttons=document.querySelectorAll(`[data-unlock-order="${orderId}"]`);buttons.forEach(button=>button.disabled=true);try{const data=await apiFetch('/api/unlock-song',{method:'POST',body:JSON.stringify({orderId:Number(orderId),variant:Number(variant)})},30000);if(!data.ok)throw new Error(data.error||'Не удалось купить песню.');setBalance(data.user?.balance??data.balance);downloadSongFile(data.audioUrl,data.title||'song');await loadOrders();showDownloadStatus((data.title||'song').replace(/[\\/:*?"<>|]/g,'_').slice(0,80)+'.m4a')}catch(error){console.error('[UNLOCK]',error);showStatus(error.message||'Ошибка покупки.','error');await loadOrders()}finally{buttons.forEach(button=>button.disabled=false)}}
     function downloadSongFile(audioUrl, songTitle) {
       const url = String(audioUrl || '').trim();
-      if (!url) { showStatus('Некорректная ссылка на аудиофайл.', 'error'); return; }
-      const safeName = (songTitle || 'song').replace(/[\\/:*?"<>|]/g, '_').slice(0, 80) + '.m4a';
+      if (!url) {
+        showStatus('Некорректная ссылка на аудиофайл.', 'error');
+        return;
+      }
+
+      const safeName =
+        (songTitle || 'song')
+          .replace(/[\\/:*?"<>|]/g, '_')
+          .slice(0, 80) +
+        '.m4a';
+
       let proxyUrl;
       try {
         const parsedUrl = new URL(url, window.location.origin);
+
         if (
           parsedUrl.pathname === '/api/audio' &&
           parsedUrl.searchParams.has('orderId') &&
           parsedUrl.searchParams.has('sig')
         ) {
-          // Новые подписанные ссылки /api/audio?orderId=...&download=1
-          // нельзя оборачивать в старый /api/download endpoint.
+          // Новая подписанная ссылка /api/audio?orderId=...&download=1.
           proxyUrl = parsedUrl.toString();
         } else {
           // Старые внешние PiAPI-ссылки оставляем через legacy proxy.
@@ -106,18 +115,73 @@
         showStatus('Некорректная ссылка на аудиофайл.', 'error');
         return;
       }
+
       const webApp = getMaxWebApp();
+
       if (webApp?.downloadFile) {
-        try { webApp.downloadFile(proxyUrl, safeName); showDownloadStatus(); return; }
-        catch (e) { console.warn('[MAX DOWNLOAD FILE]', e); }
+        try {
+          const result = webApp.downloadFile(proxyUrl, safeName);
+          showDownloadStatus(safeName);
+
+          // MAX может вернуть Promise с ошибкой/результатом.
+          // Если Promise не возвращается, инструкция всё равно остаётся
+          // в приложении и объясняет, где искать файл.
+          if (result && typeof result.then === 'function') {
+            Promise.resolve(result)
+              .then(() => showDownloadCompleted(safeName))
+              .catch((error) => {
+                console.warn('[MAX DOWNLOAD FILE]', error);
+                showDownloadFailed(safeName);
+              });
+          }
+          return;
+        } catch (e) {
+          console.warn('[MAX DOWNLOAD FILE]', e);
+        }
       }
+
       if (webApp?.openLink) {
-        try { webApp.openLink(proxyUrl); showDownloadStatus(); return; }
-        catch (e) { console.warn('[MAX DOWNLOAD LINK]', e); }
+        try {
+          webApp.openLink(proxyUrl);
+          showDownloadStatus(safeName);
+          return;
+        } catch (e) {
+          console.warn('[MAX DOWNLOAD LINK]', e);
+        }
       }
+
       showStatus('Не удалось запустить скачивание в MAX.', 'error');
     }
-    function showDownloadStatus() { const box = document.createElement('div'); box.id='download-status'; box.className='status visible'; box.textContent='📥 Запускаем загрузку файла…'; document.getElementById('orders-list').prepend(box); setTimeout(()=>box.remove(),5000); }
+
+    function showDownloadStatus(fileName) {
+      showStatus(
+        '📥 Скачивание запущено.\\n\\n' +
+        'Файл: «' + fileName + '»\\n\\n' +
+        'После завершения откройте на телефоне приложение «Файлы» ' +
+        'или «Проводник» → папка «Загрузки» (Downloads).\\n\\n' +
+        'Системная шторка MAX может убрать уведомление сразу после запуска — ' +
+        'сам файл при этом сохраняется в папку загрузок.',
+        'warning'
+      );
+    }
+
+    function showDownloadCompleted(fileName) {
+      showStatus(
+        '✅ Файл сохранён: «' + fileName + '»\\n\\n' +
+        'Откройте на телефоне «Файлы» или «Проводник» → «Загрузки».',
+        'warning'
+      );
+    }
+
+    function showDownloadFailed(fileName) {
+      showStatus(
+        '⚠️ MAX не подтвердил завершение загрузки файла «' +
+        fileName +
+        '».\\n\\n' +
+        'Проверьте папку «Загрузки» — если файла там нет, попробуйте скачать ещё раз.',
+        'error'
+      );
+    }
     function stopAllAudio() { document.querySelectorAll('audio').forEach(audio=>{try{audio.pause();audio.currentTime=0}catch(_) {}}); }
     window.addEventListener('pagehide', stopAllAudio);
     window.addEventListener('beforeunload', stopAllAudio);
