@@ -195,6 +195,49 @@ function getStorageUploadUrl(storagePath) {
   );
 }
 
+async function createStorageSignedUrl(storagePath, downloadName, expiresIn = AUDIO_ACCESS_TTL_SECONDS) {
+  if (!SUPABASE_URL || !SUPABASE_KEY || !storagePath) {
+    throw new Error('Supabase signed download is not configured');
+  }
+
+  const response = await axios.post(
+    SUPABASE_URL +
+      '/storage/v1/object/sign/' +
+      AUDIO_STORAGE_BUCKET +
+      '/' +
+      encodeStoragePath(storagePath),
+    { expiresIn: Math.max(60, Number(expiresIn) || AUDIO_ACCESS_TTL_SECONDS) },
+    {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: 'Bearer ' + SUPABASE_KEY,
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    }
+  );
+
+  const signedPath = String(response.data?.signedURL || '').trim();
+  if (!signedPath) {
+    throw new Error('Supabase did not return a signed download URL');
+  }
+
+  const separator = signedPath.includes('?') ? '&' : '?';
+  const safeName =
+    String(downloadName || 'song.m4a')
+      .replace(/[\\/:*?"<>|]/g, '_')
+      .slice(0, 100) || 'song.m4a';
+
+  return (
+    SUPABASE_URL +
+    '/storage/v1' +
+    signedPath +
+    separator +
+    'download=' +
+    encodeURIComponent(safeName)
+  );
+}
+
 function getAudioExtension(sourceUrl, contentType) {
   const normalizedType = String(contentType || '').toLowerCase().split(';')[0];
 
@@ -891,59 +934,98 @@ app.get('/api/orders', async (req, res) => {
       }
     }
 
-    const responseOrders = orders.map((order) => ({
-      ...order,
-      audio_play_url:
-        buildAudioAccessUrl(req, user.max_id, order.id, 1),
-      audio_play_url_2:
-        buildAudioAccessUrl(req, user.max_id, order.id, 2),
-      audio_download_url:
-        buildAudioAccessUrl(
-          req,
-          user.max_id,
-          order.id,
-          1,
-          true
-        ),
-      audio_download_url_2:
-        buildAudioAccessUrl(
-          req,
-          user.max_id,
-          order.id,
-          2,
-          true
-        ),
-      audio_play_url_selected:
-        order.selected_variant
-          ? buildAudioAccessUrl(
-              req,
-              user.max_id,
-              order.id,
-              Number(order.selected_variant)
-            )
-          : buildAudioAccessUrl(
-              req,
-              user.max_id,
-              order.id,
-              1
-            ),
-      audio_download_url_selected:
-        order.selected_variant
-          ? buildAudioAccessUrl(
-              req,
-              user.max_id,
-              order.id,
-              Number(order.selected_variant),
-              true
-            )
-          : buildAudioAccessUrl(
-              req,
-              user.max_id,
-              order.id,
-              1,
-              true
-            )
-    }));
+    const responseOrders = [];
+
+    for (const order of orders) {
+      const item = {
+        ...order,
+        audio_play_url:
+          buildAudioAccessUrl(req, user.max_id, order.id, 1),
+        audio_play_url_2:
+          buildAudioAccessUrl(req, user.max_id, order.id, 2),
+        audio_download_url:
+          buildAudioAccessUrl(
+            req,
+            user.max_id,
+            order.id,
+            1,
+            true
+          ),
+        audio_download_url_2:
+          buildAudioAccessUrl(
+            req,
+            user.max_id,
+            order.id,
+            2,
+            true
+          ),
+        audio_play_url_selected:
+          order.selected_variant
+            ? buildAudioAccessUrl(
+                req,
+                user.max_id,
+                order.id,
+                Number(order.selected_variant)
+              )
+            : buildAudioAccessUrl(
+                req,
+                user.max_id,
+                order.id,
+                1
+              ),
+        audio_download_url_selected:
+          order.selected_variant
+            ? buildAudioAccessUrl(
+                req,
+                user.max_id,
+                order.id,
+                Number(order.selected_variant),
+                true
+              )
+            : buildAudioAccessUrl(
+                req,
+                user.max_id,
+                order.id,
+                1,
+                true
+              )
+      };
+
+      // Для полной версии даём MAX прямую signed-ссылку Supabase Storage.
+      // Проигрывание остаётся через наш /api/audio proxy.
+      if (order.status === 'completed') {
+        const selectedVariant = Number(order.selected_variant || 0);
+        const selectedStoragePath =
+          selectedVariant === 1
+            ? order.storage_path
+            : selectedVariant === 2
+              ? order.storage_path_2
+              : order.storage_path_selected;
+
+        if (selectedStoragePath) {
+          try {
+            const selectedTitle =
+              order.title_selected ||
+              order.title ||
+              'song';
+            item.audio_download_url_selected =
+              await createStorageSignedUrl(
+                selectedStoragePath,
+                String(selectedTitle).replace(/[\\/:*?"<>|]/g, '_') + '.m4a'
+              );
+          } catch (downloadError) {
+            console.error(
+              '[SONG STORAGE SIGNED DOWNLOAD]',
+              'order=' + String(order.id),
+              downloadError.response?.status || '',
+              downloadError.response?.data || downloadError.message
+            );
+          }
+        }
+      }
+
+      responseOrders.push(item);
+    }
 
     res.json({ ok: true, orders: responseOrders });
   } catch (error) {
@@ -1116,17 +1198,33 @@ app.post('/api/unlock-song', async (req, res) => {
       console.error('[TRANSACTION LOG]', transactionError.response?.data || transactionError.message);
     }
 
+    let downloadAudioUrl = buildAudioAccessUrl(
+      req,
+      user.max_id,
+      order.id,
+      selectedVariant,
+      true
+    );
+
+    try {
+      downloadAudioUrl = await createStorageSignedUrl(
+        selectedStoragePath,
+        String(selectedTitle || 'song').replace(/[\\/:*?"<>|]/g, '_') + '.m4a'
+      );
+    } catch (downloadError) {
+      console.error(
+        '[SONG STORAGE SIGNED UNLOCK DOWNLOAD]',
+        'order=' + String(order.id),
+        downloadError.response?.status || '',
+        downloadError.response?.data || downloadError.message
+      );
+    }
+
     res.json({
       ok: true,
       user: updatedUserRows[0] || { ...user, balance: newBalance },
       order: updatedOrderRows[0],
-      audioUrl: buildAudioAccessUrl(
-        req,
-        user.max_id,
-        order.id,
-        selectedVariant,
-        true
-      ),
+      audioUrl: downloadAudioUrl,
       title: selectedTitle || 'Ваша песня'
     });
   } catch (error) {
