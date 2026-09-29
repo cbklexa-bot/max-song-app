@@ -146,7 +146,12 @@
             order.audio_url||
             '';
 
-          card.innerHTML=`<div class="order-head"><div class="order-icon completed-icon">✅</div><div class="order-info"><p class="order-name">${escapeHtml(title)}</p><p class="order-meta">${escapeHtml(order.genre)} · ${escapeHtml(order.vocal)}</p></div></div><div class="pill pill-completed">Полная версия</div><div class="completed-player"><audio controls preload="none" src="${escapeHtml(audioUrl)}"></audio></div><div class="actions"><button class="action primary" type="button" data-action="download" data-url="${escapeHtml(audioUrl)}" data-title="${escapeHtml(title)}">📥 Скачать MP3</button><button class="action" type="button" data-action="share" data-url="${escapeHtml(audioUrl)}">📤 Поделиться</button></div>`;
+          const downloadUrl=
+            order.audio_download_url_selected||
+            order.audio_download_url||
+            audioUrl;
+
+          card.innerHTML=`<div class="order-head"><div class="order-icon completed-icon">✅</div><div class="order-info"><p class="order-name">${escapeHtml(title)}</p><p class="order-meta">${escapeHtml(order.genre)} · ${escapeHtml(order.vocal)}</p></div></div><div class="pill pill-completed">Полная версия</div><div class="completed-player"><audio controls preload="none" src="${escapeHtml(audioUrl)}"></audio></div><div class="actions"><button class="action primary" type="button" data-action="download" data-url="${escapeHtml(downloadUrl)}" data-title="${escapeHtml(title)}">📥 Скачать MP3</button><button class="action" type="button" data-action="share" data-url="${escapeHtml(audioUrl)}">📤 Поделиться</button></div>`;
         }
 
         list.appendChild(card);
