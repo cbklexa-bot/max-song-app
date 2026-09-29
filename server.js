@@ -204,7 +204,7 @@ function getAudioExtension(sourceUrl, contentType) {
   return 'm4a';
 }
 
-async function saveExternalAudioToStorage(orderId, variant, sourceUrl) {
+async function saveExternalAudioToStorage(orderId, variant, sourceUrl, timeoutMs = 120000) {
   if (!SUPABASE_URL || !SUPABASE_KEY) {
     throw new Error('Supabase storage is not configured');
   }
@@ -213,7 +213,7 @@ async function saveExternalAudioToStorage(orderId, variant, sourceUrl) {
 
   const sourceResponse = await axios.get(source.toString(), {
     responseType: 'arraybuffer',
-    timeout: 120000,
+    timeout: timeoutMs,
     maxContentLength: 50 * 1024 * 1024,
     maxBodyLength: 50 * 1024 * 1024,
     headers: { 'Accept-Encoding': 'identity' }
@@ -369,7 +369,8 @@ async function migrateLegacyOrderAudio(order) {
       const storedPath = await saveExternalAudioToStorage(
         order.id,
         variant,
-        order[urlField]
+        order[urlField],
+        15000
       );
 
       patch[pathField] = storedPath;
@@ -875,6 +876,22 @@ app.get('/api/orders', async (req, res) => {
         buildAudioAccessUrl(req, user.max_id, order.id, 1),
       audio_play_url_2:
         buildAudioAccessUrl(req, user.max_id, order.id, 2),
+      audio_download_url:
+        buildAudioAccessUrl(
+          req,
+          user.max_id,
+          order.id,
+          1,
+          true
+        ),
+      audio_download_url_2:
+        buildAudioAccessUrl(
+          req,
+          user.max_id,
+          order.id,
+          2,
+          true
+        ),
       audio_play_url_selected:
         order.selected_variant
           ? buildAudioAccessUrl(
@@ -888,6 +905,22 @@ app.get('/api/orders', async (req, res) => {
               user.max_id,
               order.id,
               1
+            ),
+      audio_download_url_selected:
+        order.selected_variant
+          ? buildAudioAccessUrl(
+              req,
+              user.max_id,
+              order.id,
+              Number(order.selected_variant),
+              true
+            )
+          : buildAudioAccessUrl(
+              req,
+              user.max_id,
+              order.id,
+              1,
+              true
             )
     }));
 
@@ -1070,7 +1103,8 @@ app.post('/api/unlock-song', async (req, res) => {
         req,
         user.max_id,
         order.id,
-        selectedVariant
+        selectedVariant,
+        true
       ),
       title: selectedTitle || 'Ваша песня'
     });
@@ -1273,11 +1307,19 @@ app.get('/api/audio', async (req, res) => {
           .replace(/[\\/:*?"<>|]/g, '_')
           .slice(0, 80);
 
+        const extension = String(storagePath)
+          .toLowerCase()
+          .endsWith('.mp3')
+          ? 'mp3'
+          : 'm4a';
+
         res.setHeader(
           'Content-Disposition',
           'attachment; filename="' +
             encodeURIComponent(fileName) +
-            '.m4a"'
+            '.' +
+            extension +
+            '"'
         );
       }
 
