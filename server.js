@@ -683,6 +683,13 @@ app.get('/api/user', async (req, res) => {
       limit: 20
     });
 
+    // Temporary account-link diagnostic; never log initData, tokens, prompts, or audio URLs.
+    console.log('[ACCOUNT MATCH]', {
+      maxId: String(user.max_id),
+      dbName: String(user.name || ''),
+      ordersReturned: orders.length
+    });
+
     res.json({ ok: true, user, orders });
   } catch (error) {
     console.error('[GET /api/user]', error.response?.data || error.message);
