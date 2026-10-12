@@ -632,7 +632,7 @@ app.get('/api/max-bot-check', async (req, res) => {
     const response = await axios.get(
       'https://platform-api2.max.ru/me',
       {
-        headers: { Authorization: 'Bearer ' + MAX_BOT_TOKEN },
+        headers: { Authorization: MAX_BOT_TOKEN },
         httpsAgent: getMaxApiHttpsAgent(),
         timeout: 15000
       }
