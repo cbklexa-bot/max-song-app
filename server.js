@@ -2,6 +2,9 @@ const express = require('express');
 const axios = require('axios');
 const crypto = require('crypto');
 const path = require('path');
+const fs = require('fs');
+const https = require('https');
+const tls = require('tls');
 const cors = require('cors');
 
 const app = express();
@@ -32,6 +35,18 @@ app.use((req, res, next) => {
 const PORT = process.env.PORT || 10000;
 const MAX_BOT_TOKEN = process.env.MAX_BOT_TOKEN || '';
 const SUPABASE_URL = process.env.SUPABASE_URL || '';
+
+let maxApiHttpsAgent = null;
+function getMaxApiHttpsAgent() {
+  if (maxApiHttpsAgent) return maxApiHttpsAgent;
+  const maxCaBundle = fs.readFileSync(path.join(__dirname, 'russian_trusted_ca.pem'), 'utf8');
+  maxApiHttpsAgent = new https.Agent({
+    // Keep Node's normal public CAs and add the official MAX/Ministry CA bundle
+    // only to this HTTPS client, rather than disabling TLS verification globally.
+    ca: [...tls.rootCertificates, maxCaBundle]
+  });
+  return maxApiHttpsAgent;
+}
 const SUPABASE_KEY = process.env.SUPABASE_KEY || '';
 const PIAPI_KEY = process.env.PIAPI_KEY || '';
 const SONG_PRICE = 200;
@@ -615,9 +630,10 @@ app.get('/api/max-bot-check', async (req, res) => {
     }
 
     const response = await axios.get(
-      'https://platform-api2.max.ru/users/@me',
+      'https://platform-api2.max.ru/me',
       {
         headers: { Authorization: 'Bearer ' + MAX_BOT_TOKEN },
+        httpsAgent: getMaxApiHttpsAgent(),
         timeout: 15000
       }
     );
