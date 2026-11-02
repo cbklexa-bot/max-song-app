@@ -5,39 +5,35 @@ const express = require('express');
 // Robokassa itself presents the available payment methods, including SBP and card.
 function frontendFixScript() {
   return `<script>(function(){
+var paymentCheckRunning=false,paymentCheckTimer=null,paymentCheckAttempts=0;
 function getPending(){try{return localStorage.getItem('robokassa_pending_invoice')||''}catch(e){return ''}}
-function setPending(id){try{localStorage.setItem('robokassa_pending_invoice',String(id))}catch(e){}}
-function clearPending(){try{localStorage.removeItem('robokassa_pending_invoice')}catch(e){}}
+function setPending(id){try{localStorage.setItem('robokassa_pending_invoice',String(id));paymentCheckAttempts=0;if(paymentCheckTimer){clearTimeout(paymentCheckTimer);paymentCheckTimer=null}}catch(e){}}
+function clearPending(){try{localStorage.removeItem('robokassa_pending_invoice')}catch(e){}paymentCheckAttempts=0;if(paymentCheckTimer){clearTimeout(paymentCheckTimer);paymentCheckTimer=null}}
+function schedulePendingPaymentCheck(){if(paymentCheckTimer||paymentCheckAttempts>=12)return;paymentCheckTimer=setTimeout(function(){paymentCheckTimer=null;checkPayment()},5000)}
 function show(msg,type){if(typeof window.showStatus==='function')window.showStatus(msg,type||'info');else console.log('[ROBOKASSA]',msg)}
 function openPayment(url){var value=String(url||'').trim();if(!value)throw new Error('Не удалось получить ссылку на оплату.');var webApp=window.WebApp||null;if(webApp&&typeof webApp.openLink==='function'){webApp.openLink(value);return}window.location.href=value}
 async function checkPayment(){
   var id=getPending();
-  if(!id||typeof window.apiFetch!=='function')return;
-  for(var i=0;i<10;i++){
-    try{
-      var reconciled=await window.apiFetch('/api/robokassa/reconcile',{method:'GET'},30000);
-      if(reconciled&&reconciled.ok&&Number(reconciled.succeeded||0)>0){
-        if(typeof window.loadUser==='function')await window.loadUser();
-        clearPending();
-        show('Баланс успешно пополнен.','success');
-        return;
-      }
-
-      var r=await window.apiFetch('/api/robokassa/status?invoiceId='+encodeURIComponent(id),{method:'GET'},20000);
-      if(r&&((r.status==='paid')||(r.status==='succeeded'))){
-        if(typeof window.loadUser==='function')await window.loadUser();
-        clearPending();
-        show('Баланс успешно пополнен.','success');
-        return;
-      }
-      if(r&&r.status==='canceled'){
-        clearPending();
-        return;
-      }
-    }catch(e){
-      console.warn('[ROBOKASSA STATUS]',e);
+  if(!id||typeof window.apiFetch!=='function'||paymentCheckRunning)return;
+  paymentCheckRunning=true;
+  try{
+    var r=await window.apiFetch('/api/robokassa/status?invoiceId='+encodeURIComponent(id),{method:'GET'},20000);
+    if(r&&((r.status==='paid')||(r.status==='succeeded'))){
+      if(typeof window.loadUser==='function')await window.loadUser();
+      clearPending();
+      show('Баланс успешно пополнен.','success');
+    }else if(r&&r.status==='canceled'){
+      clearPending();
+    }else{
+      paymentCheckAttempts+=1;
+      schedulePendingPaymentCheck();
     }
-    await new Promise(function(resolve){setTimeout(resolve,2000)});
+  }catch(e){
+    console.warn('[ROBOKASSA STATUS]',e);
+    paymentCheckAttempts+=1;
+    schedulePendingPaymentCheck();
+  }finally{
+    paymentCheckRunning=false;
   }
 }
 function normalizePlans(){document.querySelectorAll('.amount').forEach(function(el){var amount=Number(el.dataset.amount||0);var right=el.querySelector('.amount-right');var strong=el.querySelector('.amount-left strong');var small=el.querySelector('.amount-left small');if(small)small.textContent='';if(amount===200){if(strong)strong.textContent='200 ₽';if(right)right.innerHTML='200 ₽'}if(amount===400){if(strong)strong.textContent='400 ₽';if(right)right.innerHTML='420 ₽ <span class="bonus bonus-side">+5% бонус</span>'}if(amount===700||amount===800){el.dataset.amount='800';if(strong)strong.textContent='800 ₽';if(right)right.innerHTML='880 ₽ <span class="bonus bonus-side bonus-orange">+10% бонус</span>'}})}
