@@ -375,12 +375,10 @@ const listen = express.application.listen;
 express.application.listen = function (...args) {
   try {
     install(this);
-    setTimeout(() => reconcileAllPendingPayments(20), 5000);
-    setInterval(() => reconcileAllPendingPayments(20), 60000);
   } catch (error) {
     console.error('[ROBOKASSA PAYMENT INSTALL]', error.message);
   }
   return listen.apply(this, args);
 };
 
-console.log('[ROBOKASSA PAYMENT] module loaded: plans 200/400/800');
+console.log('[ROBOKASSA PAYMENT] module loaded: plans 200/400/800; global pending-payment polling disabled');
