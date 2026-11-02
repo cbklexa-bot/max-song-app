@@ -5,12 +5,13 @@ const express = require('express');
 // Robokassa itself presents the available payment methods, including SBP and card.
 function frontendFixScript() {
   return `<script>(function(){
+var paymentCheckRunning=false,paymentCheckTimer=null,paymentCheckAttempts=0;
 function getPending(){try{return localStorage.getItem('robokassa_pending_invoice')||''}catch(e){return ''}}
-function setPending(id){try{localStorage.setItem('robokassa_pending_invoice',String(id))}catch(e){}}
-function clearPending(){try{localStorage.removeItem('robokassa_pending_invoice')}catch(e){}}
+function setPending(id){try{localStorage.setItem('robokassa_pending_invoice',String(id));paymentCheckAttempts=0;if(paymentCheckTimer){clearTimeout(paymentCheckTimer);paymentCheckTimer=null}}catch(e){}}
+function clearPending(){try{localStorage.removeItem('robokassa_pending_invoice')}catch(e){}paymentCheckAttempts=0;if(paymentCheckTimer){clearTimeout(paymentCheckTimer);paymentCheckTimer=null}}
+function schedulePendingPaymentCheck(){if(paymentCheckTimer||paymentCheckAttempts>=12)return;paymentCheckTimer=setTimeout(function(){paymentCheckTimer=null;checkPayment()},5000)}
 function show(msg,type){if(typeof window.showStatus==='function')window.showStatus(msg,type||'info');else console.log('[ROBOKASSA]',msg)}
 function openPayment(url){var value=String(url||'').trim();if(!value)throw new Error('Не удалось получить ссылку на оплату.');var webApp=window.WebApp||null;if(webApp&&typeof webApp.openLink==='function'){webApp.openLink(value);return}window.location.href=value}
-var paymentCheckRunning=false;
 async function checkPayment(){
   var id=getPending();
   if(!id||typeof window.apiFetch!=='function'||paymentCheckRunning)return;
@@ -23,9 +24,14 @@ async function checkPayment(){
       show('Баланс успешно пополнен.','success');
     }else if(r&&r.status==='canceled'){
       clearPending();
+    }else{
+      paymentCheckAttempts+=1;
+      schedulePendingPaymentCheck();
     }
   }catch(e){
     console.warn('[ROBOKASSA STATUS]',e);
+    paymentCheckAttempts+=1;
+    schedulePendingPaymentCheck();
   }finally{
     paymentCheckRunning=false;
   }
