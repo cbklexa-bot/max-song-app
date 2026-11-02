@@ -123,13 +123,13 @@ function validateMaxInitData(initData) {
     throw new Error('Invalid MAX initData signature');
   }
 
-  if (decodedParams.auth_date) {
-    const authDate = Number(decodedParams.auth_date);
-    if (!Number.isNaN(authDate)) {
-      const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
-      if (ageSeconds > 3600) throw new Error('MAX initData expired');
-    }
+  const authDate = Number(decodedParams.auth_date);
+  if (!Number.isFinite(authDate) || authDate <= 0) {
+    throw new Error('MAX initData auth_date is missing or invalid');
   }
+  const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+  if (ageSeconds > 24 * 60 * 60) throw new Error('MAX initData expired');
+  if (ageSeconds < -300) throw new Error('MAX initData date is in the future');
 
   let user = null;
   if (decodedParams.user) {
@@ -139,6 +139,7 @@ function validateMaxInitData(initData) {
       user = null;
     }
   }
+  if (!user || !user.id) throw new Error('MAX user data is missing');
 
   return { params: decodedParams, user };
 }
@@ -159,7 +160,7 @@ function requireMaxUser(req) {
 async function supabaseGet(table, query) {
   const response = await axios.get(
     SUPABASE_URL + '/rest/v1/' + table,
-    { headers: dbHeaders, params: query }
+    { headers: dbHeaders, params: query, timeout: 15000 }
   );
   return response.data;
 }
@@ -168,7 +169,7 @@ async function supabasePost(table, body) {
   const response = await axios.post(
     SUPABASE_URL + '/rest/v1/' + table,
     body,
-    { headers: dbHeaders }
+    { headers: dbHeaders, timeout: 20000 }
   );
   return response.data;
 }
@@ -177,7 +178,7 @@ async function supabasePatch(table, query, body) {
   const response = await axios.patch(
     SUPABASE_URL + '/rest/v1/' + table,
     body,
-    { headers: dbHeaders, params: query }
+    { headers: dbHeaders, params: query, timeout: 20000 }
   );
   return response.data;
 }
@@ -673,27 +674,26 @@ app.get('/api/max-probe', (req, res) => {
 });
 
 app.get('/api/user', async (req, res) => {
+  const startedAt = Date.now();
+  let auth;
   try {
-    const auth = requireMaxUser(req);
-    const user = await getOrCreateUser(auth.user);
-    const orders = await supabaseGet('orders', {
-      user_id: 'eq.' + String(user.max_id),
-      select: '*',
-      order: 'created_at.desc',
-      limit: 20
-    });
-
-    // Temporary account-link diagnostic; never log initData, tokens, prompts, or audio URLs.
-    console.log('[ACCOUNT MATCH]', {
-      maxId: String(user.max_id),
-      dbName: String(user.name || ''),
-      ordersReturned: orders.length
-    });
-
-    res.json({ ok: true, user, orders });
+    auth = requireMaxUser(req);
   } catch (error) {
-    console.error('[GET /api/user]', error.response?.data || error.message);
-    res.status(401).json({ ok: false, error: error.message || 'Authorization error' });
+    console.warn('[GET /api/user] auth rejected:', error.message);
+    return res.status(401).json({ ok: false, error: error.message || 'Authorization error' });
+  }
+
+  try {
+    // Songs are loaded independently by /api/orders; the profile response stays small.
+    const user = await getOrCreateUser(auth.user);
+    console.log('[GET /api/user] success', { durationMs: Date.now() - startedAt });
+    return res.json({ ok: true, user });
+  } catch (error) {
+    console.error('[GET /api/user] database error:', error.response?.data || error.message);
+    return res.status(503).json({
+      ok: false,
+      error: 'Не удалось получить профиль из базы. Повторите загрузку.'
+    });
   }
 });
 
